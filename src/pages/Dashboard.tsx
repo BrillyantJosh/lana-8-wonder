@@ -69,12 +69,20 @@ const Dashboard = () => {
       try {
         const wallets = planData.accounts.map(acc => acc.wallet);
         
+        console.log('Sending to edge function:', {
+          wallet_addresses: wallets,
+          electrum_servers: params?.electrum,
+          electrum_count: params?.electrum?.length
+        });
+        
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
           body: { 
             wallet_addresses: wallets,
-            electrum_servers: params.electrum
+            electrum_servers: params?.electrum || []
           },
         });
+
+        console.log('Edge function response:', { data, error });
 
         if (error) throw error;
 
