@@ -360,7 +360,7 @@ export default function TradingPlanCalculator() {
                         </tr>
                       </thead>
                       <tbody>
-                        {account.levels.slice(0, 10).map((level) => (
+                        {(account.number === 8 ? account.levels : account.levels.slice(0, 10)).map((level) => (
                           <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
                             <td className="text-right py-3 px-4 text-muted-foreground">€{formatNumber(parseFloat(level.triggerPrice))}</td>
@@ -381,7 +381,7 @@ export default function TradingPlanCalculator() {
                       </tbody>
                     </table>
                   </div>
-                  {account.levels.length > 10 && (
+                  {account.number !== 8 && account.levels.length > 10 && (
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Showing first 10 of {account.levels.length} levels
                     </p>
