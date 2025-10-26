@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogOut, Loader2, Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Loader2, Send, CheckCircle2 } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -372,12 +373,17 @@ const Dashboard = () => {
                           <TableHead>Coins to Give</TableHead>
                           <TableHead>Cash Out ({plan.currency})</TableHead>
                           <TableHead>Remaining LANAs</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {account.levels.map((level) => {
                           // Check if trigger price is reached
                           const isTriggered = currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate;
+                          
+                          // Check if level has been paid out (balance is at or below remaining_lanas)
+                          const currentBalance = walletBalances[account.wallet] || 0;
+                          const isPaidOut = isTriggered && currentBalance <= level.remaining_lanas && !balancesLoading;
                           
                           return (
                             <TableRow 
@@ -391,6 +397,14 @@ const Dashboard = () => {
                               <TableCell>{level.coins_to_give.toFixed(4)}</TableCell>
                               <TableCell>{level.cash_out.toFixed(2)}</TableCell>
                               <TableCell>{level.remaining_lanas.toFixed(4)}</TableCell>
+                              <TableCell>
+                                {isPaidOut && (
+                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                    Paid Out
+                                  </Badge>
+                                )}
+                              </TableCell>
                             </TableRow>
                           );
                         })}
