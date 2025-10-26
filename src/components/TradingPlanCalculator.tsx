@@ -74,7 +74,7 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
   let remaining = lanas;
 
   for (let i = 1; i <= 10; i++) {
-    const triggerPrice = i === 1 ? startPrice : startPrice * Math.pow(1.292, i - 1);
+    const triggerPrice = startPrice * i; // Linear growth like accounts 1-2
     const lanasOnSale = lanas * sellPercentages[i - 1];
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasOnSale;
