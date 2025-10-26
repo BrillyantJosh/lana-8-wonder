@@ -323,26 +323,31 @@ export default function TradingPlanCalculator() {
             </div>
           </div>
 
-          {accounts.length > 0 && <div className="mt-6 p-6 rounded-lg bg-gradient-wealth border border-border">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Initial Investment</p>
-                  <p className="text-2xl font-bold text-foreground">€88.00</p>
+          {accounts.length > 0 && <div className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Initial Investment</p>
+                  <p className="text-3xl font-bold text-foreground">€88</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Total LANA Coins</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Total Lanas</p>
+                  <p className="text-3xl font-bold text-foreground">
                     {formatNumber(88 / parseFloat(currentPrice))}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Lana8Wonder Donation</p>
-                  <p className="text-lg font-bold text-secondary">
-                    12 EUR = {formatNumber(12 / parseFloat(currentPrice))} LANA
+                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Lana8Wonder Donation</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {formatNumber(12 / parseFloat(currentPrice))}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Total LANA to step into Lana8Wonder
+                  <p className="text-xs text-muted-foreground mt-1">LANA</p>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Total LANA to step into Lana8Wonder</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {formatNumber((88 + 12) / parseFloat(currentPrice))}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">LANA</p>
                 </div>
               </div>
             </div>}
