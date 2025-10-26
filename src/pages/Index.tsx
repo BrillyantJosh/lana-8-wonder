@@ -1,5 +1,6 @@
 import TradingPlanCalculator from "@/components/TradingPlanCalculator";
 import lanaCoin from "@/assets/lana-coin.png";
+import einsteinImg from "@/assets/einstein.png";
 import { Sparkles, Wifi, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -95,19 +96,20 @@ const Index = () => {
                 Transform your €88 investment into extraordinary wealth with 8-account.
               </p>
               
-              <div className="flex flex-wrap justify-center gap-4 pt-8">
-                <div className="bg-card/90 backdrop-blur-sm px-6 py-3 rounded-full border border-primary/20 shadow-card">
-                  <p className="text-sm font-medium text-muted-foreground">Linear Growth</p>
-                  <p className="text-lg font-bold text-primary">Accounts 1-2</p>
+              <div className="flex items-center justify-center gap-6 pt-8 max-w-4xl mx-auto">
+                <div className="w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
+                  <img 
+                    src={einsteinImg} 
+                    alt="Albert Einstein" 
+                    className="w-full h-full object-cover object-center"
+                  />
                 </div>
-                <div className="bg-card/90 backdrop-blur-sm px-6 py-3 rounded-full border border-accent/20 shadow-card">
-                  <p className="text-sm font-medium text-muted-foreground">Compound Returns</p>
-                  <p className="text-lg font-bold text-accent">Accounts 3-5</p>
-                </div>
-                <div className="bg-card/90 backdrop-blur-sm px-6 py-3 rounded-full border border-secondary/20 shadow-card">
-                  <p className="text-sm font-medium text-muted-foreground">Passive Income</p>
-                  <p className="text-lg font-bold text-secondary">Accounts 6-8</p>
-                </div>
+                <blockquote className="text-left">
+                  <p className="text-lg md:text-xl font-medium text-foreground italic">
+                    "Compound interest is the eighth wonder of the world. He who understands it, earns it… He who doesn't, pays it."
+                  </p>
+                  <cite className="block mt-3 text-sm text-muted-foreground not-italic">— Albert Einstein</cite>
+                </blockquote>
               </div>
             </div>
           </div>
