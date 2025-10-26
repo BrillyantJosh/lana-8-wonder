@@ -238,7 +238,9 @@ export default function TradingPlanCalculator() {
 
   const calculatePortfolioProjection = (startingPrice: number, remainingLanaMap: Map<number, number>): ProjectionData[] => {
     const projections: ProjectionData[] = [];
-    let startingSplit = calculateSplit(startingPrice);
+    // Increase starting price by 8% to skip the first split (Initial Recovery)
+    const adjustedStartingPrice = startingPrice * 1.08;
+    let startingSplit = calculateSplit(adjustedStartingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
     let milestoneReached = false;
     
