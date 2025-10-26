@@ -24,6 +24,12 @@ interface Account {
   totalCashOut: number;
   portfolioValue?: number;
 }
+interface ProjectionData {
+  splitNumber: number;
+  splitPrice: number;
+  portfolioValue: number;
+  remainingLana: number;
+}
 const accountConfigs = [{
   name: "Initial Recovery",
   type: "linear" as const,
@@ -186,6 +192,7 @@ export default function TradingPlanCalculator() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [account8Batches, setAccount8Batches] = useState<number>(0);
+  const [portfolioProjection, setPortfolioProjection] = useState<ProjectionData[]>([]);
 
   // Set default price from NOSTR params when loaded
   useEffect(() => {
@@ -194,6 +201,27 @@ export default function TradingPlanCalculator() {
       setCurrentPrice(rate.toString());
     }
   }, [params, selectedCurrency, currentPrice]);
+
+  const calculatePortfolioProjection = (remainingLana: number, currentPrice: number): ProjectionData[] => {
+    const projections: ProjectionData[] = [];
+    let currentSplit = calculateSplit(currentPrice);
+    
+    // Calculate portfolio value for all splits from current to Split 37
+    for (let splitNum = currentSplit.splitNumber; splitNum <= 37; splitNum++) {
+      const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
+      const portfolioValue = remainingLana * splitPrice;
+      
+      projections.push({
+        splitNumber: splitNum,
+        splitPrice: splitPrice,
+        portfolioValue: portfolioValue,
+        remainingLana: remainingLana
+      });
+    }
+    
+    return projections;
+  };
+
   const calculatePlan = () => {
     const initialInvestment = 88;
     const price = parseFloat(currentPrice);
@@ -244,6 +272,16 @@ export default function TradingPlanCalculator() {
     });
     setAccounts(newAccounts);
     setAccount8Batches(0); // Reset batches when recalculating
+    
+    // Calculate portfolio projection for Account 8
+    const account8 = newAccounts[7]; // Account 8 is at index 7
+    if (account8 && account8.levels.length > 0) {
+      const finalLevel = account8.levels[account8.levels.length - 1];
+      const remainingLana = finalLevel.remaining;
+      const finalPrice = parseFloat(finalLevel.triggerPrice);
+      const projection = calculatePortfolioProjection(remainingLana, finalPrice);
+      setPortfolioProjection(projection);
+    }
   };
   const loadMoreAccount8Levels = () => {
     setAccount8Batches(prev => prev + 1);
@@ -264,6 +302,15 @@ export default function TradingPlanCalculator() {
       totalCashOut,
       portfolioValue
     } : acc));
+    
+    // Recalculate portfolio projection with new Account 8 data
+    if (levels.length > 0) {
+      const finalLevel = levels[levels.length - 1];
+      const remainingLana = finalLevel.remaining;
+      const finalPrice = parseFloat(finalLevel.triggerPrice);
+      const projection = calculatePortfolioProjection(remainingLana, finalPrice);
+      setPortfolioProjection(projection);
+    }
   };
   const toggleAccount = (accountNumber: number) => {
     const newExpanded = new Set(expandedAccounts);
@@ -437,5 +484,115 @@ export default function TradingPlanCalculator() {
                 </div>}
             </Card>)}
         </div>}
+
+      {/* Portfolio Growth Projection */}
+      {portfolioProjection.length > 0 && <Card className="overflow-hidden shadow-card border-border">
+          <div className="bg-gradient-to-r from-indigo-500 to-indigo-700 p-6">
+            <h3 className="text-2xl font-bold text-white mb-2">Portfolio Growth Projection</h3>
+            <p className="text-white/90 text-sm">
+              Projected value of your remaining LANA from Account 8 at each Split milestone
+            </p>
+          </div>
+          
+          <div className="p-6 bg-card space-y-6">
+            {/* Summary Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Remaining LANA</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatNumber(portfolioProjection[0].remainingLana)}
+                </p>
+              </div>
+              
+              <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Current Portfolio Value</p>
+                <p className="text-2xl font-bold text-foreground">
+                  €{formatNumber(portfolioProjection[0].portfolioValue)}
+                </p>
+              </div>
+              
+              <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-1">At Split 37</p>
+                <p className="text-2xl font-bold text-foreground">
+                  €{formatNumber(portfolioProjection[portfolioProjection.length - 1].portfolioValue)}
+                </p>
+              </div>
+            </div>
+
+            {/* Milestone Highlight */}
+            {(() => {
+              const milestone100M = portfolioProjection.find(p => p.portfolioValue >= 100000000);
+              if (milestone100M) {
+                return <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/30 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">🎯 Milestone Achievement</p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
+                      €100,000,000
+                    </p>
+                    <p className="text-lg text-foreground">
+                      Reached at <span className="font-bold text-primary">Split {milestone100M.splitNumber}</span>
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      LANA Price: €{formatNumber(milestone100M.splitPrice)}
+                    </p>
+                  </div>;
+              }
+              return <div className="bg-muted/20 border border-border rounded-lg p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">📊 Maximum Projection</p>
+                  <p className="text-lg text-foreground">
+                    €100M milestone not reached by Split 37
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Highest projected value: €{formatNumber(portfolioProjection[portfolioProjection.length - 1].portfolioValue)}
+                  </p>
+                </div>;
+            })()}
+
+            {/* Full Projection Table */}
+            <div>
+              <h4 className="text-lg font-semibold text-foreground mb-4">Complete Split Projection</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-border">
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">Split</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">LANA Price</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Portfolio Value</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Progress to €100M</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolioProjection.map(projection => {
+                    const progressPercent = Math.min((projection.portfolioValue / 100000000) * 100, 100);
+                    const isMillestone = projection.portfolioValue >= 100000000;
+                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isMillestone ? 'bg-green-500/5' : ''}`}>
+                          <td className="py-3 px-4 font-medium text-primary">
+                            Split {projection.splitNumber}
+                          </td>
+                          <td className="text-right py-3 px-4 text-muted-foreground">
+                            €{formatNumber(projection.splitPrice)}
+                          </td>
+                          <td className={`text-right py-3 px-4 font-semibold ${isMillestone ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                            €{formatNumber(projection.portfolioValue)}
+                          </td>
+                          <td className="text-right py-3 px-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-primary to-green-500 transition-all" style={{
+                              width: `${progressPercent}%`
+                            }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground min-w-[3rem]">
+                                {formatNumber(progressPercent)}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>;
+                  })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </Card>}
     </div>;
 }
