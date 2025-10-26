@@ -210,51 +210,71 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-6">
-          {plan.accounts.map((account) => (
-            <Card key={account.account_id}>
-              <CardHeader>
-                <CardTitle>Account {account.account_id}</CardTitle>
-                <CardDescription>
-                  Wallet: <span className="font-mono">{account.wallet}</span> • {account.levels.length} levels
-                  {balancesLoading ? (
-                    <span className="ml-2 text-muted-foreground">
-                      <Loader2 className="inline h-3 w-3 animate-spin" /> Loading balance...
-                    </span>
-                  ) : walletBalances[account.wallet] !== undefined ? (
-                    <span className="ml-2 font-semibold text-primary">
-                      • Balance: {walletBalances[account.wallet].toFixed(8)} LANA
-                    </span>
-                  ) : null}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Level</TableHead>
-                        <TableHead>Trigger Price ({plan.currency})</TableHead>
-                        <TableHead>Coins to Give</TableHead>
-                        <TableHead>Cash Out ({plan.currency})</TableHead>
-                        <TableHead>Remaining LANAs</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {account.levels.map((level) => (
-                        <TableRow key={level.row_id}>
-                          <TableCell className="font-medium">{level.level_no}</TableCell>
-                          <TableCell>{level.trigger_price.toFixed(4)}</TableCell>
-                          <TableCell>{level.coins_to_give.toFixed(4)}</TableCell>
-                          <TableCell>{level.cash_out.toFixed(2)}</TableCell>
-                          <TableCell>{level.remaining_lanas.toFixed(4)}</TableCell>
+          {plan.accounts.map((account) => {
+            // Get current exchange rate for the plan currency
+            const currentExchangeRate = params?.exchangeRates?.[plan.currency as keyof typeof params.exchangeRates] || 0;
+            
+            return (
+              <Card key={account.account_id}>
+                <CardHeader>
+                  <CardTitle>Account {account.account_id}</CardTitle>
+                  <CardDescription>
+                    Wallet: <span className="font-mono">{account.wallet}</span> • {account.levels.length} levels
+                    {balancesLoading ? (
+                      <span className="ml-2 text-muted-foreground">
+                        <Loader2 className="inline h-3 w-3 animate-spin" /> Loading balance...
+                      </span>
+                    ) : walletBalances[account.wallet] !== undefined ? (
+                      <span className="ml-2 font-semibold text-primary">
+                        • Balance: {walletBalances[account.wallet].toFixed(8)} LANA
+                      </span>
+                    ) : null}
+                    {currentExchangeRate > 0 && (
+                      <span className="ml-2 text-muted-foreground">
+                        • Current {plan.currency} rate: {currentExchangeRate.toFixed(4)}
+                      </span>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Level</TableHead>
+                          <TableHead>Trigger Price ({plan.currency})</TableHead>
+                          <TableHead>Coins to Give</TableHead>
+                          <TableHead>Cash Out ({plan.currency})</TableHead>
+                          <TableHead>Remaining LANAs</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      </TableHeader>
+                      <TableBody>
+                        {account.levels.map((level) => {
+                          // Check if trigger price is reached
+                          const isTriggered = currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate;
+                          
+                          return (
+                            <TableRow 
+                              key={level.row_id}
+                              className={isTriggered ? "bg-green-500/10 hover:bg-green-500/20" : ""}
+                            >
+                              <TableCell className="font-medium">{level.level_no}</TableCell>
+                              <TableCell className={isTriggered ? "font-semibold text-green-600" : ""}>
+                                {level.trigger_price.toFixed(4)}
+                              </TableCell>
+                              <TableCell>{level.coins_to_give.toFixed(4)}</TableCell>
+                              <TableCell>{level.cash_out.toFixed(2)}</TableCell>
+                              <TableCell>{level.remaining_lanas.toFixed(4)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>
