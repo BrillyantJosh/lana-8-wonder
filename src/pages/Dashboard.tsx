@@ -1,28 +1,60 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { LogOut, Loader2 } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
-import { Lana8WonderPlan } from "@/lib/nostrClient";
+import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [plan, setPlan] = useState<Lana8WonderPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { params } = useNostrLanaParams();
 
   useEffect(() => {
-    const sessionData = sessionStorage.getItem("lana_session");
-    if (!sessionData) {
-      navigate("/login");
-      return;
+    const loadPlanData = async () => {
+      const sessionData = sessionStorage.getItem("lana_session");
+      if (!sessionData) {
+        navigate("/login");
+        return;
+      }
+
+      const parsedSession: LanaSession = JSON.parse(sessionData);
+      setSession(parsedSession);
+
+      if (!params?.relays || params.relays.length === 0) {
+        toast.error("No relays available");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const fetchedPlan = await fetchKind88888(parsedSession.nostrHexId, params.relays);
+        
+        if (!fetchedPlan) {
+          toast.error("No annuity plan found");
+          navigate("/create-lana8wonder");
+          return;
+        }
+
+        setPlan(fetchedPlan);
+      } catch (error) {
+        console.error("Error loading plan:", error);
+        toast.error("Failed to load annuity plan");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params?.relays) {
+      loadPlanData();
     }
-
-    const parsedSession: LanaSession = JSON.parse(sessionData);
-    setSession(parsedSession);
-
-    // TODO: Load plan from relay
-  }, [navigate]);
+  }, [navigate, params]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("lana_session");
@@ -30,6 +62,30 @@ const Dashboard = () => {
   };
 
   if (!session) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your annuity plan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Plan Found</CardTitle>
+            <CardDescription>Redirecting to plan creation...</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -65,18 +121,77 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plan Overview</CardTitle>
+              <CardDescription>
+                {plan.coin}/{plan.currency} • Policy {plan.policy} • Schema {plan.accounts.length} accounts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Accounts</p>
+                  <p className="text-2xl font-bold">{plan.accounts.length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Levels</p>
+                  <p className="text-2xl font-bold">
+                    {plan.accounts.reduce((sum, acc) => sum + acc.levels.length, 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Currency</p>
+                  <p className="text-2xl font-bold">{plan.currency}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Asset</p>
+                  <p className="text-2xl font-bold">{plan.coin}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Annuity Plan (Coming Soon)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Your annuity plan tables will be displayed here.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {plan.accounts.map((account) => (
+            <Card key={account.account_id}>
+              <CardHeader>
+                <CardTitle>Account {account.account_id}</CardTitle>
+                <CardDescription>
+                  Wallet: <span className="font-mono">{account.wallet}</span> • {account.levels.length} levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Level</TableHead>
+                        <TableHead>Trigger Price ({plan.currency})</TableHead>
+                        <TableHead>Coins to Give</TableHead>
+                        <TableHead>Cash Out ({plan.currency})</TableHead>
+                        <TableHead>Remaining LANAs</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {account.levels.map((level) => (
+                        <TableRow key={level.row_id}>
+                          <TableCell className="font-medium">{level.level_no}</TableCell>
+                          <TableCell>{level.trigger_price.toFixed(4)}</TableCell>
+                          <TableCell>{level.coins_to_give.toFixed(4)}</TableCell>
+                          <TableCell>{level.cash_out.toFixed(2)}</TableCell>
+                          <TableCell>{level.remaining_lanas.toFixed(4)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
