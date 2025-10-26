@@ -205,6 +205,7 @@ export default function TradingPlanCalculator() {
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [account8Batches, setAccount8Batches] = useState<number>(0);
   const [portfolioProjection, setPortfolioProjection] = useState<ProjectionData[]>([]);
+  const [passiveAccountSplits, setPassiveAccountSplits] = useState<Set<number>>(new Set());
 
   // Set default price from NOSTR params when loaded
   useEffect(() => {
@@ -247,6 +248,21 @@ export default function TradingPlanCalculator() {
     }
     
     return lanaMap;
+  };
+
+  // Track which splits have passive account activity (accounts 6, 7, 8)
+  const getPassiveAccountSplits = (accounts: Account[]): Set<number> => {
+    const passiveSplits = new Set<number>();
+    
+    accounts.forEach(account => {
+      if (account.number >= 6 && account.number <= 8) {
+        account.levels.forEach(level => {
+          passiveSplits.add(level.splitNumber);
+        });
+      }
+    });
+    
+    return passiveSplits;
   };
 
   const calculatePortfolioProjection = (startingPrice: number, remainingLanaMap: Map<number, number>): ProjectionData[] => {
@@ -342,6 +358,10 @@ export default function TradingPlanCalculator() {
     // Build remaining LANA map considering all sales across all accounts
     const lanaMap = buildRemainingLanaMap(newAccounts, totalLanas);
     
+    // Track which splits have passive account activity
+    const passiveSplits = getPassiveAccountSplits(newAccounts);
+    setPassiveAccountSplits(passiveSplits);
+    
     // Calculate portfolio projection with accurate remaining LANA
     const projection = calculatePortfolioProjection(price, lanaMap);
     setPortfolioProjection(projection);
@@ -371,6 +391,10 @@ export default function TradingPlanCalculator() {
     
     // Rebuild remaining LANA map with updated accounts
     const lanaMap = buildRemainingLanaMap(updatedAccounts, totalLanas);
+    
+    // Track which splits have passive account activity
+    const passiveSplits = getPassiveAccountSplits(updatedAccounts);
+    setPassiveAccountSplits(passiveSplits);
     
     // Recalculate portfolio projection with accurate remaining LANA
     const projection = calculatePortfolioProjection(parseFloat(currentPrice), lanaMap);
@@ -574,7 +598,8 @@ export default function TradingPlanCalculator() {
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Remaining LANA</p>
                 <p className="text-2xl font-bold text-foreground">
-                  ~{formatNumber(portfolioProjection[0].remainingLana)}
+                  {passiveAccountSplits.has(portfolioProjection[0].splitNumber) && '≈ '}
+                  {formatNumber(portfolioProjection[0].remainingLana)}
                 </p>
               </div>
               
@@ -647,7 +672,8 @@ export default function TradingPlanCalculator() {
                             €{formatNumber(projection.portfolioValue)}
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
-                            ~{formatNumber(projection.remainingLana)}
+                            {passiveAccountSplits.has(projection.splitNumber) && '≈ '}
+                            {formatNumber(projection.remainingLana)}
                           </td>
                         </tr>;
                   })}
