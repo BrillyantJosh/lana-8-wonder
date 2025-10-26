@@ -82,11 +82,10 @@ export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[])
     // Get the newest event
     const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
     
-    // Check for required lang tag
+    // Check for lang tag (optional warning, not blocking)
     const langTag = latestEvent.tags.find(t => t[0] === "lang");
     if (!langTag || !langTag[1]) {
-      console.error("Profile missing required lang tag");
-      return null;
+      console.warn("Profile missing recommended lang tag");
     }
     
     try {
