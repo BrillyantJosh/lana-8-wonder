@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,64 +6,44 @@ const corsHeaders = {
 };
 
 interface ElectrumServer {
-  id: string;
-  name: string;
   host: string;
   port: number;
-  priority: number;
-  is_active: boolean;
-  error_count?: number;
 }
 
 interface WalletBalance {
-  wallet: string;
+  wallet_id: string;
   balance: number;
+  status: string;
   error?: string;
 }
 
 class ElectrumBalanceAggregator {
   servers: ElectrumServer[] = [];
-  supabase: SupabaseClient;
 
-  constructor(supabase: SupabaseClient) {
-    this.supabase = supabase;
-  }
-
-  async initialize() {
-    const { data: servers, error } = await this.supabase
-      .from('electrum_servers')
-      .select('*')
-      .eq('is_active', true)
-      .order('priority', { ascending: true });
-
-    if (error) {
-      throw new Error(`Failed to load Electrum servers: ${error.message}`);
-    }
-
-    this.servers = (servers as ElectrumServer[]) || [];
-    console.log(`Initialized with ${this.servers.length} active Electrum servers`);
+  constructor(servers: ElectrumServer[]) {
+    this.servers = servers;
+    console.log(`Initialized with ${this.servers.length} Electrum servers`);
   }
 
   async fetchWalletBalances(walletAddresses: string[]): Promise<WalletBalance[]> {
     if (this.servers.length === 0) {
-      throw new Error('No active Electrum servers available');
+      throw new Error('No Electrum servers available');
     }
 
     console.log(`Starting balance fetch for ${walletAddresses.length} wallets`);
 
-    // Try servers in priority order
+    // Try servers in order
     for (const server of this.servers) {
       try {
-        console.log(`Attempting with server: ${server.name} (priority: ${server.priority})`);
+        console.log(`Attempting with server: ${server.host}:${server.port}`);
         const result = await this.processBatchWithServer(server, walletAddresses);
         
         if (result.success) {
-          console.log(`Batch completed with ${server.name}: ${result.balances.length} balances fetched`);
+          console.log(`Batch completed with ${server.host}: ${result.balances.length} balances fetched`);
           return result.balances;
         }
       } catch (error) {
-        console.warn(`Server ${server.name} failed:`, error);
-        await this.updateServerStats(server.id, 0, false);
+        console.warn(`Server ${server.host} failed:`, error);
         continue;
       }
     }
@@ -75,9 +55,10 @@ class ElectrumBalanceAggregator {
     const startTime = Date.now();
     const balances: WalletBalance[] = [];
     const errors: string[] = [];
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = 50; // Process in smaller batches for efficiency
 
     try {
+      // Process wallets in batches
       for (let i = 0; i < walletAddresses.length; i += BATCH_SIZE) {
         const batch = walletAddresses.slice(i, i + BATCH_SIZE);
         console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(walletAddresses.length / BATCH_SIZE)} with ${batch.length} addresses`);
@@ -86,23 +67,24 @@ class ElectrumBalanceAggregator {
         balances.push(...batchResults.balances);
         errors.push(...batchResults.errors);
 
+        // Small delay between batches to prevent overwhelming the server
         if (i + BATCH_SIZE < walletAddresses.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
       const responseTime = Date.now() - startTime;
-      await this.updateServerStats(server.id, responseTime, true);
+      console.log(`Server ${server.host} completed in ${responseTime}ms`);
 
       return {
         success: true,
         balances,
         errors,
-        server_used: server.name
+        server_used: server.host
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      await this.updateServerStats(server.id, responseTime, false);
+      console.log(`Server ${server.host} failed after ${responseTime}ms`);
       throw error;
     }
   }
@@ -116,6 +98,7 @@ class ElectrumBalanceAggregator {
       }, 10000);
 
       try {
+        // Connect to Electrum server
         conn = await Deno.connect({
           hostname: server.host,
           port: server.port
@@ -148,8 +131,9 @@ class ElectrumBalanceAggregator {
 
           buffer += decoder.decode(chunk.subarray(0, bytesRead));
 
+          // Process complete lines
           const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
           for (const line of lines) {
             if (line.trim()) {
@@ -172,18 +156,20 @@ class ElectrumBalanceAggregator {
           if (response && response.result) {
             const confirmedBalance = response.result.confirmed || 0;
             const unconfirmedBalance = response.result.unconfirmed || 0;
-            const totalBalance = (confirmedBalance + unconfirmedBalance) / 100000000;
+            const totalBalance = (confirmedBalance + unconfirmedBalance) / 100000000; // Convert from satoshis
 
             balances.push({
-              wallet: address,
-              balance: Math.round(totalBalance * 100000000) / 100000000
+              wallet_id: address,
+              balance: Math.round(totalBalance * 100) / 100,
+              status: totalBalance > 0 ? 'active' : 'inactive'
             });
           } else {
             const errorMsg = response?.error?.message || 'No response received';
             errors.push(`${address}: ${errorMsg}`);
             balances.push({
-              wallet: address,
+              wallet_id: address,
               balance: 0,
+              status: 'inactive',
               error: errorMsg
             });
           }
@@ -199,88 +185,88 @@ class ElectrumBalanceAggregator {
       }
     });
   }
-
-  async updateServerStats(serverId: string, responseTimeMs: number, success: boolean) {
-    try {
-      const updateData: any = {
-        last_health_check: new Date().toISOString(),
-        response_time_ms: responseTimeMs,
-        status: success ? 'online' : 'error',
-        updated_at: new Date().toISOString()
-      };
-
-      if (!success) {
-        const { data: currentServer } = await this.supabase
-          .from('electrum_servers')
-          .select('error_count')
-          .eq('id', serverId)
-          .single();
-
-        updateData.error_count = (currentServer?.error_count || 0) + 1;
-        updateData.last_error_message = 'Connection or request failed';
-      } else {
-        updateData.error_count = 0;
-        updateData.last_error_message = null;
-      }
-
-      await this.supabase
-        .from('electrum_servers')
-        .update(updateData)
-        .eq('id', serverId);
-    } catch (error) {
-      console.error('Failed to update server stats:', error);
-    }
-  }
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Check-wallet-balance started');
-    
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Electrum Balance Aggregator started');
 
-    const { wallets } = await req.json();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl!, supabaseKey!);
 
-    if (!wallets || !Array.isArray(wallets) || wallets.length === 0) {
+    // Parse request body
+    let requestBody = null;
+    try {
+      const text = await req.text();
+      if (text) {
+        requestBody = JSON.parse(text);
+      }
+    } catch (e) {
+      // Ignore parsing errors - treat as no body
+    }
+
+    const walletAddresses = requestBody?.wallet_addresses || [];
+    const electrumServers = requestBody?.electrum_servers || [];
+
+    if (!Array.isArray(walletAddresses) || walletAddresses.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'wallets array is required', timestamp: new Date().toISOString() }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'wallet_addresses array is required',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    console.log(`Processing ${wallets.length} wallet addresses`);
+    if (!Array.isArray(electrumServers) || electrumServers.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'electrum_servers array is required',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
-    const aggregator = new ElectrumBalanceAggregator(supabase);
-    await aggregator.initialize();
+    console.log(`Processing ${walletAddresses.length} wallet addresses with ${electrumServers.length} Electrum servers`);
 
-    const balances = await aggregator.fetchWalletBalances(wallets);
+    // Initialize and fetch balances
+    const aggregator = new ElectrumBalanceAggregator(electrumServers);
+    const balances = await aggregator.fetchWalletBalances(walletAddresses);
 
+    // Calculate totals
     const totalBalance = balances.reduce((sum, b) => sum + b.balance, 0);
     const successCount = balances.filter(b => !b.error).length;
     const errorCount = balances.filter(b => b.error).length;
 
     const result = {
       success: true,
+      total_balance: Math.round(totalBalance * 100) / 100,
       wallets: balances,
-      totalBalance: Math.round(totalBalance * 100000000) / 100000000,
-      successCount,
-      errorCount,
+      success_count: successCount,
+      error_count: errorCount,
       timestamp: new Date().toISOString()
     };
 
-    console.log(`Balance check completed: ${successCount} success, ${errorCount} errors, total: ${result.totalBalance} LANA`);
+    console.log(`Electrum aggregation completed: ${successCount} success, ${errorCount} errors, total: ${result.total_balance} LANA`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Error in check-wallet-balance:', error);
+    console.error('Error in Electrum balance aggregator:', error);
     return new Response(
       JSON.stringify({
         success: false,

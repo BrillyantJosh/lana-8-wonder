@@ -70,7 +70,10 @@ const Dashboard = () => {
         const wallets = planData.accounts.map(acc => acc.wallet);
         
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
-          body: { wallets },
+          body: { 
+            wallet_addresses: wallets,
+            electrum_servers: params.electrum
+          },
         });
 
         if (error) throw error;
@@ -78,7 +81,7 @@ const Dashboard = () => {
         if (data?.success && data?.wallets) {
           const balances: Record<string, number> = {};
           data.wallets.forEach((w: any) => {
-            balances[w.wallet] = w.balance || 0;
+            balances[w.wallet_id] = w.balance || 0;
           });
           setWalletBalances(balances);
         }
