@@ -27,6 +27,10 @@ const Login = () => {
     if (!scannerDivRef.current) return;
 
     try {
+      // Request camera permissions first
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
 
@@ -39,7 +43,7 @@ const Login = () => {
         (decodedText) => {
           setWif(decodedText);
           stopScanning();
-          toast.success("QR koda uspešno skenirana!");
+          toast.success("QR code scanned successfully!");
         },
         () => {
           // Error callback - ignore frame errors
@@ -49,7 +53,11 @@ const Login = () => {
       setIsScanning(true);
     } catch (error) {
       console.error("Error starting QR scanner:", error);
-      toast.error("Napaka pri zagonu skenerja kamere");
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        toast.error("Camera permission denied. Please allow camera access.");
+      } else {
+        toast.error("Error starting camera scanner");
+      }
     }
   };
 
@@ -69,14 +77,14 @@ const Login = () => {
     e.preventDefault();
     
     if (!wif.trim()) {
-      toast.error("Vnesite WIF ključ");
+      toast.error("Enter WIF key");
       return;
     }
 
     // TODO: Validate WIF format and authenticate
     // For now, just store in localStorage
     localStorage.setItem("lana_wif", wif);
-    toast.success("Prijava uspešna!");
+    toast.success("Login successful!");
     navigate("/");
   };
 
@@ -87,19 +95,19 @@ const Login = () => {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
             <KeyRound className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">LANA Prijava</CardTitle>
+          <CardTitle className="text-2xl">LANA Login</CardTitle>
           <CardDescription>
-            Vnesite vaš LANA WIF ključ ali skenirajte QR kodo
+            Enter your LANA WIF key or scan QR code
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="wif">WIF Ključ</Label>
+              <Label htmlFor="wif">WIF Key</Label>
               <Input
                 id="wif"
                 type="text"
-                placeholder="Vnesite vaš WIF ključ..."
+                placeholder="Enter your WIF key..."
                 value={wif}
                 onChange={(e) => setWif(e.target.value)}
                 disabled={isScanning}
@@ -116,11 +124,11 @@ const Login = () => {
                   onClick={startScanning}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
-                  Skeniraj QR Kodo
+                  Scan QR Code
                 </Button>
 
                 <Button type="submit" className="w-full" disabled={!wif.trim()}>
-                  Prijavi se
+                  Log In
                 </Button>
               </div>
             ) : (
@@ -136,7 +144,7 @@ const Login = () => {
                   className="w-full"
                   onClick={stopScanning}
                 >
-                  Ustavi Skeniranje
+                  Stop Scanning
                 </Button>
               </div>
             )}
@@ -144,7 +152,7 @@ const Login = () => {
 
           <div className="pt-4 border-t border-border">
             <p className="text-xs text-muted-foreground text-center">
-              Vaš WIF ključ je varen in se shrani lokalno v vašem brskalniku
+              Your WIF key is secure and stored locally in your browser
             </p>
           </div>
         </CardContent>

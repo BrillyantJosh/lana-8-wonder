@@ -8,6 +8,7 @@ import NostrStatusCard from "@/components/NostrStatusCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const { params, loading, error } = useNostrLanaParams();
@@ -63,8 +64,8 @@ const Index = () => {
             </Dialog>
           </div>
           
-          <Button variant="default" size="sm">
-            Log in
+          <Button variant="default" size="sm" asChild>
+            <Link to="/login">Log in</Link>
           </Button>
         </div>
       </nav>
