@@ -336,9 +336,12 @@ export default function TradingPlanCalculator() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Projected Total Value</p>
-                  <p className="text-2xl font-bold text-secondary">
-                    €{formatNumber(totalProjectedValue)}
+                  <p className="text-sm font-medium text-foreground/80">Lana8Wonder Donation</p>
+                  <p className="text-lg font-bold text-secondary">
+                    12 EUR = {formatNumber(12 / parseFloat(currentPrice))} LANA
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total LANA to step into Lana8Wonder
                   </p>
                 </div>
               </div>
