@@ -275,22 +275,25 @@ export default function TradingPlanCalculator() {
     const totalLanas = initialInvestment / price;
     const lanasPerAccount = totalLanas / 8;
 
+    // Increase starting price by 8% to skip the first split (Initial Recovery)
+    const adjustedStartingPrice = price * 1.08;
+
     // Calculate account prices based on progression
-    const accountPrices = [price,
-    // Account 1: starts at current price
-    price * 10,
+    const accountPrices = [adjustedStartingPrice,
+    // Account 1: starts at adjusted price (+8%)
+    adjustedStartingPrice * 10,
     // Account 2: continues where Account 1 ends
-    price * 100,
+    adjustedStartingPrice * 100,
     // Account 3: continues where Account 2 ends
-    price * 1000,
+    adjustedStartingPrice * 1000,
     // Account 4: continues where Account 3 ends
-    price * 10000,
+    adjustedStartingPrice * 10000,
     // Account 5: continues where Account 4 ends
-    price * 100000,
+    adjustedStartingPrice * 100000,
     // Account 6: continues where Account 5 ends
-    price * 1000000,
+    adjustedStartingPrice * 1000000,
     // Account 7: continues where Account 6 ends
-    price * 10000000 // Account 8: continues where Account 7 ends
+    adjustedStartingPrice * 10000000 // Account 8: continues where Account 7 ends
     ];
     const newAccounts: Account[] = accountConfigs.map((config, index) => {
       let levels: TradingLevel[];
@@ -332,10 +335,11 @@ export default function TradingPlanCalculator() {
 
     // Recalculate only account 8
     const price = parseFloat(currentPrice);
+    const adjustedStartingPrice = price * 1.08;
     const initialInvestment = 88;
     const totalLanas = initialInvestment / price;
     const lanasPerAccount = totalLanas / 8;
-    const account8Price = price * 10000000;
+    const account8Price = adjustedStartingPrice * 10000000;
     const newBatches = account8Batches + 1;
     const levels = generatePassiveLevels(lanasPerAccount, account8Price, newBatches);
     const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
