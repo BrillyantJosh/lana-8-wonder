@@ -70,10 +70,7 @@ const Dashboard = () => {
         const wallets = planData.accounts.map(acc => acc.wallet);
         
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
-          body: {
-            wallets,
-            electrumServers: params?.electrum || [],
-          },
+          body: { wallets },
         });
 
         if (error) throw error;

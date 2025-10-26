@@ -1,18 +1,18 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.0';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
 interface ElectrumServer {
+  id: string;
+  name: string;
   host: string;
-  port: string;
-}
-
-interface WalletBalanceRequest {
-  wallets: string[];
-  electrumServers: ElectrumServer[];
+  port: number;
+  priority: number;
+  is_active: boolean;
+  error_count?: number;
 }
 
 interface WalletBalance {
@@ -21,201 +21,275 @@ interface WalletBalance {
   error?: string;
 }
 
-// Base58 decode helper for LANA addresses
-function base58Decode(address: string): Uint8Array {
-  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let decoded = 0n;
-  
-  for (const char of address) {
-    const index = ALPHABET.indexOf(char);
-    if (index === -1) throw new Error('Invalid base58 character');
-    decoded = decoded * 58n + BigInt(index);
-  }
-  
-  const bytes = [];
-  while (decoded > 0n) {
-    bytes.unshift(Number(decoded % 256n));
-    decoded = decoded / 256n;
-  }
-  
-  // Add leading zeros
-  for (const char of address) {
-    if (char !== '1') break;
-    bytes.unshift(0);
-  }
-  
-  return new Uint8Array(bytes);
-}
+class ElectrumBalanceAggregator {
+  servers: ElectrumServer[] = [];
+  supabase: SupabaseClient;
 
-// Convert address to script hash for Electrum
-async function addressToScriptHash(address: string): Promise<string> {
-  try {
-    const decoded = base58Decode(address);
-    // Remove version byte and checksum (last 4 bytes)
-    const pubkeyHash = decoded.slice(1, -4);
-    
-    // Create P2PKH script: OP_DUP OP_HASH160 <pubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
-    const script = new Uint8Array([
-      0x76, // OP_DUP
-      0xa9, // OP_HASH160
-      0x14, // Push 20 bytes
-      ...pubkeyHash,
-      0x88, // OP_EQUALVERIFY
-      0xac  // OP_CHECKSIG
-    ]);
-    
-    // Double SHA256 and reverse
-    const hash1 = await crypto.subtle.digest('SHA-256', script);
-    const hash2 = await crypto.subtle.digest('SHA-256', hash1);
-    const reversed = Array.from(new Uint8Array(hash2)).reverse();
-    
-    return Array.from(reversed).map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (error) {
-    console.error(`Error converting address ${address}:`, error);
-    throw error;
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase;
   }
-}
 
-// Query Electrum server for wallet balance
-async function queryElectrumBalance(
-  walletAddress: string,
-  electrumServers: ElectrumServer[]
-): Promise<number> {
-  for (const server of electrumServers) {
-    try {
-      console.log(`Querying ${server.host}:${server.port} for ${walletAddress}`);
-      
-      // Convert address to script hash
-      const scriptHash = await addressToScriptHash(walletAddress);
-      console.log(`Script hash for ${walletAddress}: ${scriptHash}`);
-      
-      // Connect to Electrum server via TCP with timeout
-      const conn = await Promise.race([
-        Deno.connect({
-          hostname: server.host,
-          port: parseInt(server.port),
-        }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Connection timeout')), 5000)
-        )
-      ]);
+  async initialize() {
+    const { data: servers, error } = await this.supabase
+      .from('electrum_servers')
+      .select('*')
+      .eq('is_active', true)
+      .order('priority', { ascending: true });
 
+    if (error) {
+      throw new Error(`Failed to load Electrum servers: ${error.message}`);
+    }
+
+    this.servers = (servers as ElectrumServer[]) || [];
+    console.log(`Initialized with ${this.servers.length} active Electrum servers`);
+  }
+
+  async fetchWalletBalances(walletAddresses: string[]): Promise<WalletBalance[]> {
+    if (this.servers.length === 0) {
+      throw new Error('No active Electrum servers available');
+    }
+
+    console.log(`Starting balance fetch for ${walletAddresses.length} wallets`);
+
+    // Try servers in priority order
+    for (const server of this.servers) {
       try {
-        // Request balance
-        const request = JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'blockchain.scripthash.get_balance',
-          params: [scriptHash],
-          id: 1,
-        }) + '\n';
-
-        await conn.write(new TextEncoder().encode(request));
-
-        // Read response with timeout
-        const buffer = new Uint8Array(4096);
-        const n = await Promise.race([
-          conn.read(buffer),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Read timeout')), 5000)
-          )
-        ]);
+        console.log(`Attempting with server: ${server.name} (priority: ${server.priority})`);
+        const result = await this.processBatchWithServer(server, walletAddresses);
         
-        if (!n) {
-          conn.close();
-          continue;
-        }
-
-        const response = new TextDecoder().decode(buffer.subarray(0, n));
-        const data = JSON.parse(response);
-
-        conn.close();
-
-        if (data.result) {
-          const confirmed = data.result.confirmed || 0;
-          const unconfirmed = data.result.unconfirmed || 0;
-          return (confirmed + unconfirmed) / 100000000; // Convert satoshis to LANA
+        if (result.success) {
+          console.log(`Batch completed with ${server.name}: ${result.balances.length} balances fetched`);
+          return result.balances;
         }
       } catch (error) {
-        conn.close();
-        throw error;
+        console.warn(`Server ${server.name} failed:`, error);
+        await this.updateServerStats(server.id, 0, false);
+        continue;
       }
+    }
+
+    throw new Error('All Electrum servers failed');
+  }
+
+  async processBatchWithServer(server: ElectrumServer, walletAddresses: string[]) {
+    const startTime = Date.now();
+    const balances: WalletBalance[] = [];
+    const errors: string[] = [];
+    const BATCH_SIZE = 50;
+
+    try {
+      for (let i = 0; i < walletAddresses.length; i += BATCH_SIZE) {
+        const batch = walletAddresses.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(walletAddresses.length / BATCH_SIZE)} with ${batch.length} addresses`);
+
+        const batchResults = await this.fetchBatchBalances(server, batch);
+        balances.push(...batchResults.balances);
+        errors.push(...batchResults.errors);
+
+        if (i + BATCH_SIZE < walletAddresses.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      const responseTime = Date.now() - startTime;
+      await this.updateServerStats(server.id, responseTime, true);
+
+      return {
+        success: true,
+        balances,
+        errors,
+        server_used: server.name
+      };
     } catch (error) {
-      console.error(`Error querying ${server.host}:${server.port}:`, error);
-      continue;
+      const responseTime = Date.now() - startTime;
+      await this.updateServerStats(server.id, responseTime, false);
+      throw error;
     }
   }
-  
-  throw new Error('All Electrum servers failed');
+
+  async fetchBatchBalances(server: ElectrumServer, addresses: string[]): Promise<{ balances: WalletBalance[], errors: string[] }> {
+    return new Promise(async (resolve, reject) => {
+      let conn: Deno.TcpConn | null = null;
+      const timeout = setTimeout(() => {
+        if (conn) conn.close();
+        reject(new Error('Connection timeout'));
+      }, 10000);
+
+      try {
+        conn = await Deno.connect({
+          hostname: server.host,
+          port: server.port
+        });
+
+        const balances: WalletBalance[] = [];
+        const errors: string[] = [];
+        let requestId = 1;
+
+        // Send batch requests
+        for (const address of addresses) {
+          const request = {
+            id: requestId++,
+            method: "blockchain.address.get_balance",
+            params: [address]
+          };
+          const requestData = JSON.stringify(request) + '\n';
+          await conn.write(new TextEncoder().encode(requestData));
+        }
+
+        // Read responses
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const responses = new Map<number, any>();
+
+        while (responses.size < addresses.length) {
+          const chunk = new Uint8Array(4096);
+          const bytesRead = await conn.read(chunk);
+          if (bytesRead === null) break;
+
+          buffer += decoder.decode(chunk.subarray(0, bytesRead));
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const response = JSON.parse(line);
+                responses.set(response.id, response);
+              } catch (e) {
+                console.warn('Failed to parse response:', line);
+              }
+            }
+          }
+        }
+
+        // Process responses
+        for (let i = 0; i < addresses.length; i++) {
+          const address = addresses[i];
+          const responseId = i + 1;
+          const response = responses.get(responseId);
+
+          if (response && response.result) {
+            const confirmedBalance = response.result.confirmed || 0;
+            const unconfirmedBalance = response.result.unconfirmed || 0;
+            const totalBalance = (confirmedBalance + unconfirmedBalance) / 100000000;
+
+            balances.push({
+              wallet: address,
+              balance: Math.round(totalBalance * 100000000) / 100000000
+            });
+          } else {
+            const errorMsg = response?.error?.message || 'No response received';
+            errors.push(`${address}: ${errorMsg}`);
+            balances.push({
+              wallet: address,
+              balance: 0,
+              error: errorMsg
+            });
+          }
+        }
+
+        clearTimeout(timeout);
+        conn.close();
+        resolve({ balances, errors });
+      } catch (error) {
+        clearTimeout(timeout);
+        if (conn) conn.close();
+        reject(error);
+      }
+    });
+  }
+
+  async updateServerStats(serverId: string, responseTimeMs: number, success: boolean) {
+    try {
+      const updateData: any = {
+        last_health_check: new Date().toISOString(),
+        response_time_ms: responseTimeMs,
+        status: success ? 'online' : 'error',
+        updated_at: new Date().toISOString()
+      };
+
+      if (!success) {
+        const { data: currentServer } = await this.supabase
+          .from('electrum_servers')
+          .select('error_count')
+          .eq('id', serverId)
+          .single();
+
+        updateData.error_count = (currentServer?.error_count || 0) + 1;
+        updateData.last_error_message = 'Connection or request failed';
+      } else {
+        updateData.error_count = 0;
+        updateData.last_error_message = null;
+      }
+
+      await this.supabase
+        .from('electrum_servers')
+        .update(updateData)
+        .eq('id', serverId);
+    } catch (error) {
+      console.error('Failed to update server stats:', error);
+    }
+  }
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { wallets, electrumServers }: WalletBalanceRequest = await req.json();
+    console.log('Check-wallet-balance started');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { wallets } = await req.json();
 
     if (!wallets || !Array.isArray(wallets) || wallets.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Invalid wallets array' }),
+        JSON.stringify({ error: 'wallets array is required', timestamp: new Date().toISOString() }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!electrumServers || !Array.isArray(electrumServers) || electrumServers.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid electrumServers array' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`Processing ${wallets.length} wallet addresses`);
 
-    console.log(`Checking balances for ${wallets.length} wallets using ${electrumServers.length} Electrum servers`);
+    const aggregator = new ElectrumBalanceAggregator(supabase);
+    await aggregator.initialize();
 
-    const results: WalletBalance[] = await Promise.all(
-      wallets.map(async (wallet) => {
-        try {
-          const balance = await queryElectrumBalance(wallet, electrumServers);
-          return { wallet, balance };
-        } catch (error) {
-          console.error(`Failed to get balance for ${wallet}:`, error);
-          return {
-            wallet,
-            balance: 0,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      })
-    );
+    const balances = await aggregator.fetchWalletBalances(wallets);
 
-    const totalBalance = results.reduce((sum, r) => sum + r.balance, 0);
-    const successCount = results.filter(r => !r.error).length;
-    const errorCount = results.filter(r => r.error).length;
+    const totalBalance = balances.reduce((sum, b) => sum + b.balance, 0);
+    const successCount = balances.filter(b => !b.error).length;
+    const errorCount = balances.filter(b => b.error).length;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        wallets: results,
-        totalBalance: Math.round(totalBalance * 100000000) / 100000000,
-        successCount,
-        errorCount,
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    const result = {
+      success: true,
+      wallets: balances,
+      totalBalance: Math.round(totalBalance * 100000000) / 100000000,
+      successCount,
+      errorCount,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`Balance check completed: ${successCount} success, ${errorCount} errors, total: ${result.totalBalance} LANA`);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error in check-wallet-balance:', error);
     return new Response(
       JSON.stringify({
+        success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

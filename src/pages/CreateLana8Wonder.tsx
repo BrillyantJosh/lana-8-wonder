@@ -64,10 +64,7 @@ const CreateLana8Wonder = () => {
       setBalancesLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
-          body: {
-            wallets,
-            electrumServers: params?.electrum || [],
-          },
+          body: { wallets },
         });
 
         if (error) throw error;
