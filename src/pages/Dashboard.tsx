@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LogOut, Loader2, Send } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
-import { Lana8WonderPlan, fetchKind88888, fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
+import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,14 +18,6 @@ const Dashboard = () => {
   const [greeting, setGreeting] = useState("");
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [balancesLoading, setBalancesLoading] = useState(false);
-  const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
-  const [walletsLoading, setWalletsLoading] = useState(false);
-  const [selectedTransfer, setSelectedTransfer] = useState<{
-    accountId: number;
-    wallet: string;
-    amount: number;
-  } | null>(null);
-  const [selectedDestination, setSelectedDestination] = useState<string>("");
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -65,9 +56,6 @@ const Dashboard = () => {
         if (fetchedPlan && params?.electrum && params.electrum.length > 0) {
           loadWalletBalances(fetchedPlan);
         }
-
-        // Load user's wallet list for transfers
-        loadUserWallets(parsedSession.nostrHexId);
       } catch (error) {
         console.error("Error loading plan:", error);
         toast.error("Failed to load annuity plan");
@@ -113,19 +101,6 @@ const Dashboard = () => {
       }
     };
 
-    const loadUserWallets = async (nostrHexId: string) => {
-      setWalletsLoading(true);
-      try {
-        const records = await fetchKind30889(nostrHexId, params.relays);
-        setWalletRecords(records);
-      } catch (error) {
-        console.error("Error loading wallets:", error);
-        toast.error("Failed to load wallet list");
-      } finally {
-        setWalletsLoading(false);
-      }
-    };
-
     if (params?.relays) {
       loadPlanData();
     }
@@ -137,31 +112,14 @@ const Dashboard = () => {
   };
 
   const handleSendLana = (accountId: number, wallet: string, amount: number) => {
-    setSelectedTransfer({ accountId, wallet, amount });
-    setSelectedDestination("");
+    // Navigate to send-lana page with params
+    const params = new URLSearchParams({
+      accountId: accountId.toString(),
+      wallet: wallet,
+      amount: amount.toString()
+    });
+    navigate(`/send-lana?${params}`);
   };
-
-  const handleConfirmTransfer = () => {
-    if (!selectedTransfer || !selectedDestination) {
-      toast.error("Please select a destination wallet");
-      return;
-    }
-    
-    toast.info("Transfer functionality will be implemented soon");
-    setSelectedTransfer(null);
-    setSelectedDestination("");
-  };
-
-  // Get available wallets (excluding Lana8Wonder type)
-  const availableWallets = walletRecords.flatMap(record => 
-    record.wallets
-      .filter(wallet => wallet.wallet_type !== "Lana8Wonder")
-      .map(wallet => ({
-        ...wallet,
-        status: record.status,
-        registrar: record.registrar_pubkey
-      }))
-  );
 
   if (!session) return null;
 
@@ -337,103 +295,13 @@ const Dashboard = () => {
                                 {info.withdrawalAmount.toFixed(4)} LANA
                               </p>
                               <p className="text-xs text-muted-foreground mb-2">to withdraw</p>
-                              <Dialog open={selectedTransfer?.accountId === info.accountId} onOpenChange={(open) => !open && setSelectedTransfer(null)}>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount)}
-                                  >
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Send LANA
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl">
-                                  <DialogHeader>
-                                    <DialogTitle>Transfer LANA</DialogTitle>
-                                    <DialogDescription>
-                                      Select destination wallet for withdrawal
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">From Account:</p>
-                                        <p className="font-semibold">Account {selectedTransfer?.accountId}</p>
-                                        <p className="text-xs font-mono break-all mt-1">{selectedTransfer?.wallet}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">Amount:</p>
-                                        <p className="text-xl font-bold text-green-600">
-                                          {selectedTransfer?.amount.toFixed(4)} LANA
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <p className="font-semibold mb-3">Select Destination Wallet:</p>
-                                      {walletsLoading ? (
-                                        <div className="flex items-center justify-center py-8">
-                                          <Loader2 className="h-8 w-8 animate-spin" />
-                                        </div>
-                                      ) : availableWallets.length === 0 ? (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                          <p>No available destination wallets found</p>
-                                        </div>
-                                      ) : (
-                                        <div className="border rounded-lg max-h-96 overflow-y-auto">
-                                          <Table>
-                                            <TableHeader>
-                                              <TableRow>
-                                                <TableHead className="w-12"></TableHead>
-                                                <TableHead>Wallet Address</TableHead>
-                                                <TableHead>Type</TableHead>
-                                                <TableHead>Note</TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {availableWallets.map((wallet, idx) => (
-                                                <TableRow 
-                                                  key={idx}
-                                                  className={`cursor-pointer ${selectedDestination === wallet.wallet_address ? 'bg-primary/10' : ''}`}
-                                                  onClick={() => setSelectedDestination(wallet.wallet_address)}
-                                                >
-                                                  <TableCell>
-                                                    <input
-                                                      type="radio"
-                                                      checked={selectedDestination === wallet.wallet_address}
-                                                      onChange={() => setSelectedDestination(wallet.wallet_address)}
-                                                      className="cursor-pointer"
-                                                    />
-                                                  </TableCell>
-                                                  <TableCell className="font-mono text-sm">{wallet.wallet_address}</TableCell>
-                                                  <TableCell>
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                                      {wallet.wallet_type}
-                                                    </span>
-                                                  </TableCell>
-                                                  <TableCell className="text-muted-foreground text-sm">{wallet.note || "—"}</TableCell>
-                                                </TableRow>
-                                              ))}
-                                            </TableBody>
-                                          </Table>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    <div className="flex gap-2 justify-end pt-4">
-                                      <Button variant="outline" onClick={() => setSelectedTransfer(null)}>
-                                        Cancel
-                                      </Button>
-                                      <Button 
-                                        onClick={handleConfirmTransfer}
-                                        disabled={!selectedDestination}
-                                      >
-                                        Confirm Transfer
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
+                              <Button 
+                                size="sm"
+                                onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount)}
+                              >
+                                <Send className="mr-2 h-4 w-4" />
+                                Send LANA
+                              </Button>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm mt-3 pt-3 border-t">

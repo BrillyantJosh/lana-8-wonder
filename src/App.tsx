@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
+import SendLana from "./pages/SendLana";
+import SendLanaConfirm from "./pages/SendLanaConfirm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
+          <Route path="/send-lana" element={<SendLana />} />
+          <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
