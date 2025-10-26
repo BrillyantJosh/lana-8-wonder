@@ -281,7 +281,7 @@ export default function TradingPlanCalculator() {
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-4">
             <Coins className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-foreground">Calculate Your 8th Wonder Plan</h2>
+            <h2 className="text-2xl font-bold text-foreground">Let's see Your 8th Wonder Plan</h2>
           </div>
           <p className="text-muted-foreground">
             Current prices loaded from Nostr Network. Select your currency and generate your personalized 8-account trading strategy.
