@@ -168,4 +168,6 @@ export interface LanaSession {
   nostrNpubId: string;
   privateKeyHex: string;
   wif: string;
+  profileName?: string;
+  profileDisplayName?: string;
 }

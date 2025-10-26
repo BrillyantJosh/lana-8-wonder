@@ -14,6 +14,7 @@ const CreateLana8Wonder = () => {
   const [session, setSession] = useState<LanaSession | null>(null);
   const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] = useState("");
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -24,8 +25,12 @@ const CreateLana8Wonder = () => {
         return;
       }
 
-      const parsedSession = JSON.parse(sessionData);
+      const parsedSession: LanaSession = JSON.parse(sessionData);
       setSession(parsedSession);
+      
+      // Set greeting with profile name
+      const displayName = parsedSession.profileDisplayName || parsedSession.profileName || "User";
+      setGreeting(`Hello, ${displayName}!`);
 
       if (!params?.relays || params.relays.length === 0) {
         toast.error("No relays available");
@@ -67,9 +72,14 @@ const CreateLana8Wonder = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
+        {greeting && (
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold">{greeting}</h1>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Create Lana8Wonder Plan</h1>
+            <h2 className="text-2xl font-bold">Create Lana8Wonder Plan</h2>
             <p className="text-muted-foreground">Set up your annuity structure</p>
           </div>
           <Button variant="outline" onClick={handleLogout}>

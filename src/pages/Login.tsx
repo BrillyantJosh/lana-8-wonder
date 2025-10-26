@@ -8,7 +8,7 @@ import { QrCode, KeyRound, Loader2 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
-import { fetchKind88888 } from "@/lib/nostrClient";
+import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 
 const Login = () => {
@@ -112,21 +112,35 @@ const Login = () => {
 
     try {
       // Convert WIF to all identifiers
-      const lanaSession = await convertWifToIds(wif);
+      const ids = await convertWifToIds(wif);
       
       console.log("Derived identifiers:", {
-        walletId: lanaSession.walletId,
-        nostrHexId: lanaSession.nostrHexId,
-        nostrNpubId: lanaSession.nostrNpubId
+        walletId: ids.walletId,
+        nostrHexId: ids.nostrHexId,
+        nostrNpubId: ids.nostrNpubId
       });
 
-      // Store in session
-      sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));
+      // First, check if user has a KIND 0 profile
+      const profile = await fetchKind0Profile(ids.nostrHexId, params.relays);
       
-      toast.success("Keys derived successfully!");
+      if (!profile) {
+        toast.error("No profile found. Please create a profile first and wait 24 hours before logging in.");
+        return;
+      }
+
+      toast.success("Profile found!");
+
+      // Store session with profile data
+      const lanaSession = {
+        ...ids,
+        profileName: profile.name,
+        profileDisplayName: profile.display_name
+      };
+      
+      sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));
 
       // Check for KIND 88888 plan on relays
-      const plan = await fetchKind88888(lanaSession.nostrHexId, params.relays);
+      const plan = await fetchKind88888(ids.nostrHexId, params.relays);
 
       if (plan) {
         toast.success("Annuity plan found!");

@@ -35,6 +35,76 @@ export interface WalletListRecord {
   registrar_pubkey: string;
 }
 
+export interface LanaProfile {
+  name?: string;
+  display_name?: string;
+  about?: string;
+  picture?: string;
+  website?: string;
+  location?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  currency?: string;
+  language?: string;
+  lanoshi2lash?: string;
+  lanaWalletID?: string;
+  whoAreYou?: string;
+  orgasmic_profile?: string;
+  bankName?: string;
+  bankAddress?: string;
+  bankSWIFT?: string;
+  bankAccount?: string;
+}
+
+export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[]): Promise<LanaProfile | null> {
+  const filter: Filter = {
+    kinds: [0],
+    authors: [nostrHexId],
+    limit: 1
+  };
+
+  console.log("Fetching KIND 0 profile for:", nostrHexId);
+  console.log("Using relays:", relayUrls);
+
+  const pool = new SimplePool();
+
+  try {
+    const events = await pool.querySync(relayUrls, filter);
+    
+    console.log(`Found ${events.length} profile events`);
+
+    if (events.length === 0) {
+      console.log("No KIND 0 profile found");
+      return null;
+    }
+
+    // Get the newest event
+    const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+    
+    // Check for required lang tag
+    const langTag = latestEvent.tags.find(t => t[0] === "lang");
+    if (!langTag || !langTag[1]) {
+      console.error("Profile missing required lang tag");
+      return null;
+    }
+    
+    try {
+      const profile: LanaProfile = JSON.parse(latestEvent.content);
+      console.log("Found profile:", profile);
+      return profile;
+    } catch (error) {
+      console.error("Error parsing profile content:", error);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching KIND 0 profile:", error);
+    return null;
+  } finally {
+    pool.close(relayUrls);
+  }
+}
+
 export async function fetchKind30889(customerHexId: string, relayUrls: string[]): Promise<WalletListRecord[]> {
   const filter: Filter = {
     kinds: [30889],
