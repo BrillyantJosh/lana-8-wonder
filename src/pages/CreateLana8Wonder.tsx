@@ -2,22 +2,52 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { LogOut, Plus, Loader2, Wallet } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
+import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { toast } from "sonner";
 
 const CreateLana8Wonder = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
+  const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { params } = useNostrLanaParams();
 
   useEffect(() => {
-    const sessionData = sessionStorage.getItem("lana_session");
-    if (!sessionData) {
-      navigate("/login");
-      return;
-    }
+    const loadWallets = async () => {
+      const sessionData = sessionStorage.getItem("lana_session");
+      if (!sessionData) {
+        navigate("/login");
+        return;
+      }
 
-    setSession(JSON.parse(sessionData));
-  }, [navigate]);
+      const parsedSession = JSON.parse(sessionData);
+      setSession(parsedSession);
+
+      if (!params?.relays || params.relays.length === 0) {
+        toast.error("No relays available");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const records = await fetchKind30889(parsedSession.nostrHexId, params.relays);
+        setWalletRecords(records);
+      } catch (error) {
+        console.error("Error loading wallets:", error);
+        toast.error("Failed to load wallet list");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params?.relays) {
+      loadWallets();
+    }
+  }, [navigate, params]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("lana_session");
@@ -25,6 +55,14 @@ const CreateLana8Wonder = () => {
   };
 
   if (!session) return null;
+
+  const allWallets = walletRecords.flatMap(record => 
+    record.wallets.map(wallet => ({
+      ...wallet,
+      status: record.status,
+      registrar: record.registrar_pubkey
+    }))
+  );
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -86,6 +124,57 @@ const CreateLana8Wonder = () => {
                   Plan creation interface will be available soon
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                <CardTitle>Your Registered Wallets</CardTitle>
+              </div>
+              <CardDescription>
+                Select wallets from this list when creating your annuity plan
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : allWallets.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No wallets found for your account</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Contact your registrar to add wallets
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-semibold">Wallet Address</TableHead>
+                        <TableHead className="font-semibold">Wallet Type</TableHead>
+                        <TableHead className="font-semibold">Note</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allWallets.map((wallet, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono text-sm">{wallet.wallet_address}</TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                              {wallet.wallet_type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{wallet.note || "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
