@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogOut, Plus, Loader2, Wallet } from "lucide-react";
+import { LogOut, Loader2, Wallet } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -147,38 +147,6 @@ const CreateLana8Wonder = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Nostr HEX ID</p>
                 <p className="font-mono text-sm break-all">{session.nostrHexId}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>No Annuity Plan Found</CardTitle>
-              <CardDescription>
-                You don't have an existing Lana8Wonder annuity plan. Create one to start managing your LANA tokens across 8 accounts with multiple price levels.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-muted p-4 rounded-lg">
-                  <h3 className="font-semibold mb-2">Plan Structure:</h3>
-                  <ul className="text-sm space-y-1 text-muted-foreground">
-                    <li>• 8 accounts with dedicated wallets</li>
-                    <li>• Accounts 1-5: 10 levels each</li>
-                    <li>• Accounts 6-8: minimum 8 levels each</li>
-                    <li>• Total: minimum 74 annuity levels</li>
-                    <li>• EUR/LANA price triggers for automatic releases</li>
-                  </ul>
-                </div>
-
-                <Button className="w-full" size="lg">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Annuity Plan (Coming Soon)
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  Plan creation interface will be available soon
-                </p>
               </div>
             </CardContent>
           </Card>
