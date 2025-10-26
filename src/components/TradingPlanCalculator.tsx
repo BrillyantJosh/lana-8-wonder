@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins, Loader2 } from "lucide-react";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import NostrStatusCard from "./NostrStatusCard";
 
 interface TradingLevel {
   level: number;
@@ -144,10 +147,20 @@ function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: 
 }
 
 export default function TradingPlanCalculator() {
-  const [currentPrice, setCurrentPrice] = useState<string>("0.004");
+  const { params, loading, error } = useNostrLanaParams();
+  const [currentPrice, setCurrentPrice] = useState<string>("");
+  const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [account8Batches, setAccount8Batches] = useState<number>(0);
+
+  // Set default price from NOSTR params when loaded
+  useEffect(() => {
+    if (params && !currentPrice) {
+      const rate = params.exchangeRates[selectedCurrency];
+      setCurrentPrice(rate.toString());
+    }
+  }, [params, selectedCurrency, currentPrice]);
 
   const calculatePlan = () => {
     const initialInvestment = 88;
@@ -238,6 +251,24 @@ export default function TradingPlanCalculator() {
 
   return (
     <div className="space-y-8">
+      {/* NOSTR Status Card */}
+      {loading && (
+        <Card className="p-8 bg-card/95 backdrop-blur-sm border-primary/20">
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="text-muted-foreground">Connecting to Nostr Network...</span>
+          </div>
+        </Card>
+      )}
+      
+      {error && (
+        <Card className="p-6 bg-destructive/10 border-destructive/30">
+          <p className="text-sm text-destructive">Error: {error}</p>
+        </Card>
+      )}
+
+      {params && <NostrStatusCard params={params} />}
+
       {/* Calculator Input */}
       <Card className="p-8 shadow-mystical bg-card border-border">
         <div className="space-y-6">
@@ -246,31 +277,60 @@ export default function TradingPlanCalculator() {
             <h2 className="text-2xl font-bold text-foreground">Calculate Your Trading Plan</h2>
           </div>
           <p className="text-muted-foreground">
-            Enter the current LANA price to generate your personalized 8-account trading strategy
+            Current prices loaded from Nostr Network. Select your currency and generate your personalized 8-account trading strategy.
           </p>
           
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
+          <div className="grid gap-4">
+            <div>
               <label className="block text-sm font-medium mb-2 text-foreground">
-                Current LANA Price (€)
+                Select Currency
               </label>
-              <Input
-                type="number"
-                step="0.000001"
-                value={currentPrice}
-                onChange={(e) => setCurrentPrice(e.target.value)}
-                placeholder="0.004"
-                className="text-lg"
-              />
+              <Select
+                value={selectedCurrency}
+                onValueChange={(value: 'EUR' | 'USD' | 'GBP') => {
+                  setSelectedCurrency(value);
+                  if (params) {
+                    setCurrentPrice(params.exchangeRates[value].toString());
+                  }
+                }}
+                disabled={loading}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button 
-              onClick={calculatePlan} 
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Generate Plan
-            </Button>
+
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-2 text-foreground">
+                  Current LANA Price ({selectedCurrency})
+                </label>
+                <Input
+                  type="number"
+                  step="0.000001"
+                  value={currentPrice}
+                  onChange={(e) => setCurrentPrice(e.target.value)}
+                  placeholder="Price loaded from Nostr"
+                  className="text-lg"
+                  disabled={loading}
+                />
+              </div>
+              <Button 
+                onClick={calculatePlan} 
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={loading || !currentPrice}
+              >
+                <TrendingUp className="w-5 h-5 mr-2" />
+                Generate Plan
+              </Button>
+            </div>
           </div>
 
           {accounts.length > 0 && (
