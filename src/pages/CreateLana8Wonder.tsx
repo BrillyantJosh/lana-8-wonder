@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogOut, Loader2, Wallet } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Loader2, Wallet, AlertCircle } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -18,6 +19,8 @@ const CreateLana8Wonder = () => {
   const [greeting, setGreeting] = useState("");
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [balancesLoading, setBalancesLoading] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState<{ EUR: number; USD: number; GBP: number } | null>(null);
+  const [planCurrency, setPlanCurrency] = useState<string>("EUR");
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -39,6 +42,11 @@ const CreateLana8Wonder = () => {
         toast.error("No relays available");
         setLoading(false);
         return;
+      }
+
+      // Set exchange rates from params
+      if (params?.exchangeRates) {
+        setExchangeRates(params.exchangeRates);
       }
 
       try {
@@ -115,6 +123,16 @@ const CreateLana8Wonder = () => {
     }))
   );
 
+  // Calculate minimum required LANA balance (100 currency units / exchange rate)
+  const getMinimumRequiredBalance = (currency: string = "EUR"): number => {
+    if (!exchangeRates) return 0;
+    const rate = exchangeRates[currency as keyof typeof exchangeRates];
+    if (!rate || rate === 0) return 0;
+    return 100 / rate;
+  };
+
+  const minimumRequired = getMinimumRequiredBalance(planCurrency);
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
@@ -158,7 +176,12 @@ const CreateLana8Wonder = () => {
                 <CardTitle>Your Registered Wallets</CardTitle>
               </div>
               <CardDescription>
-                Select wallets from this list when creating your annuity plan
+                Select wallets from this list when creating your annuity plan.
+                {minimumRequired > 0 && (
+                  <span className="block mt-1 text-foreground">
+                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {planCurrency} ÷ current exchange rate)
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -182,31 +205,56 @@ const CreateLana8Wonder = () => {
                         <TableHead className="font-semibold">Wallet Type</TableHead>
                         <TableHead className="font-semibold">Balance (LANA)</TableHead>
                         <TableHead className="font-semibold">Note</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {allWallets.map((wallet, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-mono text-sm">{wallet.wallet_address}</TableCell>
-                          <TableCell>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                              {wallet.wallet_type}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {balancesLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : walletBalances[wallet.wallet_address] !== undefined ? (
-                              <span className="font-semibold">
-                                {walletBalances[wallet.wallet_address].toFixed(8)}
+                      {allWallets.map((wallet, idx) => {
+                        const currentBalance = walletBalances[wallet.wallet_address] || 0;
+                        const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
+                        
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell className="font-mono text-sm">{wallet.wallet_address}</TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                {wallet.wallet_type}
                               </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{wallet.note || "—"}</TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell>
+                              {balancesLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : walletBalances[wallet.wallet_address] !== undefined ? (
+                                <span className="font-semibold">
+                                  {walletBalances[wallet.wallet_address].toFixed(8)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{wallet.note || "—"}</TableCell>
+                            <TableCell>
+                              {!balancesLoading && minimumRequired > 0 && (
+                                hasEnoughBalance ? (
+                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                                    ✓ Sufficient
+                                  </Badge>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <Badge variant="destructive" className="flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      Insufficient
+                                    </Badge>
+                                    <p className="text-xs text-muted-foreground">
+                                      Min: {minimumRequired.toFixed(4)} LANA
+                                    </p>
+                                  </div>
+                                )
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
