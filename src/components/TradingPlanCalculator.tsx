@@ -202,14 +202,14 @@ export default function TradingPlanCalculator() {
     }
   }, [params, selectedCurrency, currentPrice]);
 
-  const calculatePortfolioProjection = (remainingLana: number, currentPrice: number): ProjectionData[] => {
+  const calculatePortfolioProjection = (remainingLana: number, currentPrice: number, startingPrice: number): ProjectionData[] => {
     const projections: ProjectionData[] = [];
-    let currentSplit = calculateSplit(currentPrice);
+    let startingSplit = calculateSplit(startingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
     let milestoneReached = false;
     
-    // Calculate portfolio value from current split, showing all splits until and slightly past €100M
-    for (let splitNum = currentSplit.splitNumber; splitNum <= 37; splitNum++) {
+    // Calculate portfolio value from starting split, showing all splits until and slightly past €100M
+    for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
       const portfolioValue = remainingLana * splitPrice;
       
@@ -289,7 +289,7 @@ export default function TradingPlanCalculator() {
       const finalLevel = account8.levels[account8.levels.length - 1];
       const remainingLana = finalLevel.remaining;
       const finalPrice = parseFloat(finalLevel.triggerPrice);
-      const projection = calculatePortfolioProjection(remainingLana, finalPrice);
+      const projection = calculatePortfolioProjection(remainingLana, finalPrice, price);
       setPortfolioProjection(projection);
     }
   };
@@ -318,7 +318,7 @@ export default function TradingPlanCalculator() {
       const finalLevel = levels[levels.length - 1];
       const remainingLana = finalLevel.remaining;
       const finalPrice = parseFloat(finalLevel.triggerPrice);
-      const projection = calculatePortfolioProjection(remainingLana, finalPrice);
+      const projection = calculatePortfolioProjection(remainingLana, finalPrice, parseFloat(currentPrice));
       setPortfolioProjection(projection);
     }
   };
