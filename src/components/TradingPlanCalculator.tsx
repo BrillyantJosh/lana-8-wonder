@@ -46,8 +46,9 @@ function formatNumber(value: number): string {
 }
 
 function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
-  const splitNumber = Math.max(1, Math.floor(Math.log2(price / 0.001)) + 1);
-  const splitPrice = 0.001 * Math.pow(2, splitNumber - 1);
+  // Find the next split price that is >= trigger price
+  const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
+  const splitNumber = splitPrice / 0.001;
   return { splitNumber, splitPrice };
 }
 
