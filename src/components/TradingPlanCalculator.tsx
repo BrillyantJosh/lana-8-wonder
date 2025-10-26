@@ -149,12 +149,11 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
   }
   return levels;
 }
-function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: number = 0): TradingLevel[] {
+function generatePassiveLevels(lanas: number, startPrice: number, maxLevels: number = 100): TradingLevel[] {
   const levels: TradingLevel[] = [];
-  const totalPeriods = 8 + extraBatches * 100;
   let remaining = lanas;
   let currentPrice = startPrice;
-  for (let i = 1; i <= totalPeriods; i++) {
+  for (let i = 1; i <= maxLevels; i++) {
     const accountValue = remaining * currentPrice;
     const cashOutPoint = accountValue * 1.01;
     const cashOut = cashOutPoint - accountValue;
@@ -302,8 +301,12 @@ export default function TradingPlanCalculator() {
       } else if (config.type === "compound") {
         levels = generateCompoundLevels(lanasPerAccount, accountPrices[index]);
       } else {
-        // For account 8, generate extra batches if requested
-        levels = generatePassiveLevels(lanasPerAccount, accountPrices[index], index === 7 ? account8Batches : 0);
+        // Passive accounts (6, 7, 8): Generate 100 levels by default, more for account 8 if requested
+        levels = generatePassiveLevels(
+          lanasPerAccount, 
+          accountPrices[index], 
+          index === 7 ? 100 + account8Batches * 100 : 100
+        );
       }
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
 
@@ -341,7 +344,7 @@ export default function TradingPlanCalculator() {
     const lanasPerAccount = totalLanas / 8;
     const account8Price = adjustedStartingPrice * 10000000;
     const newBatches = account8Batches + 1;
-    const levels = generatePassiveLevels(lanasPerAccount, account8Price, newBatches);
+    const levels = generatePassiveLevels(lanasPerAccount, account8Price, 100 + newBatches * 100);
     const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
     const portfolioValue = lanasPerAccount * account8Price;
     const updatedAccounts = accounts.map(acc => acc.number === 8 ? {
