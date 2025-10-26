@@ -211,6 +211,7 @@ const CreateLana8Wonder = () => {
                         <TableHead className="font-semibold">Balance (LANA)</TableHead>
                         <TableHead className="font-semibold">Note</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -255,6 +256,21 @@ const CreateLana8Wonder = () => {
                                     </p>
                                   </div>
                                 )
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
+                                <Button 
+                                  size="sm"
+                                  onClick={() => navigate('/assign-lana8wonder', { 
+                                    state: { 
+                                      sourceWallet: wallet.wallet_address,
+                                      balance: currentBalance
+                                    } 
+                                  })}
+                                >
+                                  Assign to Lana 8 Wonder
+                                </Button>
                               )}
                             </TableCell>
                           </TableRow>
