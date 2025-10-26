@@ -207,6 +207,105 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {(() => {
+            const currentExchangeRate = params?.exchangeRates?.[plan.currency as keyof typeof params.exchangeRates] || 0;
+            
+            // Calculate withdrawal amounts for each account
+            const withdrawalInfo = plan.accounts.map(account => {
+              const currentBalance = walletBalances[account.wallet] || 0;
+              
+              // Find the last triggered level (highest trigger price that is <= current exchange rate)
+              const triggeredLevels = account.levels.filter(
+                level => currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate
+              ).sort((a, b) => b.trigger_price - a.trigger_price);
+              
+              const lastTriggeredLevel = triggeredLevels[0];
+              
+              if (!lastTriggeredLevel || currentBalance === 0) {
+                return null;
+              }
+              
+              const requiredBalance = lastTriggeredLevel.remaining_lanas;
+              const withdrawalAmount = currentBalance - requiredBalance;
+              
+              // Only show accounts that need withdrawal (positive amount)
+              if (withdrawalAmount > 0.0001) {
+                return {
+                  accountId: account.account_id,
+                  currentBalance,
+                  requiredBalance,
+                  withdrawalAmount,
+                  triggeredCount: triggeredLevels.length
+                };
+              }
+              
+              return null;
+            }).filter(Boolean);
+
+            if (withdrawalInfo.length === 0) {
+              return null;
+            }
+
+            const totalWithdrawal = withdrawalInfo.reduce((sum, info) => sum + (info?.withdrawalAmount || 0), 0);
+
+            return (
+              <Card className="border-green-500/50 bg-green-500/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-green-600">💰</span>
+                    Withdrawal Required
+                  </CardTitle>
+                  <CardDescription>
+                    Based on current {plan.currency} exchange rate: {currentExchangeRate.toFixed(4)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {withdrawalInfo.map((info) => info && (
+                      <div key={info.accountId} className="border rounded-lg p-4 bg-background">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-semibold text-lg">Account {info.accountId}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {info.triggeredCount} level{info.triggeredCount !== 1 ? 's' : ''} triggered
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-green-600">
+                              {info.withdrawalAmount.toFixed(4)} LANA
+                            </p>
+                            <p className="text-xs text-muted-foreground">to withdraw</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm mt-3 pt-3 border-t">
+                          <div>
+                            <p className="text-muted-foreground">Current Balance:</p>
+                            <p className="font-mono">{info.currentBalance.toFixed(4)} LANA</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Required Balance:</p>
+                            <p className="font-mono">{info.requiredBalance.toFixed(4)} LANA</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {withdrawalInfo.length > 1 && (
+                      <div className="border-t pt-4 mt-4">
+                        <div className="flex justify-between items-center">
+                          <p className="font-semibold text-lg">Total Withdrawal Required:</p>
+                          <p className="text-3xl font-bold text-green-600">
+                            {totalWithdrawal.toFixed(4)} LANA
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
 
         <div className="space-y-6">
