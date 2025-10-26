@@ -206,8 +206,9 @@ export default function TradingPlanCalculator() {
     const projections: ProjectionData[] = [];
     let currentSplit = calculateSplit(currentPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
+    let milestoneReached = false;
     
-    // Calculate portfolio value from current split until €100M is reached
+    // Calculate portfolio value from current split, showing all splits until and slightly past €100M
     for (let splitNum = currentSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
       const portfolioValue = remainingLana * splitPrice;
@@ -219,9 +220,12 @@ export default function TradingPlanCalculator() {
         remainingLana: remainingLana
       });
       
-      // Stop after reaching €100M
-      if (portfolioValue >= TARGET_VALUE) {
+      // Continue for one more split after reaching €100M, then stop
+      if (milestoneReached) {
         break;
+      }
+      if (portfolioValue >= TARGET_VALUE) {
+        milestoneReached = true;
       }
     }
     
