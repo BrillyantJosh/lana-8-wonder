@@ -109,35 +109,60 @@ const SendLanaConfirm = () => {
 
   const startScanner = async () => {
     setShowScanner(true);
-    setIsScanning(true);
-
-    try {
-      const scanner = new Html5Qrcode("qr-reader");
-      scannerRef.current = scanner;
-
-      await scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        (decodedText) => {
-          // Successfully scanned
-          setWifPrivateKey(decodedText);
-          stopScanner();
-          toast.success("Private key scanned successfully");
-        },
-        (errorMessage) => {
-          // Scanning error (ignore, happens continuously)
-          console.log("Scanning...", errorMessage);
+    
+    // CRITICAL: 100ms delay to ensure DOM is ready
+    setTimeout(async () => {
+      try {
+        // 1. Enumerate cameras
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (!cameras || cameras.length === 0) {
+          toast.error("No camera found on this device");
+          setShowScanner(false);
+          return;
         }
-      );
-    } catch (err) {
-      console.error("Error starting scanner:", err);
-      toast.error("Failed to start camera scanner");
-      setShowScanner(false);
-      setIsScanning(false);
-    }
+
+        // 2. Select camera (priority: back camera)
+        let selectedCamera = cameras[0];
+        if (cameras.length > 1) {
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear')
+          );
+          if (backCamera) {
+            selectedCamera = backCamera;
+          }
+        }
+
+        // 3. Initialize scanner with unique ID
+        const scanner = new Html5Qrcode("qr-reader-private-key");
+        scannerRef.current = scanner;
+
+        // 4. Start scanner with camera.id
+        await scanner.start(
+          selectedCamera.id,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          (decodedText) => {
+            setWifPrivateKey(decodedText);
+            stopScanner();
+            toast.success("Private key scanned successfully");
+          },
+          (errorMessage) => {
+            // Ignore scan errors during operation
+          }
+        );
+        
+        setIsScanning(true);
+      } catch (err) {
+        console.error("Error starting scanner:", err);
+        toast.error("Failed to start camera scanner");
+        setShowScanner(false);
+        setIsScanning(false);
+      }
+    }, 100);
   };
 
   const stopScanner = async () => {
@@ -310,9 +335,9 @@ const SendLanaConfirm = () => {
                   <Card className="border-2">
                     <CardContent className="p-4">
                       <div 
-                        id="qr-reader" 
+                        id="qr-reader-private-key" 
                         ref={videoRef}
-                        className="w-full"
+                        className="w-full rounded-lg overflow-hidden"
                       />
                       <p className="text-xs text-center text-muted-foreground mt-2">
                         Position the QR code within the frame

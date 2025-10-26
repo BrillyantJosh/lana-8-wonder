@@ -29,58 +29,67 @@ const Login = () => {
   }, []);
 
   const startScanning = async () => {
-    if (!scannerDivRef.current) return;
-
-    try {
-      setIsScanning(true);
-      
-      // Get available cameras first
-      const cameras = await Html5Qrcode.getCameras();
-      
-      if (!cameras || cameras.length === 0) {
-        toast.error("No cameras found on this device");
-        setIsScanning(false);
-        return;
-      }
-
-      // Use the back camera if available (last camera is usually back camera)
-      const cameraId = cameras.length > 1 ? cameras[cameras.length - 1].id : cameras[0].id;
-
-      const scanner = new Html5Qrcode("qr-reader");
-      scannerRef.current = scanner;
-
-      await scanner.start(
-        cameraId,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        (decodedText) => {
-          console.log("QR Code scanned:", decodedText);
-          setWif(decodedText);
-          stopScanning();
-          toast.success("QR code scanned successfully!");
-        },
-        (errorMessage) => {
-          // Error callback - ignore frame errors silently
-          console.debug("QR scan frame error:", errorMessage);
+    setIsScanning(true);
+    
+    // CRITICAL: 100ms delay to ensure DOM is ready
+    setTimeout(async () => {
+      try {
+        // 1. Enumerate cameras
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (!cameras || cameras.length === 0) {
+          toast.error("No camera found on this device");
+          setIsScanning(false);
+          return;
         }
-      );
 
-    } catch (error: any) {
-      console.error("Error starting QR scanner:", error);
-      setIsScanning(false);
-      
-      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-        toast.error("Camera permission denied. Please allow camera access in your browser settings.");
-      } else if (error.name === "NotFoundError") {
-        toast.error("No camera found on this device");
-      } else if (error.name === "NotReadableError") {
-        toast.error("Camera is already in use by another application");
-      } else {
-        toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
+        // 2. Select camera (priority: back camera)
+        let selectedCamera = cameras[0];
+        if (cameras.length > 1) {
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear')
+          );
+          if (backCamera) {
+            selectedCamera = backCamera;
+          }
+        }
+
+        // 3. Initialize scanner with unique ID
+        const scanner = new Html5Qrcode("qr-reader-login");
+        scannerRef.current = scanner;
+
+        // 4. Start scanner with camera.id
+        await scanner.start(
+          selectedCamera.id,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            setWif(decodedText);
+            stopScanning();
+            toast.success("QR code scanned successfully!");
+          },
+          (errorMessage) => {
+            // Ignore scan errors during operation
+          }
+        );
+      } catch (error: any) {
+        console.error("Error starting QR scanner:", error);
+        setIsScanning(false);
+        
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
+        } else if (error.name === "NotFoundError") {
+          toast.error("No camera found on this device");
+        } else if (error.name === "NotReadableError") {
+          toast.error("Camera is already in use by another application");
+        } else {
+          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
+        }
       }
-    }
+    }, 100);
   };
 
   const stopScanning = async () => {
@@ -211,7 +220,7 @@ const Login = () => {
             ) : (
               <div className="space-y-4">
                 <div
-                  id="qr-reader"
+                  id="qr-reader-login"
                   ref={scannerDivRef}
                   className="rounded-lg overflow-hidden border-2 border-primary"
                 />
