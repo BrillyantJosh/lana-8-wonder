@@ -222,8 +222,8 @@ const AssignLana8Wonder = () => {
 
   const allWalletsValid = wallets.every(w => w.isValid === true && w.address.trim() !== "");
 
-  // Calculate PHI donation (12 in plan currency converted to LANA)
-  const phiDonation = 12 / (exchangeRate / 100000000);
+  // Calculate PHI donation (12 in plan currency converted to LANA using monthly exchange rate)
+  const phiDonation = exchangeRate > 0 ? 12 / exchangeRate : 0;
   
   // Calculate amount per wallet
   const totalToDistribute = sourceBalance - minRequiredLana - phiDonation;
