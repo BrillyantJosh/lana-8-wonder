@@ -140,14 +140,14 @@ export default function TradingPlanCalculator() {
 
     // Calculate account prices based on progression
     const accountPrices = [
-      price, // Account 1
-      price * 10, // Account 2
-      50, // Account 3
-      500, // Account 4
-      5000, // Account 5 - continues where Account 4 ends
-      100000, // Account 6
-      1000000, // Account 7
-      10000000, // Account 8
+      price,           // Account 1: starts at current price
+      price * 10,      // Account 2: continues where Account 1 ends
+      price * 100,     // Account 3: continues where Account 2 ends
+      price * 1000,    // Account 4: continues where Account 3 ends
+      price * 10000,   // Account 5: continues where Account 4 ends
+      price * 100000,  // Account 6: continues where Account 5 ends
+      price * 1000000, // Account 7: continues where Account 6 ends
+      price * 10000000, // Account 8: continues where Account 7 ends
     ];
 
     const newAccounts: Account[] = accountConfigs.map((config, index) => {
