@@ -265,7 +265,10 @@ const CreateLana8Wonder = () => {
                                   onClick={() => navigate('/assign-lana8wonder', { 
                                     state: { 
                                       sourceWallet: wallet.wallet_address,
-                                      balance: currentBalance
+                                      balance: currentBalance,
+                                      minRequiredLana: minimumRequired,
+                                      planCurrency: planCurrency,
+                                      exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
                                     } 
                                   })}
                                 >

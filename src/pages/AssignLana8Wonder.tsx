@@ -38,6 +38,9 @@ const AssignLana8Wonder = () => {
 
   const sourceWallet = location.state?.sourceWallet;
   const sourceBalance = location.state?.balance;
+  const minRequiredLana = location.state?.minRequiredLana || 0;
+  const planCurrency = location.state?.planCurrency || "EUR";
+  const exchangeRate = location.state?.exchangeRate || 300000000;
 
   useEffect(() => {
     if (!sourceWallet) {
@@ -219,6 +222,15 @@ const AssignLana8Wonder = () => {
 
   const allWalletsValid = wallets.every(w => w.isValid === true && w.address.trim() !== "");
 
+  // Calculate PHI donation (12 in plan currency converted to LANA)
+  const phiDonation = 12 / (exchangeRate / 100000000);
+  
+  // Calculate amount per wallet
+  const totalToDistribute = sourceBalance - minRequiredLana - phiDonation;
+  const amountPerWallet = totalToDistribute / 8;
+  const totalTransferred = phiDonation + totalToDistribute;
+  const remainingBalance = sourceBalance - totalTransferred;
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
@@ -244,7 +256,7 @@ const AssignLana8Wonder = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Wallet Address</p>
                 <p className="font-mono text-sm break-all">{sourceWallet}</p>
@@ -252,6 +264,32 @@ const AssignLana8Wonder = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <p className="font-semibold">{sourceBalance?.toFixed(8) || "0.00000000"} LANA</p>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <p className="text-sm font-semibold mb-3">Transaction Breakdown</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Required Deposit ({planCurrency}):</span>
+                    <span className="font-mono">{minRequiredLana.toFixed(8)} LANA</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
+                    <span className="font-mono">{phiDonation.toFixed(8)} LANA</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
+                    <span className="font-mono">{amountPerWallet.toFixed(8)} LANA</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t font-semibold">
+                    <span>Total to Transfer:</span>
+                    <span className="font-mono">{totalTransferred.toFixed(8)} LANA</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Remaining in Wallet:</span>
+                    <span className="font-mono">{remainingBalance.toFixed(8)} LANA</span>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
