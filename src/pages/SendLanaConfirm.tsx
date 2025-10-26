@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Send, QrCode, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Send, QrCode, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
+import { supabase } from "@/integrations/supabase/client";
 
 const SendLanaConfirm = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const SendLanaConfirm = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     validated: boolean;
     matches: boolean;
@@ -178,19 +180,78 @@ const SendLanaConfirm = () => {
     setIsScanning(false);
   };
 
-  const handleConfirmTransfer = () => {
+  const handleConfirmTransfer = async () => {
     if (!validationResult?.matches) {
       toast.error("Please validate your private key first");
       return;
     }
 
-    // TODO: Implement actual transfer logic here
-    toast.info("Transfer functionality will be implemented soon");
-    
-    // For now, just navigate back to dashboard
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1500);
+    setIsProcessing(true);
+
+    try {
+      // Get Electrum servers from session
+      const lanaSession = sessionStorage.getItem("lana_session");
+      const params = sessionStorage.getItem("nostr_lana_params");
+      
+      let electrumServers = [];
+      if (params) {
+        const parsedParams = JSON.parse(params);
+        electrumServers = parsedParams.electrumServers || [];
+      }
+
+      // Prepare transaction data
+      const transactionData = {
+        senderAddress: fromWallet,
+        recipientAddress: toWallet,
+        amount: parseFloat(amount!),
+        privateKey: wifPrivateKey.trim(),
+        electrumServers
+      };
+
+      console.log("Sending transaction...", {
+        from: fromWallet,
+        to: toWallet,
+        amount: amount
+      });
+
+      // Call edge function
+      const { data, error } = await supabase.functions.invoke("send-lana-transaction", {
+        body: transactionData
+      });
+
+      if (error) {
+        throw new Error(error.message || "Transaction failed");
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || "Transaction failed");
+      }
+
+      console.log("Transaction successful:", data);
+      toast.success("Transaction sent successfully!");
+
+      // Navigate to result page
+      const resultParams = new URLSearchParams({
+        success: "true",
+        txHash: data.txHash || "",
+        amount: (data.amount / 100000000).toFixed(4)
+      });
+      navigate(`/send-lana-result?${resultParams}`);
+
+    } catch (error) {
+      console.error("Transaction error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Transaction failed: ${errorMessage}`);
+      
+      // Navigate to error result page
+      const resultParams = new URLSearchParams({
+        success: "false",
+        error: errorMessage
+      });
+      navigate(`/send-lana-result?${resultParams}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!accountId || !fromWallet || !toWallet || !amount) {
@@ -354,11 +415,20 @@ const SendLanaConfirm = () => {
                 </Button>
                 <Button 
                   onClick={handleConfirmTransfer}
-                  disabled={!validationResult?.matches}
+                  disabled={!validationResult?.matches || isProcessing}
                   size="lg"
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Confirm Transfer
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Confirm Transfer
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
