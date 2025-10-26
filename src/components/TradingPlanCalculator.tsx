@@ -7,6 +7,8 @@ import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins } from "lucide-react"
 interface TradingLevel {
   level: number;
   triggerPrice: string;
+  splitNumber: number;
+  splitPrice: string;
   lanasOnSale: number;
   cashOut: string;
   remaining: number;
@@ -33,6 +35,12 @@ const accountConfigs = [
   { name: "Ultimate Freedom", type: "passive" as const, color: "from-purple-600 to-purple-800", description: "€10,000,000+ per period income" },
 ];
 
+function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
+  const splitNumber = Math.max(1, Math.floor(Math.log2(price / 0.001)) + 1);
+  const splitPrice = 0.001 * Math.pow(2, splitNumber - 1);
+  return { splitNumber, splitPrice };
+}
+
 function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[] {
   const levels: TradingLevel[] = [];
   const lanasPerLevel = lanas / 10;
@@ -44,9 +52,13 @@ function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[]
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasPerLevel;
 
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+
     levels.push({
       level: i,
       triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
       cashOut: cashOut.toFixed(2),
       remaining: parseFloat(remaining.toFixed(2)),
@@ -67,9 +79,13 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasOnSale;
 
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+
     levels.push({
       level: i,
       triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
       cashOut: cashOut.toFixed(2),
       remaining: parseFloat(remaining.toFixed(2)),
@@ -92,9 +108,13 @@ function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: 
     const newCoinPrice = cashOutPoint / remaining;
     const lanasToSell = cashOut / newCoinPrice;
     
+    const { splitNumber, splitPrice } = calculateSplit(newCoinPrice);
+    
     levels.push({
       level: i,
       triggerPrice: newCoinPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasToSell.toFixed(2)),
       cashOut: cashOut.toFixed(2),
       remaining: parseFloat((remaining - lanasToSell).toFixed(2)),
@@ -282,6 +302,7 @@ export default function TradingPlanCalculator() {
                         <tr className="border-b border-border">
                           <th className="text-left py-3 px-4 font-semibold text-foreground">Level</th>
                           <th className="text-right py-3 px-4 font-semibold text-foreground">Trigger Price</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">Split</th>
                           <th className="text-right py-3 px-4 font-semibold text-foreground">LANA on Sale</th>
                           <th className="text-right py-3 px-4 font-semibold text-foreground">Cash Out</th>
                           <th className="text-right py-3 px-4 font-semibold text-foreground">Remaining</th>
@@ -292,6 +313,9 @@ export default function TradingPlanCalculator() {
                           <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
                             <td className="text-right py-3 px-4 text-muted-foreground">€{level.triggerPrice}</td>
+                            <td className="text-right py-3 px-4 text-primary font-medium">
+                              Split {level.splitNumber}. €{level.splitPrice}
+                            </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {level.lanasOnSale.toLocaleString()}
                             </td>
