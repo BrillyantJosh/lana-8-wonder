@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Send, QrCode, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Send, QrCode, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
+import { verifyWifMatchesWallet } from "@/lib/wifValidation";
 
 const SendLanaConfirm = () => {
   const navigate = useNavigate();
@@ -14,6 +16,13 @@ const SendLanaConfirm = () => {
   const [wifPrivateKey, setWifPrivateKey] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    validated: boolean;
+    matches: boolean;
+    derivedWalletId?: string;
+    error?: string;
+  } | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const videoRef = useRef<HTMLDivElement>(null);
 
@@ -88,9 +97,51 @@ const SendLanaConfirm = () => {
     setIsScanning(false);
   };
 
-  const handleConfirmTransfer = () => {
+  const handleValidateWif = async () => {
     if (!wifPrivateKey.trim()) {
       toast.error("Please enter or scan your WIF private key");
+      return;
+    }
+
+    if (!fromWallet) {
+      toast.error("Missing wallet information");
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      const result = await verifyWifMatchesWallet(wifPrivateKey.trim(), fromWallet);
+      
+      setValidationResult({
+        validated: true,
+        matches: result.matches,
+        derivedWalletId: result.derivedWalletId,
+        error: result.error
+      });
+
+      if (result.matches) {
+        toast.success("Private key validated successfully!");
+      } else {
+        toast.error("Private key does not match the source wallet");
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Validation failed";
+      setValidationResult({
+        validated: true,
+        matches: false,
+        error: errorMsg
+      });
+      toast.error(errorMsg);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleConfirmTransfer = () => {
+    if (!validationResult?.matches) {
+      toast.error("Please validate your private key first");
       return;
     }
 
@@ -168,7 +219,10 @@ const SendLanaConfirm = () => {
                     id="wif-key"
                     type="password"
                     value={wifPrivateKey}
-                    onChange={(e) => setWifPrivateKey(e.target.value)}
+                    onChange={(e) => {
+                      setWifPrivateKey(e.target.value);
+                      setValidationResult(null); // Reset validation when key changes
+                    }}
                     placeholder="Enter WIF private key"
                     className="font-mono"
                   />
@@ -179,7 +233,7 @@ const SendLanaConfirm = () => {
                     type="button" 
                     variant="outline" 
                     onClick={showScanner ? stopScanner : startScanner}
-                    className="w-full"
+                    className="flex-1"
                   >
                     {showScanner ? (
                       <>
@@ -193,7 +247,56 @@ const SendLanaConfirm = () => {
                       </>
                     )}
                   </Button>
+                  <Button 
+                    type="button" 
+                    onClick={handleValidateWif}
+                    disabled={!wifPrivateKey.trim() || isValidating}
+                    className="flex-1"
+                  >
+                    {isValidating ? (
+                      <>Validating...</>
+                    ) : (
+                      <>Validate Key</>
+                    )}
+                  </Button>
                 </div>
+
+                {/* Validation Result */}
+                {validationResult?.validated && (
+                  <Alert className={validationResult.matches ? "border-green-500 bg-green-500/10" : "border-red-500 bg-red-500/10"}>
+                    <div className="flex items-start gap-2">
+                      {validationResult.matches ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <AlertDescription>
+                          {validationResult.matches ? (
+                            <>
+                              <p className="font-semibold text-green-600">Private key validated successfully!</p>
+                              <p className="text-xs mt-1 text-muted-foreground">
+                                Derived wallet: <span className="font-mono">{validationResult.derivedWalletId}</span>
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-semibold text-red-600">Validation failed</p>
+                              <p className="text-xs mt-1">
+                                {validationResult.error || "The private key does not match the source wallet address"}
+                              </p>
+                              {validationResult.derivedWalletId && (
+                                <p className="text-xs mt-1 text-muted-foreground">
+                                  Your key belongs to: <span className="font-mono">{validationResult.derivedWalletId}</span>
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </AlertDescription>
+                      </div>
+                    </div>
+                  </Alert>
+                )}
 
                 {/* QR Scanner */}
                 {showScanner && (
@@ -219,7 +322,7 @@ const SendLanaConfirm = () => {
                 </Button>
                 <Button 
                   onClick={handleConfirmTransfer}
-                  disabled={!wifPrivateKey.trim()}
+                  disabled={!validationResult?.matches}
                   size="lg"
                 >
                   <Send className="mr-2 h-4 w-4" />

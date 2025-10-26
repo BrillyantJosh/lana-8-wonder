@@ -194,7 +194,7 @@ const SendLana = () => {
                           <TableHead>Wallet Address</TableHead>
                           <TableHead>Type</TableHead>
                           <TableHead>Balance (LANA)</TableHead>
-                          <TableHead>Note</TableHead>
+                          <TableHead className="max-w-xs">Note</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -229,7 +229,11 @@ const SendLana = () => {
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">{wallet.note || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm max-w-xs">
+                              <div className="truncate" title={wallet.note || "—"}>
+                                {wallet.note || "—"}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
