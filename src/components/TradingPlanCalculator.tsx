@@ -135,6 +135,9 @@ function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: 
 
     remaining -= lanasToSell;
     currentPrice = newCoinPrice;
+    
+    // Stop at split 37
+    if (splitNumber >= 37) break;
   }
 
   return levels;
@@ -144,6 +147,7 @@ export default function TradingPlanCalculator() {
   const [currentPrice, setCurrentPrice] = useState<string>("0.004");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
+  const [account8Batches, setAccount8Batches] = useState<number>(0);
 
   const calculatePlan = () => {
     const initialInvestment = 88;
@@ -171,7 +175,8 @@ export default function TradingPlanCalculator() {
       } else if (config.type === "compound") {
         levels = generateCompoundLevels(lanasPerAccount, accountPrices[index]);
       } else {
-        levels = generatePassiveLevels(lanasPerAccount, accountPrices[index], index === 7 ? 0 : 0);
+        // For account 8, generate extra batches if requested
+        levels = generatePassiveLevels(lanasPerAccount, accountPrices[index], index === 7 ? account8Batches : 0);
       }
 
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
@@ -194,6 +199,29 @@ export default function TradingPlanCalculator() {
     });
 
     setAccounts(newAccounts);
+    setAccount8Batches(0); // Reset batches when recalculating
+  };
+  
+  const loadMoreAccount8Levels = () => {
+    setAccount8Batches(prev => prev + 1);
+    
+    // Recalculate only account 8
+    const price = parseFloat(currentPrice);
+    const initialInvestment = 88;
+    const totalLanas = initialInvestment / price;
+    const lanasPerAccount = totalLanas / 8;
+    const account8Price = price * 10000000;
+    
+    const newBatches = account8Batches + 1;
+    const levels = generatePassiveLevels(lanasPerAccount, account8Price, newBatches);
+    const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
+    const portfolioValue = lanasPerAccount * account8Price;
+    
+    setAccounts(prev => prev.map(acc => 
+      acc.number === 8 
+        ? { ...acc, levels, totalCashOut, portfolioValue }
+        : acc
+    ));
   };
 
   const toggleAccount = (accountNumber: number) => {
@@ -357,6 +385,20 @@ export default function TradingPlanCalculator() {
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Showing first 10 of {account.levels.length} levels
                     </p>
+                  )}
+                  
+                  {/* Show "Load More" button for Account 8 */}
+                  {account.number === 8 && account.levels.length > 0 && account.levels[account.levels.length - 1].splitNumber < 37 && (
+                    <div className="text-center mt-6 pt-6 border-t border-border">
+                      <Button 
+                        onClick={loadMoreAccount8Levels}
+                        variant="outline"
+                        className="w-full max-w-md"
+                      >
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Load Next 100 Records (Current: {account.levels.length} levels, Split {account.levels[account.levels.length - 1].splitNumber})
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
