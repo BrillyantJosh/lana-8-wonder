@@ -22,6 +22,7 @@ interface Account {
   description: string;
   levels: TradingLevel[];
   totalCashOut: number;
+  portfolioValue?: number;
 }
 
 const accountConfigs = [
@@ -174,6 +175,11 @@ export default function TradingPlanCalculator() {
       }
 
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
+      
+      // For passive accounts (6, 7, 8), calculate portfolio value
+      const portfolioValue = config.type === "passive" 
+        ? lanasPerAccount * accountPrices[index]
+        : undefined;
 
       return {
         number: index + 1,
@@ -183,6 +189,7 @@ export default function TradingPlanCalculator() {
         description: config.description,
         levels,
         totalCashOut,
+        portfolioValue,
       };
     });
 
@@ -291,9 +298,13 @@ export default function TradingPlanCalculator() {
                     <p className="text-white/90 text-sm">{account.description}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-white/80 mb-1">Total Cash Out</p>
+                    <p className="text-sm text-white/80 mb-1">
+                      {account.type === "passive" ? "Portfolio Value" : "Total Cash Out"}
+                    </p>
                     <p className="text-2xl font-bold text-white">
-                      €{formatNumber(account.totalCashOut)}
+                      €{formatNumber(account.type === "passive" && account.portfolioValue 
+                        ? account.portfolioValue 
+                        : account.totalCashOut)}
                     </p>
                     <div className="mt-2">
                       {expandedAccounts.has(account.number) ? (
