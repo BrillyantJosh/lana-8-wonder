@@ -225,10 +225,10 @@ const AssignLana8Wonder = () => {
   // Calculate PHI donation (12 in plan currency converted to LANA using monthly exchange rate)
   const phiDonation = exchangeRate > 0 ? 12 / exchangeRate : 0;
   
-  // Calculate amount per wallet
-  const totalToDistribute = sourceBalance - minRequiredLana - phiDonation;
-  const amountPerWallet = totalToDistribute / 8;
-  const totalTransferred = phiDonation + totalToDistribute;
+  // Calculate distribution: (Required Deposit - PHI Donation) / 8
+  const totalFor8Wallets = minRequiredLana - phiDonation;
+  const amountPerWallet = totalFor8Wallets / 8;
+  const totalTransferred = minRequiredLana;
   const remainingBalance = sourceBalance - totalTransferred;
 
   return (
@@ -276,6 +276,10 @@ const AssignLana8Wonder = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
                     <span className="font-mono">{phiDonation.toFixed(8)} LANA</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total to 8 Wallets:</span>
+                    <span className="font-mono">{totalFor8Wallets.toFixed(8)} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
