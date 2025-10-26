@@ -4,16 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { QrCode, KeyRound, Scan } from "lucide-react";
+import { QrCode, KeyRound, Loader2 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
+import { convertWifToIds } from "@/lib/lanaKeys";
+import { fetchKind88888 } from "@/lib/nostrClient";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 
 const Login = () => {
   const [wif, setWif] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
+  const { params } = useNostrLanaParams();
 
   useEffect(() => {
     return () => {
@@ -90,7 +95,7 @@ const Login = () => {
     setIsScanning(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!wif.trim()) {
@@ -98,11 +103,45 @@ const Login = () => {
       return;
     }
 
-    // TODO: Validate WIF format and authenticate
-    // For now, just store in localStorage
-    localStorage.setItem("lana_wif", wif);
-    toast.success("Login successful!");
-    navigate("/");
+    if (!params?.relays || params.relays.length === 0) {
+      toast.error("No relays available. Please refresh the page.");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Convert WIF to all identifiers
+      const lanaSession = await convertWifToIds(wif);
+      
+      console.log("Derived identifiers:", {
+        walletId: lanaSession.walletId,
+        nostrHexId: lanaSession.nostrHexId,
+        nostrNpubId: lanaSession.nostrNpubId
+      });
+
+      // Store in session
+      sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));
+      
+      toast.success("Keys derived successfully!");
+
+      // Check for KIND 88888 plan on relays
+      const plan = await fetchKind88888(lanaSession.nostrHexId, params.relays);
+
+      if (plan) {
+        toast.success("Annuity plan found!");
+        navigate("/dashboard");
+      } else {
+        toast.info("No annuity plan found. Create a new one.");
+        navigate("/create-lana8wonder");
+      }
+
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error(error instanceof Error ? error.message : "Invalid WIF key");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -144,8 +183,15 @@ const Login = () => {
                   Scan QR Code
                 </Button>
 
-                <Button type="submit" className="w-full" disabled={!wif.trim()}>
-                  Log In
+                <Button type="submit" className="w-full" disabled={!wif.trim() || isProcessing}>
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Log In"
+                  )}
                 </Button>
               </div>
             ) : (
