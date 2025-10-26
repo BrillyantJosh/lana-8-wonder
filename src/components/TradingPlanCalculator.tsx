@@ -204,32 +204,33 @@ export default function TradingPlanCalculator() {
 
   const buildRemainingLanaMap = (accounts: Account[], totalInitialLana: number): Map<number, number> => {
     const lanaMap = new Map<number, number>();
-    let remainingLana = totalInitialLana;
     
-    // Collect all levels from all accounts and sort by split number
-    const allLevels: Array<{splitNumber: number, lanasOnSale: number}> = [];
+    // First, aggregate ALL sales per split (sum lanasOnSale for all levels with same splitNumber)
+    const salesPerSplit = new Map<number, number>();
+    
     accounts.forEach(account => {
       account.levels.forEach(level => {
-        allLevels.push({
-          splitNumber: level.splitNumber,
-          lanasOnSale: level.lanasOnSale
-        });
+        const currentSales = salesPerSplit.get(level.splitNumber) || 0;
+        salesPerSplit.set(level.splitNumber, currentSales + level.lanasOnSale);
       });
     });
     
-    // Sort by split number
-    allLevels.sort((a, b) => a.splitNumber - b.splitNumber);
+    // Get sorted list of splits that have sales
+    const splitsWithSales = Array.from(salesPerSplit.keys()).sort((a, b) => a - b);
     
-    // Calculate remaining LANA for each split
-    let levelIndex = 0;
+    // Calculate cumulative remaining LANA for each split (1 to 37)
+    let remainingLana = totalInitialLana;
+    let salesIndex = 0;
     
     for (let split = 1; split <= 37; split++) {
-      // Subtract all sales at this split
-      while (levelIndex < allLevels.length && allLevels[levelIndex].splitNumber === split) {
-        remainingLana -= allLevels[levelIndex].lanasOnSale;
-        levelIndex++;
+      // If this split has sales, subtract the aggregated amount
+      if (salesIndex < splitsWithSales.length && splitsWithSales[salesIndex] === split) {
+        const totalSalesAtThisSplit = salesPerSplit.get(split) || 0;
+        remainingLana -= totalSalesAtThisSplit;
+        salesIndex++;
       }
       
+      // Store the remaining LANA at this split
       lanaMap.set(split, Math.max(0, remainingLana));
     }
     
