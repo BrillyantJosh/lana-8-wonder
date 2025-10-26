@@ -202,26 +202,57 @@ export default function TradingPlanCalculator() {
     }
   }, [params, selectedCurrency, currentPrice]);
 
-  const calculatePortfolioProjection = (startingPrice: number): ProjectionData[] => {
+  const buildRemainingLanaMap = (accounts: Account[], totalInitialLana: number): Map<number, number> => {
+    const lanaMap = new Map<number, number>();
+    let remainingLana = totalInitialLana;
+    
+    // Collect all levels from all accounts and sort by split number
+    const allLevels: Array<{splitNumber: number, lanasOnSale: number}> = [];
+    accounts.forEach(account => {
+      account.levels.forEach(level => {
+        allLevels.push({
+          splitNumber: level.splitNumber,
+          lanasOnSale: level.lanasOnSale
+        });
+      });
+    });
+    
+    // Sort by split number
+    allLevels.sort((a, b) => a.splitNumber - b.splitNumber);
+    
+    // Calculate remaining LANA for each split
+    let levelIndex = 0;
+    
+    for (let split = 1; split <= 37; split++) {
+      // Subtract all sales at this split
+      while (levelIndex < allLevels.length && allLevels[levelIndex].splitNumber === split) {
+        remainingLana -= allLevels[levelIndex].lanasOnSale;
+        levelIndex++;
+      }
+      
+      lanaMap.set(split, Math.max(0, remainingLana));
+    }
+    
+    return lanaMap;
+  };
+
+  const calculatePortfolioProjection = (startingPrice: number, remainingLanaMap: Map<number, number>): ProjectionData[] => {
     const projections: ProjectionData[] = [];
     let startingSplit = calculateSplit(startingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
     let milestoneReached = false;
     
-    // Calculate total LANA from initial investment
-    const initialInvestment = 88;
-    const totalLana = initialInvestment / startingPrice;
-    
     // Calculate portfolio value from starting split, showing all splits until and slightly past €100M
     for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
-      const portfolioValue = totalLana * splitPrice;
+      const remainingLana = remainingLanaMap.get(splitNum) || 0;
+      const portfolioValue = remainingLana * splitPrice;
       
       projections.push({
         splitNumber: splitNum,
         splitPrice: splitPrice,
         portfolioValue: portfolioValue,
-        remainingLana: totalLana
+        remainingLana: remainingLana
       });
       
       // Continue for one more split after reaching €100M, then stop
@@ -287,8 +318,11 @@ export default function TradingPlanCalculator() {
     setAccounts(newAccounts);
     setAccount8Batches(0); // Reset batches when recalculating
     
-    // Calculate portfolio projection using total LANA
-    const projection = calculatePortfolioProjection(price);
+    // Build remaining LANA map considering all sales across all accounts
+    const lanaMap = buildRemainingLanaMap(newAccounts, totalLanas);
+    
+    // Calculate portfolio projection with accurate remaining LANA
+    const projection = calculatePortfolioProjection(price, lanaMap);
     setPortfolioProjection(projection);
   };
   const loadMoreAccount8Levels = () => {
@@ -304,15 +338,20 @@ export default function TradingPlanCalculator() {
     const levels = generatePassiveLevels(lanasPerAccount, account8Price, newBatches);
     const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
     const portfolioValue = lanasPerAccount * account8Price;
-    setAccounts(prev => prev.map(acc => acc.number === 8 ? {
+    const updatedAccounts = accounts.map(acc => acc.number === 8 ? {
       ...acc,
       levels,
       totalCashOut,
       portfolioValue
-    } : acc));
+    } : acc);
     
-    // Recalculate portfolio projection
-    const projection = calculatePortfolioProjection(parseFloat(currentPrice));
+    setAccounts(updatedAccounts);
+    
+    // Rebuild remaining LANA map with updated accounts
+    const lanaMap = buildRemainingLanaMap(updatedAccounts, totalLanas);
+    
+    // Recalculate portfolio projection with accurate remaining LANA
+    const projection = calculatePortfolioProjection(parseFloat(currentPrice), lanaMap);
     setPortfolioProjection(projection);
   };
   const toggleAccount = (accountNumber: number) => {
