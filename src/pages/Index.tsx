@@ -1,10 +1,73 @@
 import TradingPlanCalculator from "@/components/TradingPlanCalculator";
 import lanaCoin from "@/assets/lana-coin.png";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Wifi, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import NostrStatusCard from "@/components/NostrStatusCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
+  const { params, loading, error } = useNostrLanaParams();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-hero">
+      {/* Top Navigation Bar */}
+      <nav className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Connection Status */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Connecting...</span>
+                    </>
+                  ) : error ? (
+                    <>
+                      <Wifi className="w-5 h-5 text-destructive" />
+                      <Badge variant="destructive" className="text-xs">Disconnected</Badge>
+                    </>
+                  ) : params ? (
+                    <>
+                      <Wifi className="w-5 h-5 text-green-500" />
+                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
+                        Connected
+                      </Badge>
+                    </>
+                  ) : null}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Nostr Network Status</DialogTitle>
+                </DialogHeader>
+                {loading && (
+                  <div className="flex items-center justify-center gap-3 py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="text-muted-foreground">Connecting to Nostr Network...</span>
+                  </div>
+                )}
+                {error && (
+                  <div className="p-6 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm text-destructive">Error: {error}</p>
+                  </div>
+                )}
+                {params && <NostrStatusCard params={params} />}
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <Button variant="default" size="sm">
+            Log in
+          </Button>
+        </div>
+      </nav>
+
       {/* Hero Header */}
       <header className="relative overflow-hidden bg-gradient-hero">
         <div className="container mx-auto px-4 py-12">
@@ -29,7 +92,7 @@ const Index = () => {
               </div>
               
               <p className="text-2xl md:text-3xl font-semibold text-foreground max-w-4xl mx-auto">
-                Transform your €88 investment into extraordinary wealth with our 8-account trading strategy
+                Transform your €88 investment into extraordinary wealth with 8-account.
               </p>
               
               <div className="flex flex-wrap justify-center gap-4 pt-8">

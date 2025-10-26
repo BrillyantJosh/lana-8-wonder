@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins, Loader2 } from "lucide-react";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
-import NostrStatusCard from "./NostrStatusCard";
 
 interface TradingLevel {
   level: number;
@@ -251,24 +250,6 @@ export default function TradingPlanCalculator() {
 
   return (
     <div className="space-y-8">
-      {/* NOSTR Status Card */}
-      {loading && (
-        <Card className="p-8 bg-card/95 backdrop-blur-sm border-primary/20">
-          <div className="flex items-center justify-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-muted-foreground">Connecting to Nostr Network...</span>
-          </div>
-        </Card>
-      )}
-      
-      {error && (
-        <Card className="p-6 bg-destructive/10 border-destructive/30">
-          <p className="text-sm text-destructive">Error: {error}</p>
-        </Card>
-      )}
-
-      {params && <NostrStatusCard params={params} />}
-
       {/* Calculator Input */}
       <Card className="p-8 shadow-mystical bg-card border-border">
         <div className="space-y-6">
