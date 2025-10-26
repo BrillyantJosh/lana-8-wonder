@@ -144,7 +144,7 @@ export default function TradingPlanCalculator() {
       price * 10, // Account 2
       50, // Account 3
       500, // Account 4
-      2500, // Account 5
+      5000, // Account 5 - continues where Account 4 ends
       100000, // Account 6
       1000000, // Account 7
       10000000, // Account 8
