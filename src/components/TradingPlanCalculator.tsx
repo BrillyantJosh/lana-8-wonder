@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins, Loader2 } from "lucide-react";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
-
 interface TradingLevel {
   level: number;
   triggerPrice: string;
@@ -15,7 +14,6 @@ interface TradingLevel {
   cashOut: string;
   remaining: number;
 }
-
 interface Account {
   number: number;
   name: string;
@@ -26,49 +24,88 @@ interface Account {
   totalCashOut: number;
   portfolioValue?: number;
 }
-
-const accountConfigs = [
-  { name: "Initial Recovery", type: "linear" as const, color: "from-orange-400 to-orange-600", description: "Recover your initial €88 investment" },
-  { name: "Growth Acceleration", type: "linear" as const, color: "from-orange-500 to-orange-700", description: "Double your returns with strategic growth" },
-  { name: "Breakthrough Point", type: "compound" as const, color: "from-green-400 to-green-600", description: "€50,000+ compound growth strategy" },
-  { name: "Expansion Phase", type: "compound" as const, color: "from-green-500 to-green-700", description: "€500,000+ wealth multiplication" },
-  { name: "Wealth Creation", type: "compound" as const, color: "from-green-600 to-green-800", description: "€2,670,000+ substantial returns" },
-  { name: "Passive Income", type: "passive" as const, color: "from-purple-400 to-purple-600", description: "€100,000+ per period income" },
-  { name: "Legacy Portfolio", type: "passive" as const, color: "from-purple-500 to-purple-700", description: "€1,000,000+ per period income" },
-  { name: "Ultimate Freedom", type: "passive" as const, color: "from-purple-600 to-purple-800", description: "€10,000,000+ per period income" },
-];
-
+const accountConfigs = [{
+  name: "Initial Recovery",
+  type: "linear" as const,
+  color: "from-orange-400 to-orange-600",
+  description: "Recover your initial €88 investment"
+}, {
+  name: "Growth Acceleration",
+  type: "linear" as const,
+  color: "from-orange-500 to-orange-700",
+  description: "Double your returns with strategic growth"
+}, {
+  name: "Breakthrough Point",
+  type: "compound" as const,
+  color: "from-green-400 to-green-600",
+  description: "€50,000+ compound growth strategy"
+}, {
+  name: "Expansion Phase",
+  type: "compound" as const,
+  color: "from-green-500 to-green-700",
+  description: "€500,000+ wealth multiplication"
+}, {
+  name: "Wealth Creation",
+  type: "compound" as const,
+  color: "from-green-600 to-green-800",
+  description: "€2,670,000+ substantial returns"
+}, {
+  name: "Passive Income",
+  type: "passive" as const,
+  color: "from-purple-400 to-purple-600",
+  description: "€100,000+ per period income"
+}, {
+  name: "Legacy Portfolio",
+  type: "passive" as const,
+  color: "from-purple-500 to-purple-700",
+  description: "€1,000,000+ per period income"
+}, {
+  name: "Ultimate Freedom",
+  type: "passive" as const,
+  color: "from-purple-600 to-purple-800",
+  description: "€10,000,000+ per period income"
+}];
 function formatNumber(value: number): string {
   if (value >= 100) {
-    return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return value.toLocaleString(undefined, {
+      maximumFractionDigits: 0
+    });
   } else if (value >= 10) {
-    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return value.toLocaleString(undefined, {
+      maximumFractionDigits: 2
+    });
   } else {
-    return value.toLocaleString(undefined, { maximumFractionDigits: 5 });
+    return value.toLocaleString(undefined, {
+      maximumFractionDigits: 5
+    });
   }
 }
-
-function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
+function calculateSplit(price: number): {
+  splitNumber: number;
+  splitPrice: number;
+} {
   // Find the next split price that is >= trigger price
   const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
   // Split number is based on price, not level - same price = same split
   const splitNumber = Math.log2(splitPrice / 0.001) + 1;
-  return { splitNumber, splitPrice };
+  return {
+    splitNumber,
+    splitPrice
+  };
 }
-
 function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[] {
   const levels: TradingLevel[] = [];
   const lanasPerLevel = lanas / 10;
   let remaining = lanas;
-
   for (let i = 1; i <= 10; i++) {
     const triggerPrice = startPrice * i;
     const lanasOnSale = lanasPerLevel;
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasPerLevel;
-
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-
+    const {
+      splitNumber,
+      splitPrice
+    } = calculateSplit(triggerPrice);
     levels.push({
       level: i,
       triggerPrice: triggerPrice.toFixed(5),
@@ -76,26 +113,24 @@ function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[]
       splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
       cashOut: cashOut.toFixed(2),
-      remaining: parseFloat(remaining.toFixed(2)),
+      remaining: parseFloat(remaining.toFixed(2))
     });
   }
-
   return levels;
 }
-
 function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel[] {
   const levels: TradingLevel[] = [];
   const sellPercentages = [0, 0.25, 0.20, 0.15, 0.12, 0.09, 0.07, 0.05, 0.04, 0.03];
   let remaining = lanas;
-
   for (let i = 1; i <= 10; i++) {
     const triggerPrice = startPrice * i; // Linear growth like accounts 1-2
     const lanasOnSale = lanas * sellPercentages[i - 1];
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasOnSale;
-
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-
+    const {
+      splitNumber,
+      splitPrice
+    } = calculateSplit(triggerPrice);
     levels.push({
       level: i,
       triggerPrice: triggerPrice.toFixed(5),
@@ -103,28 +138,26 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
       splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
       cashOut: cashOut.toFixed(2),
-      remaining: parseFloat(remaining.toFixed(2)),
+      remaining: parseFloat(remaining.toFixed(2))
     });
   }
-
   return levels;
 }
-
 function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: number = 0): TradingLevel[] {
   const levels: TradingLevel[] = [];
-  const totalPeriods = 8 + (extraBatches * 100);
+  const totalPeriods = 8 + extraBatches * 100;
   let remaining = lanas;
   let currentPrice = startPrice;
-
   for (let i = 1; i <= totalPeriods; i++) {
     const accountValue = remaining * currentPrice;
     const cashOutPoint = accountValue * 1.01;
     const cashOut = cashOutPoint - accountValue;
     const newCoinPrice = cashOutPoint / remaining;
     const lanasToSell = cashOut / newCoinPrice;
-    
-    const { splitNumber, splitPrice } = calculateSplit(newCoinPrice);
-    
+    const {
+      splitNumber,
+      splitPrice
+    } = calculateSplit(newCoinPrice);
     levels.push({
       level: i,
       triggerPrice: newCoinPrice.toFixed(5),
@@ -132,21 +165,22 @@ function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: 
       splitPrice: splitPrice.toFixed(3),
       lanasOnSale: parseFloat(lanasToSell.toFixed(2)),
       cashOut: cashOut.toFixed(2),
-      remaining: parseFloat((remaining - lanasToSell).toFixed(2)),
+      remaining: parseFloat((remaining - lanasToSell).toFixed(2))
     });
-
     remaining -= lanasToSell;
     currentPrice = newCoinPrice;
-    
+
     // Stop at split 37
     if (splitNumber >= 37) break;
   }
-
   return levels;
 }
-
 export default function TradingPlanCalculator() {
-  const { params, loading, error } = useNostrLanaParams();
+  const {
+    params,
+    loading,
+    error
+  } = useNostrLanaParams();
   const [currentPrice, setCurrentPrice] = useState<string>("");
   const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -160,7 +194,6 @@ export default function TradingPlanCalculator() {
       setCurrentPrice(rate.toString());
     }
   }, [params, selectedCurrency, currentPrice]);
-
   const calculatePlan = () => {
     const initialInvestment = 88;
     const price = parseFloat(currentPrice);
@@ -168,20 +201,24 @@ export default function TradingPlanCalculator() {
     const lanasPerAccount = totalLanas / 8;
 
     // Calculate account prices based on progression
-    const accountPrices = [
-      price,           // Account 1: starts at current price
-      price * 10,      // Account 2: continues where Account 1 ends
-      price * 100,     // Account 3: continues where Account 2 ends
-      price * 1000,    // Account 4: continues where Account 3 ends
-      price * 10000,   // Account 5: continues where Account 4 ends
-      price * 100000,  // Account 6: continues where Account 5 ends
-      price * 1000000, // Account 7: continues where Account 6 ends
-      price * 10000000, // Account 8: continues where Account 7 ends
+    const accountPrices = [price,
+    // Account 1: starts at current price
+    price * 10,
+    // Account 2: continues where Account 1 ends
+    price * 100,
+    // Account 3: continues where Account 2 ends
+    price * 1000,
+    // Account 4: continues where Account 3 ends
+    price * 10000,
+    // Account 5: continues where Account 4 ends
+    price * 100000,
+    // Account 6: continues where Account 5 ends
+    price * 1000000,
+    // Account 7: continues where Account 6 ends
+    price * 10000000 // Account 8: continues where Account 7 ends
     ];
-
     const newAccounts: Account[] = accountConfigs.map((config, index) => {
       let levels: TradingLevel[];
-      
       if (config.type === "linear") {
         levels = generateLinearLevels(lanasPerAccount, accountPrices[index]);
       } else if (config.type === "compound") {
@@ -190,14 +227,10 @@ export default function TradingPlanCalculator() {
         // For account 8, generate extra batches if requested
         levels = generatePassiveLevels(lanasPerAccount, accountPrices[index], index === 7 ? account8Batches : 0);
       }
-
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
-      
-      // For passive accounts (6, 7, 8), calculate portfolio value
-      const portfolioValue = config.type === "passive" 
-        ? lanasPerAccount * accountPrices[index]
-        : undefined;
 
+      // For passive accounts (6, 7, 8), calculate portfolio value
+      const portfolioValue = config.type === "passive" ? lanasPerAccount * accountPrices[index] : undefined;
       return {
         number: index + 1,
         name: config.name,
@@ -206,36 +239,32 @@ export default function TradingPlanCalculator() {
         description: config.description,
         levels,
         totalCashOut,
-        portfolioValue,
+        portfolioValue
       };
     });
-
     setAccounts(newAccounts);
     setAccount8Batches(0); // Reset batches when recalculating
   };
-  
   const loadMoreAccount8Levels = () => {
     setAccount8Batches(prev => prev + 1);
-    
+
     // Recalculate only account 8
     const price = parseFloat(currentPrice);
     const initialInvestment = 88;
     const totalLanas = initialInvestment / price;
     const lanasPerAccount = totalLanas / 8;
     const account8Price = price * 10000000;
-    
     const newBatches = account8Batches + 1;
     const levels = generatePassiveLevels(lanasPerAccount, account8Price, newBatches);
     const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
     const portfolioValue = lanasPerAccount * account8Price;
-    
-    setAccounts(prev => prev.map(acc => 
-      acc.number === 8 
-        ? { ...acc, levels, totalCashOut, portfolioValue }
-        : acc
-    ));
+    setAccounts(prev => prev.map(acc => acc.number === 8 ? {
+      ...acc,
+      levels,
+      totalCashOut,
+      portfolioValue
+    } : acc));
   };
-
   const toggleAccount = (accountNumber: number) => {
     const newExpanded = new Set(expandedAccounts);
     if (newExpanded.has(accountNumber)) {
@@ -245,17 +274,14 @@ export default function TradingPlanCalculator() {
     }
     setExpandedAccounts(newExpanded);
   };
-
   const totalProjectedValue = accounts.reduce((sum, acc) => sum + acc.totalCashOut, 0);
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       {/* Calculator Input */}
       <Card className="p-8 shadow-mystical bg-card border-border">
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-4">
             <Coins className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-foreground">Calculate Your Trading Plan</h2>
+            <h2 className="text-2xl font-bold text-foreground">Calculate Your 8th Wonder Plan</h2>
           </div>
           <p className="text-muted-foreground">
             Current prices loaded from Nostr Network. Select your currency and generate your personalized 8-account trading strategy.
@@ -266,16 +292,12 @@ export default function TradingPlanCalculator() {
               <label className="block text-sm font-medium mb-2 text-foreground">
                 Select Currency
               </label>
-              <Select
-                value={selectedCurrency}
-                onValueChange={(value: 'EUR' | 'USD' | 'GBP') => {
-                  setSelectedCurrency(value);
-                  if (params) {
-                    setCurrentPrice(params.exchangeRates[value].toString());
-                  }
-                }}
-                disabled={loading}
-              >
+              <Select value={selectedCurrency} onValueChange={(value: 'EUR' | 'USD' | 'GBP') => {
+              setSelectedCurrency(value);
+              if (params) {
+                setCurrentPrice(params.exchangeRates[value].toString());
+              }
+            }} disabled={loading}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
@@ -292,30 +314,16 @@ export default function TradingPlanCalculator() {
                 <label className="block text-sm font-medium mb-2 text-foreground">
                   Current LANA Price ({selectedCurrency})
                 </label>
-                <Input
-                  type="number"
-                  step="0.000001"
-                  value={currentPrice}
-                  onChange={(e) => setCurrentPrice(e.target.value)}
-                  placeholder="Price loaded from Nostr"
-                  className="text-lg"
-                  disabled={loading}
-                />
+                <Input type="number" step="0.000001" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder="Price loaded from Nostr" className="text-lg" disabled={loading} />
               </div>
-              <Button 
-                onClick={calculatePlan} 
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={loading || !currentPrice}
-              >
+              <Button onClick={calculatePlan} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading || !currentPrice}>
                 <TrendingUp className="w-5 h-5 mr-2" />
                 Generate Plan
               </Button>
             </div>
           </div>
 
-          {accounts.length > 0 && (
-            <div className="mt-6 p-6 rounded-lg bg-gradient-wealth border border-border">
+          {accounts.length > 0 && <div className="mt-6 p-6 rounded-lg bg-gradient-wealth border border-border">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Initial Investment</p>
@@ -334,25 +342,19 @@ export default function TradingPlanCalculator() {
                   </p>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
         </div>
       </Card>
 
       {/* Trading Accounts */}
-      {accounts.length > 0 && (
-        <div className="space-y-4">
+      {accounts.length > 0 && <div className="space-y-4">
           <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Wallet className="w-6 h-6 text-primary" />
             Your 8 Trading Accounts
           </h3>
           
-          {accounts.map((account) => (
-            <Card key={account.number} className="overflow-hidden shadow-card hover:shadow-mystical transition-all duration-300">
-              <div 
-                className={`bg-gradient-to-r ${account.color} p-6 cursor-pointer`}
-                onClick={() => toggleAccount(account.number)}
-              >
+          {accounts.map(account => <Card key={account.number} className="overflow-hidden shadow-card hover:shadow-mystical transition-all duration-300">
+              <div className={`bg-gradient-to-r ${account.color} p-6 cursor-pointer`} onClick={() => toggleAccount(account.number)}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -371,23 +373,16 @@ export default function TradingPlanCalculator() {
                       {account.type === "passive" ? "Portfolio Value" : "Total Cash Out"}
                     </p>
                     <p className="text-2xl font-bold text-white">
-                      €{formatNumber(account.type === "passive" && account.portfolioValue 
-                        ? account.portfolioValue 
-                        : account.totalCashOut)}
+                      €{formatNumber(account.type === "passive" && account.portfolioValue ? account.portfolioValue : account.totalCashOut)}
                     </p>
                     <div className="mt-2">
-                      {expandedAccounts.has(account.number) ? (
-                        <ChevronUp className="w-5 h-5 text-white" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-white" />
-                      )}
+                      {expandedAccounts.has(account.number) ? <ChevronUp className="w-5 h-5 text-white" /> : <ChevronDown className="w-5 h-5 text-white" />}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {expandedAccounts.has(account.number) && (
-                <div className="p-6 bg-card">
+              {expandedAccounts.has(account.number) && <div className="p-6 bg-card">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -401,8 +396,7 @@ export default function TradingPlanCalculator() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(account.number === 8 ? account.levels : account.levels.slice(0, 10)).map((level) => (
-                          <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                        {(account.number === 8 ? account.levels : account.levels.slice(0, 10)).map(level => <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
                             <td className="text-right py-3 px-4 text-muted-foreground">€{formatNumber(parseFloat(level.triggerPrice))}</td>
                             <td className="text-right py-3 px-4 text-primary font-medium">
@@ -417,36 +411,23 @@ export default function TradingPlanCalculator() {
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.remaining)}
                             </td>
-                          </tr>
-                        ))}
+                          </tr>)}
                       </tbody>
                     </table>
                   </div>
-                  {account.number !== 8 && account.levels.length > 10 && (
-                    <p className="text-center text-sm text-muted-foreground mt-4">
+                  {account.number !== 8 && account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
                       Showing first 10 of {account.levels.length} levels
-                    </p>
-                  )}
+                    </p>}
                   
                   {/* Show "Load More" button for Account 8 */}
-                  {account.number === 8 && account.levels.length > 0 && account.levels[account.levels.length - 1].splitNumber < 37 && (
-                    <div className="text-center mt-6 pt-6 border-t border-border">
-                      <Button 
-                        onClick={loadMoreAccount8Levels}
-                        variant="outline"
-                        className="w-full max-w-md"
-                      >
+                  {account.number === 8 && account.levels.length > 0 && account.levels[account.levels.length - 1].splitNumber < 37 && <div className="text-center mt-6 pt-6 border-t border-border">
+                      <Button onClick={loadMoreAccount8Levels} variant="outline" className="w-full max-w-md">
                         <ChevronDown className="w-4 h-4 mr-2" />
                         Load Next 100 Records (Current: {account.levels.length} levels, Split {account.levels[account.levels.length - 1].splitNumber})
                       </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+                    </div>}
+                </div>}
+            </Card>)}
+        </div>}
+    </div>;
 }
