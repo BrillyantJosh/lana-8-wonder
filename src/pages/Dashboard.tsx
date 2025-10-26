@@ -8,6 +8,7 @@ import { LanaSession } from "@/lib/lanaKeys";
 import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const Dashboard = () => {
   const [plan, setPlan] = useState<Lana8WonderPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("");
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -48,11 +51,45 @@ const Dashboard = () => {
         }
 
         setPlan(fetchedPlan);
+        
+        // Load balances for all wallets in the plan
+        if (fetchedPlan && params?.electrum && params.electrum.length > 0) {
+          loadWalletBalances(fetchedPlan);
+        }
       } catch (error) {
         console.error("Error loading plan:", error);
         toast.error("Failed to load annuity plan");
       } finally {
         setLoading(false);
+      }
+    };
+
+    const loadWalletBalances = async (planData: Lana8WonderPlan) => {
+      setBalancesLoading(true);
+      try {
+        const wallets = planData.accounts.map(acc => acc.wallet);
+        
+        const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+          body: {
+            wallets,
+            electrumServers: params?.electrum || [],
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.success && data?.wallets) {
+          const balances: Record<string, number> = {};
+          data.wallets.forEach((w: any) => {
+            balances[w.wallet] = w.balance || 0;
+          });
+          setWalletBalances(balances);
+        }
+      } catch (error) {
+        console.error("Error loading wallet balances:", error);
+        toast.error("Failed to load wallet balances");
+      } finally {
+        setBalancesLoading(false);
       }
     };
 
@@ -171,6 +208,15 @@ const Dashboard = () => {
                 <CardTitle>Account {account.account_id}</CardTitle>
                 <CardDescription>
                   Wallet: <span className="font-mono">{account.wallet}</span> • {account.levels.length} levels
+                  {balancesLoading ? (
+                    <span className="ml-2 text-muted-foreground">
+                      <Loader2 className="inline h-3 w-3 animate-spin" /> Loading balance...
+                    </span>
+                  ) : walletBalances[account.wallet] !== undefined ? (
+                    <span className="ml-2 font-semibold text-primary">
+                      • Balance: {walletBalances[account.wallet].toFixed(8)} LANA
+                    </span>
+                  ) : null}
                 </CardDescription>
               </CardHeader>
               <CardContent>

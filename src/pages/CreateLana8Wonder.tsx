@@ -8,6 +8,7 @@ import { LanaSession } from "@/lib/lanaKeys";
 import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const CreateLana8Wonder = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const CreateLana8Wonder = () => {
   const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("");
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -41,11 +44,46 @@ const CreateLana8Wonder = () => {
       try {
         const records = await fetchKind30889(parsedSession.nostrHexId, params.relays);
         setWalletRecords(records);
+        
+        // Load balances for all wallets
+        if (records.length > 0 && params?.electrum && params.electrum.length > 0) {
+          const allWalletAddresses = records.flatMap(r => 
+            r.wallets.map(w => w.wallet_address)
+          );
+          loadWalletBalances(allWalletAddresses);
+        }
       } catch (error) {
         console.error("Error loading wallets:", error);
         toast.error("Failed to load wallet list");
       } finally {
         setLoading(false);
+      }
+    };
+
+    const loadWalletBalances = async (wallets: string[]) => {
+      setBalancesLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+          body: {
+            wallets,
+            electrumServers: params?.electrum || [],
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.success && data?.wallets) {
+          const balances: Record<string, number> = {};
+          data.wallets.forEach((w: any) => {
+            balances[w.wallet] = w.balance || 0;
+          });
+          setWalletBalances(balances);
+        }
+      } catch (error) {
+        console.error("Error loading wallet balances:", error);
+        toast.error("Failed to load wallet balances");
+      } finally {
+        setBalancesLoading(false);
       }
     };
 
@@ -166,6 +204,7 @@ const CreateLana8Wonder = () => {
                       <TableRow>
                         <TableHead className="font-semibold">Wallet Address</TableHead>
                         <TableHead className="font-semibold">Wallet Type</TableHead>
+                        <TableHead className="font-semibold">Balance (LANA)</TableHead>
                         <TableHead className="font-semibold">Note</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -177,6 +216,17 @@ const CreateLana8Wonder = () => {
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                               {wallet.wallet_type}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            {balancesLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : walletBalances[wallet.wallet_address] !== undefined ? (
+                              <span className="font-semibold">
+                                {walletBalances[wallet.wallet_address].toFixed(8)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground">{wallet.note || "—"}</TableCell>
                         </TableRow>
