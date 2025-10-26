@@ -242,13 +242,15 @@ export default function TradingPlanCalculator() {
     const adjustedStartingPrice = startingPrice * 1.08;
     let startingSplit = calculateSplit(adjustedStartingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
-    let milestoneReached = false;
     
-    // Calculate portfolio value from starting split, showing all splits until and slightly past €100M
+    // Calculate portfolio value from starting split until €100M is reached
     for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
       const remainingLana = remainingLanaMap.get(splitNum) || 0;
-      const portfolioValue = remainingLana * splitPrice;
+      const actualPortfolioValue = remainingLana * splitPrice;
+      
+      // Cap portfolio value at €100M
+      const portfolioValue = Math.min(actualPortfolioValue, TARGET_VALUE);
       
       projections.push({
         splitNumber: splitNum,
@@ -257,12 +259,9 @@ export default function TradingPlanCalculator() {
         remainingLana: remainingLana
       });
       
-      // Continue for one more split after reaching €100M, then stop
-      if (milestoneReached) {
+      // Stop when €100M is reached
+      if (actualPortfolioValue >= TARGET_VALUE) {
         break;
-      }
-      if (portfolioValue >= TARGET_VALUE) {
-        milestoneReached = true;
       }
     }
     
@@ -611,24 +610,18 @@ export default function TradingPlanCalculator() {
                       <th className="text-left py-3 px-4 font-semibold text-foreground">Split</th>
                       <th className="text-right py-3 px-4 font-semibold text-foreground">LANA Price</th>
                       <th className="text-right py-3 px-4 font-semibold text-foreground">Portfolio Value</th>
-                      <th className="text-right py-3 px-4 font-semibold text-foreground">Progress to €100M</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Remaining LANA</th>
                     </tr>
                   </thead>
                   <tbody>
                     {portfolioProjection.map(projection => {
-                    const progressPercent = Math.min((projection.portfolioValue / 100000000) * 100, 100);
                     const isMillestone = projection.portfolioValue >= 100000000;
                     const isSplit27 = projection.splitNumber === 27;
                     return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isMillestone ? 'bg-green-500/10 border-green-500/30' : isSplit27 ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
                           <td className="py-3 px-4 font-medium">
-                            <div className="flex items-center gap-2">
-                              <span className={isSplit27 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-primary'}>
-                                Split {projection.splitNumber}
-                              </span>
-                              {isSplit27 && <span className="text-xs bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded">
-                                {formatNumber(projection.remainingLana)} LANA
-                              </span>}
-                            </div>
+                            <span className={isSplit27 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-primary'}>
+                              Split {projection.splitNumber}
+                            </span>
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
                             €{formatNumber(projection.splitPrice)}
@@ -636,17 +629,8 @@ export default function TradingPlanCalculator() {
                           <td className={`text-right py-3 px-4 font-semibold ${isMillestone ? 'text-green-600 dark:text-green-400' : isSplit27 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>
                             €{formatNumber(projection.portfolioValue)}
                           </td>
-                          <td className="text-right py-3 px-4">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-primary to-green-500 transition-all" style={{
-                              width: `${progressPercent}%`
-                            }} />
-                              </div>
-                              <span className="text-xs text-muted-foreground min-w-[3rem]">
-                                {formatNumber(progressPercent)}%
-                              </span>
-                            </div>
+                          <td className="text-right py-3 px-4 text-muted-foreground">
+                            {formatNumber(projection.remainingLana)}
                           </td>
                         </tr>;
                   })}
