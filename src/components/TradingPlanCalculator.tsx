@@ -202,22 +202,26 @@ export default function TradingPlanCalculator() {
     }
   }, [params, selectedCurrency, currentPrice]);
 
-  const calculatePortfolioProjection = (remainingLana: number, currentPrice: number, startingPrice: number): ProjectionData[] => {
+  const calculatePortfolioProjection = (startingPrice: number): ProjectionData[] => {
     const projections: ProjectionData[] = [];
     let startingSplit = calculateSplit(startingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
     let milestoneReached = false;
     
+    // Calculate total LANA from initial investment
+    const initialInvestment = 88;
+    const totalLana = initialInvestment / startingPrice;
+    
     // Calculate portfolio value from starting split, showing all splits until and slightly past €100M
     for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
-      const portfolioValue = remainingLana * splitPrice;
+      const portfolioValue = totalLana * splitPrice;
       
       projections.push({
         splitNumber: splitNum,
         splitPrice: splitPrice,
         portfolioValue: portfolioValue,
-        remainingLana: remainingLana
+        remainingLana: totalLana
       });
       
       // Continue for one more split after reaching €100M, then stop
@@ -283,15 +287,9 @@ export default function TradingPlanCalculator() {
     setAccounts(newAccounts);
     setAccount8Batches(0); // Reset batches when recalculating
     
-    // Calculate portfolio projection for Account 8
-    const account8 = newAccounts[7]; // Account 8 is at index 7
-    if (account8 && account8.levels.length > 0) {
-      const finalLevel = account8.levels[account8.levels.length - 1];
-      const remainingLana = finalLevel.remaining;
-      const finalPrice = parseFloat(finalLevel.triggerPrice);
-      const projection = calculatePortfolioProjection(remainingLana, finalPrice, price);
-      setPortfolioProjection(projection);
-    }
+    // Calculate portfolio projection using total LANA
+    const projection = calculatePortfolioProjection(price);
+    setPortfolioProjection(projection);
   };
   const loadMoreAccount8Levels = () => {
     setAccount8Batches(prev => prev + 1);
@@ -313,14 +311,9 @@ export default function TradingPlanCalculator() {
       portfolioValue
     } : acc));
     
-    // Recalculate portfolio projection with new Account 8 data
-    if (levels.length > 0) {
-      const finalLevel = levels[levels.length - 1];
-      const remainingLana = finalLevel.remaining;
-      const finalPrice = parseFloat(finalLevel.triggerPrice);
-      const projection = calculatePortfolioProjection(remainingLana, finalPrice, parseFloat(currentPrice));
-      setPortfolioProjection(projection);
-    }
+    // Recalculate portfolio projection
+    const projection = calculatePortfolioProjection(parseFloat(currentPrice));
+    setPortfolioProjection(projection);
   };
   const toggleAccount = (accountNumber: number) => {
     const newExpanded = new Set(expandedAccounts);
