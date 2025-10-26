@@ -358,7 +358,7 @@ export default function TradingPlanCalculator() {
       {accounts.length > 0 && <div className="space-y-4">
           <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Wallet className="w-6 h-6 text-primary" />
-            Your 8 Trading Accounts
+            In current Split you can create next 8 Lana Wonder Accounts
           </h3>
           
           {accounts.map(account => <Card key={account.number} className="overflow-hidden shadow-card hover:shadow-mystical transition-all duration-300">
