@@ -205,8 +205,9 @@ export default function TradingPlanCalculator() {
   const calculatePortfolioProjection = (remainingLana: number, currentPrice: number): ProjectionData[] => {
     const projections: ProjectionData[] = [];
     let currentSplit = calculateSplit(currentPrice);
+    const TARGET_VALUE = 100000000; // €100,000,000
     
-    // Calculate portfolio value for all splits from current to Split 37
+    // Calculate portfolio value from current split until €100M is reached
     for (let splitNum = currentSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
       const portfolioValue = remainingLana * splitPrice;
@@ -217,6 +218,11 @@ export default function TradingPlanCalculator() {
         portfolioValue: portfolioValue,
         remainingLana: remainingLana
       });
+      
+      // Stop after reaching €100M
+      if (portfolioValue >= TARGET_VALUE) {
+        break;
+      }
     }
     
     return projections;
@@ -498,6 +504,16 @@ export default function TradingPlanCalculator() {
             {/* Summary Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Starting Split</p>
+                <p className="text-2xl font-bold text-foreground">
+                  Split {portfolioProjection[0].splitNumber}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  €{formatNumber(portfolioProjection[0].portfolioValue)}
+                </p>
+              </div>
+              
+              <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Remaining LANA</p>
                 <p className="text-2xl font-bold text-foreground">
                   {formatNumber(portfolioProjection[0].remainingLana)}
@@ -505,16 +521,12 @@ export default function TradingPlanCalculator() {
               </div>
               
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Current Portfolio Value</p>
-                <p className="text-2xl font-bold text-foreground">
-                  €{formatNumber(portfolioProjection[0].portfolioValue)}
+                <p className="text-sm text-muted-foreground mb-1">Target Milestone</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  €100,000,000
                 </p>
-              </div>
-              
-              <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">At Split 37</p>
-                <p className="text-2xl font-bold text-foreground">
-                  €{formatNumber(portfolioProjection[portfolioProjection.length - 1].portfolioValue)}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Split {portfolioProjection[portfolioProjection.length - 1].splitNumber}
                 </p>
               </div>
             </div>
@@ -564,14 +576,22 @@ export default function TradingPlanCalculator() {
                     {portfolioProjection.map(projection => {
                     const progressPercent = Math.min((projection.portfolioValue / 100000000) * 100, 100);
                     const isMillestone = projection.portfolioValue >= 100000000;
-                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isMillestone ? 'bg-green-500/5' : ''}`}>
-                          <td className="py-3 px-4 font-medium text-primary">
-                            Split {projection.splitNumber}
+                    const isSplit27 = projection.splitNumber === 27;
+                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isMillestone ? 'bg-green-500/10 border-green-500/30' : isSplit27 ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
+                          <td className="py-3 px-4 font-medium">
+                            <div className="flex items-center gap-2">
+                              <span className={isSplit27 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-primary'}>
+                                Split {projection.splitNumber}
+                              </span>
+                              {isSplit27 && <span className="text-xs bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded">
+                                {formatNumber(projection.remainingLana)} LANA
+                              </span>}
+                            </div>
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
                             €{formatNumber(projection.splitPrice)}
                           </td>
-                          <td className={`text-right py-3 px-4 font-semibold ${isMillestone ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                          <td className={`text-right py-3 px-4 font-semibold ${isMillestone ? 'text-green-600 dark:text-green-400' : isSplit27 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>
                             €{formatNumber(projection.portfolioValue)}
                           </td>
                           <td className="text-right py-3 px-4">
