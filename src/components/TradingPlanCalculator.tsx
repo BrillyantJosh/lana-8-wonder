@@ -149,7 +149,7 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
   }
   return levels;
 }
-function generatePassiveLevels(lanas: number, startPrice: number, maxLevels: number = 300): TradingLevel[] {
+function generatePassiveLevels(lanas: number, startPrice: number, maxLevels: number = 100): TradingLevel[] {
   const levels: TradingLevel[] = [];
   let remaining = lanas;
   let currentPrice = startPrice;
@@ -301,11 +301,11 @@ export default function TradingPlanCalculator() {
       } else if (config.type === "compound") {
         levels = generateCompoundLevels(lanasPerAccount, accountPrices[index]);
       } else {
-        // Passive accounts (6, 7, 8): Generate 300 levels by default, more for account 8 if requested
+        // Passive accounts (6, 7, 8): Generate 100 levels by default, more for account 8 if requested
         levels = generatePassiveLevels(
           lanasPerAccount, 
           accountPrices[index], 
-          index === 7 ? 300 + account8Batches * 100 : 300
+          index === 7 ? 100 + account8Batches * 100 : 100
         );
       }
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
@@ -344,7 +344,7 @@ export default function TradingPlanCalculator() {
     const lanasPerAccount = totalLanas / 8;
     const account8Price = adjustedStartingPrice * 10000000;
     const newBatches = account8Batches + 1;
-    const levels = generatePassiveLevels(lanasPerAccount, account8Price, 300 + newBatches * 100);
+    const levels = generatePassiveLevels(lanasPerAccount, account8Price, 100 + newBatches * 100);
     const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
     const portfolioValue = lanasPerAccount * account8Price;
     const updatedAccounts = accounts.map(acc => acc.number === 8 ? {
@@ -561,7 +561,7 @@ export default function TradingPlanCalculator() {
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Remaining LANA</p>
                 <p className="text-2xl font-bold text-foreground">
-                  ~{formatNumber(portfolioProjection[0].remainingLana)}
+                  {formatNumber(portfolioProjection[0].remainingLana)}
                 </p>
               </div>
               
@@ -634,7 +634,7 @@ export default function TradingPlanCalculator() {
                             €{formatNumber(projection.portfolioValue)}
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
-                            ~{formatNumber(projection.remainingLana)}
+                            {formatNumber(projection.remainingLana)}
                           </td>
                         </tr>;
                   })}
