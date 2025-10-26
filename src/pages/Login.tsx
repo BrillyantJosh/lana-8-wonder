@@ -143,7 +143,8 @@ const Login = () => {
       const lanaSession = {
         ...ids,
         profileName: profile.name,
-        profileDisplayName: profile.display_name
+        profileDisplayName: profile.display_name,
+        currency: profile.currency || "EUR" // Use profile currency or default to EUR
       };
       
       sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));

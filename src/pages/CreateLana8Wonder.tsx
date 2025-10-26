@@ -34,6 +34,11 @@ const CreateLana8Wonder = () => {
       const parsedSession: LanaSession = JSON.parse(sessionData);
       setSession(parsedSession);
       
+      // Set currency from profile (Kind 0)
+      if (parsedSession.currency) {
+        setPlanCurrency(parsedSession.currency);
+      }
+      
       // Set greeting with profile name
       const displayName = parsedSession.profileDisplayName || parsedSession.profileName || "User";
       setGreeting(`Hello, ${displayName}!`);

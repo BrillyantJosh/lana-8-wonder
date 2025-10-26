@@ -170,6 +170,7 @@ export interface LanaSession {
   wif: string;
   profileName?: string;
   profileDisplayName?: string;
+  currency?: string;
   exchangeRates?: { EUR: number; USD: number; GBP: number };
   planCurrency?: string;
 }
