@@ -35,6 +35,16 @@ const accountConfigs = [
   { name: "Ultimate Freedom", type: "passive" as const, color: "from-purple-600 to-purple-800", description: "€10,000,000+ per period income" },
 ];
 
+function formatNumber(value: number): string {
+  if (value >= 100) {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  } else if (value >= 10) {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  } else {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 5 });
+  }
+}
+
 function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
   const splitNumber = Math.max(1, Math.floor(Math.log2(price / 0.001)) + 1);
   const splitPrice = 0.001 * Math.pow(2, splitNumber - 1);
@@ -236,13 +246,13 @@ export default function TradingPlanCalculator() {
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Total LANA Coins</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {(88 / parseFloat(currentPrice)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {formatNumber(88 / parseFloat(currentPrice))}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Projected Total Value</p>
                   <p className="text-2xl font-bold text-secondary">
-                    €{totalProjectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    €{formatNumber(totalProjectedValue)}
                   </p>
                 </div>
               </div>
@@ -281,7 +291,7 @@ export default function TradingPlanCalculator() {
                   <div className="text-right">
                     <p className="text-sm text-white/80 mb-1">Total Cash Out</p>
                     <p className="text-2xl font-bold text-white">
-                      €{account.totalCashOut.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      €{formatNumber(account.totalCashOut)}
                     </p>
                     <div className="mt-2">
                       {expandedAccounts.has(account.number) ? (
@@ -312,18 +322,18 @@ export default function TradingPlanCalculator() {
                         {account.levels.slice(0, 10).map((level) => (
                           <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
-                            <td className="text-right py-3 px-4 text-muted-foreground">€{level.triggerPrice}</td>
+                            <td className="text-right py-3 px-4 text-muted-foreground">€{formatNumber(parseFloat(level.triggerPrice))}</td>
                             <td className="text-right py-3 px-4 text-primary font-medium">
-                              Split {level.splitNumber}. €{level.splitPrice}
+                              Split {level.splitNumber}. €{formatNumber(parseFloat(level.splitPrice))}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
-                              {level.lanasOnSale.toLocaleString()}
+                              {formatNumber(level.lanasOnSale)}
                             </td>
                             <td className="text-right py-3 px-4 font-semibold text-secondary">
-                              €{parseFloat(level.cashOut).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              €{formatNumber(parseFloat(level.cashOut))}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
-                              {level.remaining.toLocaleString()}
+                              {formatNumber(level.remaining)}
                             </td>
                           </tr>
                         ))}
