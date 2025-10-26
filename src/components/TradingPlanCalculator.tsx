@@ -45,10 +45,10 @@ function formatNumber(value: number): string {
   }
 }
 
-function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
+function calculateSplit(price: number, level: number): { splitNumber: number; splitPrice: number } {
   // Find the next split price that is >= trigger price
   const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
-  const splitNumber = splitPrice / 0.001;
+  const splitNumber = level; // Sequential numbering: 1, 2, 3, 4...
   return { splitNumber, splitPrice };
 }
 
@@ -63,7 +63,7 @@ function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[]
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasPerLevel;
 
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice, i);
 
     levels.push({
       level: i,
@@ -90,7 +90,7 @@ function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel
     const cashOut = triggerPrice * lanasOnSale;
     remaining -= lanasOnSale;
 
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice, i);
 
     levels.push({
       level: i,
@@ -119,7 +119,7 @@ function generatePassiveLevels(lanas: number, startPrice: number, extraBatches: 
     const newCoinPrice = cashOutPoint / remaining;
     const lanasToSell = cashOut / newCoinPrice;
     
-    const { splitNumber, splitPrice } = calculateSplit(newCoinPrice);
+    const { splitNumber, splitPrice } = calculateSplit(newCoinPrice, i);
     
     levels.push({
       level: i,
