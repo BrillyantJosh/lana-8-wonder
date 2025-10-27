@@ -667,7 +667,7 @@ export default function TradingPlanCalculator() {
               <p className="text-sm text-muted-foreground mb-4 italic">
                 After reaching {currencySymbol}100M, portfolio value remains fixed while remaining LANA adjusts to maintain this value as LANA price doubles with each split.
               </p>
-              <div className="overflow-x-auto max-h-[600px]">
+              <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-border">
