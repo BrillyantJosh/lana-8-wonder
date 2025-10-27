@@ -62,17 +62,17 @@ const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
     name: "Passive Income",
     type: "passive" as const,
     color: "from-purple-400 to-purple-600",
-    description: `${symbol}100,000+ per period income`
+    description: ""
   }, {
     name: "Legacy Portfolio",
     type: "passive" as const,
     color: "from-purple-500 to-purple-700",
-    description: `${symbol}1,000,000+ per period income`
+    description: ""
   }, {
     name: "Ultimate Freedom",
     type: "passive" as const,
     color: "from-purple-600 to-purple-800",
-    description: `${symbol}10,000,000+ per period income`
+    description: ""
   }];
 };
 function formatNumber(value: number): string {
@@ -259,7 +259,6 @@ export default function TradingPlanCalculator() {
   const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
-  const [account8Batches, setAccount8Batches] = useState<number>(0);
   const [portfolioProjection, setPortfolioProjection] = useState<ProjectionData[]>([]);
   const [passiveAccountSplits, setPassiveAccountSplits] = useState<Set<number>>(new Set());
 
@@ -436,7 +435,6 @@ export default function TradingPlanCalculator() {
       };
     });
     setAccounts(newAccounts);
-    setAccount8Batches(0); // Reset batches when recalculating
     
     // Build remaining LANA map considering all sales across all accounts
     const lanaMap = buildRemainingLanaMap(newAccounts, totalLanas);
@@ -560,7 +558,7 @@ export default function TradingPlanCalculator() {
                       </span>
                     </div>
                     <h4 className="text-2xl font-bold text-white mb-1">{account.name}</h4>
-                    <p className="text-white/90 text-sm">{account.description}</p>
+                    {account.description && <p className="text-white/90 text-sm">{account.description}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-white/80 mb-1">
@@ -590,41 +588,14 @@ export default function TradingPlanCalculator() {
                         </tr>
                       </thead>
                       <tbody>
-                         {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level, idx) => {
-                           // Determine target value for highlighting
-                           const targetValue = account.number === 6 ? 1000000 :
-                                             account.number === 7 ? 10000000 :
-                                             account.number === 8 ? 88000000 : 0;
-                           
-                           const isPassiveAccount = account.number >= 6;
-                           const currentPortfolioValue = level.remaining * parseFloat(level.splitPrice);
-                           const isTargetReached = isPassiveAccount && currentPortfolioValue >= targetValue;
-                           const prevLevel = idx > 0 ? account.levels[idx - 1] : null;
-                           const prevPortfolioValue = prevLevel ? prevLevel.remaining * parseFloat(prevLevel.splitPrice) : 0;
-                           const isFirstTarget = isTargetReached && prevPortfolioValue < targetValue;
-                           const isPostTarget = isTargetReached && !isFirstTarget;
-                           
-                           return <tr key={level.level} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isFirstTarget ? 'bg-green-500/10 border-green-500/30' : isPostTarget ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
-                            <td className="py-3 px-4 font-medium">
-                              <div className="flex items-center gap-2">
-                                <span className={isFirstTarget ? 'text-green-600 dark:text-green-400 font-bold' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}>
-                                  {level.level}
-                                </span>
-                                {isFirstTarget && (
-                                  <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
-                                    TARGET
-                                  </span>
-                                )}
-                                {isPostTarget && (
-                                  <span className="text-xs bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
-                                    FIXED
-                                  </span>
-                                )}
-                              </div>
+                          {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level) => {
+                            return <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                            <td className="py-3 px-4 font-medium text-foreground">
+                              {level.level}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">{currencySymbol}{formatNumber(parseFloat(level.triggerPrice))}</td>
                             <td className="text-right py-3 px-4 text-primary font-medium">
-                              Split {level.splitNumber}. {currencySymbol}{formatNumber(parseFloat(level.splitPrice))}
+                              {level.splitNumber}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.lanasOnSale)}
@@ -736,33 +707,15 @@ export default function TradingPlanCalculator() {
                     </tr>
                   </thead>
                   <tbody>
-                    {portfolioProjection.map((projection, index) => {
-                    const isTargetReached = projection.portfolioValue >= 100000000;
-                    const isFirstTargetReached = isTargetReached && (index === 0 || portfolioProjection[index - 1].portfolioValue < 100000000);
-                    const isPostTarget = isTargetReached && !isFirstTargetReached;
-                    
-                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isFirstTargetReached ? 'bg-green-500/10 border-green-500/30' : isPostTarget ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
-                          <td className="py-3 px-4 font-medium">
-                            <div className="flex items-center gap-2">
-                              <span className={isFirstTargetReached ? 'text-green-600 dark:text-green-400 font-bold' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-primary'}>
-                                Split {projection.splitNumber}
-                              </span>
-                              {isFirstTargetReached && (
-                                <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
-                                  TARGET
-                                </span>
-                              )}
-                              {isPostTarget && (
-                                <span className="text-xs bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
-                                  FIXED
-                                </span>
-                              )}
-                            </div>
+                    {portfolioProjection.map((projection) => {
+                    return <tr key={projection.splitNumber} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                          <td className="py-3 px-4 font-medium text-primary">
+                            {projection.splitNumber}
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
                             {currencySymbol}{formatNumber(projection.splitPrice)}
                           </td>
-                          <td className={`text-right py-3 px-4 font-semibold ${isFirstTargetReached ? 'text-green-600 dark:text-green-400' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>
+                          <td className="text-right py-3 px-4 font-semibold text-foreground">
                             {currencySymbol}{formatNumber(projection.portfolioValue)}
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
