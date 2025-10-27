@@ -202,6 +202,7 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
   const levels: TradingLevel[] = [];
   let remaining = lanas;
   let hasReachedTarget = false;
+  let previousRemaining = lanas;
   
   // Find starting split based on startPrice
   const startingSplit = calculateSplit(startPrice);
@@ -221,9 +222,10 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
     
     if (hasReachedTarget) {
       // Phase 2: Portfolio fixed at target value
+      // As price doubles, we need to sell half of LANA to maintain target value
       newRemaining = targetValue / splitPrice; // Adjust LANA to maintain target
-      lanasOnSale = 0; // No more sales
-      cashOut = 0;
+      lanasOnSale = previousRemaining - newRemaining; // Amount sold at this split
+      cashOut = lanasOnSale * splitPrice;
     } else {
       // Phase 1: Growing towards target - sell ~1% per split
       lanasOnSale = remaining * 0.01;
@@ -241,6 +243,7 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
       remaining: parseFloat(newRemaining.toFixed(2))
     });
     
+    previousRemaining = newRemaining;
     remaining = newRemaining;
   }
   
@@ -414,8 +417,13 @@ export default function TradingPlanCalculator() {
       }
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
 
-      // For passive accounts (6, 7, 8), calculate portfolio value
-      const portfolioValue = config.type === "passive" ? lanasPerAccount * accountPrices[index] : undefined;
+      // For passive accounts (6, 7, 8), use target value as portfolio value
+      let portfolioValue: number | undefined;
+      if (config.type === "passive") {
+        portfolioValue = index === 5 ? account6TargetValue : 
+                        index === 6 ? account7TargetValue : 
+                        account8TargetValue;
+      }
       return {
         number: index + 1,
         name: config.name,
@@ -582,15 +590,18 @@ export default function TradingPlanCalculator() {
                         </tr>
                       </thead>
                       <tbody>
-                         {account.levels.slice(0, 10).map((level, idx) => {
+                         {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level, idx) => {
                            // Determine target value for highlighting
                            const targetValue = account.number === 6 ? 1000000 :
                                              account.number === 7 ? 10000000 :
                                              account.number === 8 ? 88000000 : 0;
                            
                            const isPassiveAccount = account.number >= 6;
-                           const isTargetReached = isPassiveAccount && parseFloat(level.cashOut) === 0;
-                           const isFirstTarget = isTargetReached && (idx === 0 || parseFloat(account.levels[idx - 1].cashOut) > 0);
+                           const currentPortfolioValue = level.remaining * parseFloat(level.splitPrice);
+                           const isTargetReached = isPassiveAccount && currentPortfolioValue >= targetValue;
+                           const prevLevel = idx > 0 ? account.levels[idx - 1] : null;
+                           const prevPortfolioValue = prevLevel ? prevLevel.remaining * parseFloat(prevLevel.splitPrice) : 0;
+                           const isFirstTarget = isTargetReached && prevPortfolioValue < targetValue;
                            const isPostTarget = isTargetReached && !isFirstTarget;
                            
                            return <tr key={level.level} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isFirstTarget ? 'bg-green-500/10 border-green-500/30' : isPostTarget ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
@@ -618,8 +629,8 @@ export default function TradingPlanCalculator() {
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.lanasOnSale)}
                             </td>
-                            <td className={`text-right py-3 px-4 font-semibold ${isTargetReached ? 'text-muted-foreground italic' : 'text-secondary'}`}>
-                              {isTargetReached ? '-' : `${currencySymbol}${formatNumber(parseFloat(level.cashOut))}`}
+                            <td className={`text-right py-3 px-4 font-semibold ${parseFloat(level.cashOut) === 0 ? 'text-muted-foreground italic' : 'text-secondary'}`}>
+                              {parseFloat(level.cashOut) === 0 ? '-' : `${currencySymbol}${formatNumber(parseFloat(level.cashOut))}`}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.remaining)}
@@ -629,8 +640,11 @@ export default function TradingPlanCalculator() {
                       </tbody>
                     </table>
                   </div>
-                  {account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
+                  {account.number < 6 && account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
                       Showing first 10 of {account.levels.length} levels
+                    </p>}
+                  {account.number >= 6 && account.number <= 8 && <p className="text-center text-sm text-muted-foreground mt-4">
+                      Showing all {account.levels.length} levels to Split 37
                     </p>}
                 </div>}
             </Card>)}
