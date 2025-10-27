@@ -197,6 +197,55 @@ function generatePassiveLevels(lanas: number, startPrice: number, maxLevels: num
   }
   return levels;
 }
+
+function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetValue: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  let remaining = lanas;
+  let hasReachedTarget = false;
+  
+  // Find starting split based on startPrice
+  const startingSplit = calculateSplit(startPrice);
+  
+  for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
+    const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
+    const actualPortfolioValue = remaining * splitPrice;
+    
+    let lanasOnSale: number;
+    let cashOut: number;
+    let newRemaining: number;
+    
+    // Check if we've reached target
+    if (!hasReachedTarget && actualPortfolioValue >= targetValue) {
+      hasReachedTarget = true;
+    }
+    
+    if (hasReachedTarget) {
+      // Phase 2: Portfolio fixed at target value
+      newRemaining = targetValue / splitPrice; // Adjust LANA to maintain target
+      lanasOnSale = 0; // No more sales
+      cashOut = 0;
+    } else {
+      // Phase 1: Growing towards target - sell ~1% per split
+      lanasOnSale = remaining * 0.01;
+      cashOut = lanasOnSale * splitPrice;
+      newRemaining = remaining - lanasOnSale;
+    }
+    
+    levels.push({
+      level: splitNum,
+      triggerPrice: splitPrice.toFixed(5),
+      splitNumber: splitNum,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(newRemaining.toFixed(2))
+    });
+    
+    remaining = newRemaining;
+  }
+  
+  return levels;
+}
 export default function TradingPlanCalculator() {
   const {
     params,
@@ -340,6 +389,12 @@ export default function TradingPlanCalculator() {
     ];
     
     const accountConfigs = getAccountConfigs(selectedCurrency);
+    
+    // Target values for passive accounts
+    const account6TargetValue = 1000000; // £1M
+    const account7TargetValue = 10000000; // £10M  
+    const account8TargetValue = 88000000; // £88M
+    
     const newAccounts: Account[] = accountConfigs.map((config, index) => {
       let levels: TradingLevel[];
       if (config.type === "linear") {
@@ -347,11 +402,14 @@ export default function TradingPlanCalculator() {
       } else if (config.type === "compound") {
         levels = generateCompoundLevels(lanasPerAccount, accountPrices[index]);
       } else {
-        // Passive accounts (6, 7, 8): Generate 300 levels by default, more for account 8 if requested
-        levels = generatePassiveLevels(
+        // Passive accounts (6, 7, 8): Use split-based calculation with target values
+        const targetValue = index === 5 ? account6TargetValue : 
+                           index === 6 ? account7TargetValue : 
+                           account8TargetValue;
+        levels = generatePassiveLevelsBySplit(
           lanasPerAccount, 
-          accountPrices[index], 
-          index === 7 ? 300 + account8Batches * 100 : 300
+          accountPrices[index],
+          targetValue
         );
       }
       const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
@@ -381,40 +439,6 @@ export default function TradingPlanCalculator() {
     
     // Calculate portfolio projection with accurate remaining LANA
     const projection = calculatePortfolioProjection(price, lanaMap);
-    setPortfolioProjection(projection);
-  };
-  const loadMoreAccount8Levels = () => {
-    setAccount8Batches(prev => prev + 1);
-
-    // Recalculate only account 8
-    const price = parseFloat(currentPrice);
-    const adjustedStartingPrice = price * 1.08;
-    const initialInvestment = 88;
-    const totalLanas = initialInvestment / price;
-    const lanasPerAccount = totalLanas / 8;
-    const account8Price = adjustedStartingPrice * 10000000;
-    const newBatches = account8Batches + 1;
-    const levels = generatePassiveLevels(lanasPerAccount, account8Price, 300 + newBatches * 100);
-    const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
-    const portfolioValue = lanasPerAccount * account8Price;
-    const updatedAccounts = accounts.map(acc => acc.number === 8 ? {
-      ...acc,
-      levels,
-      totalCashOut,
-      portfolioValue
-    } : acc);
-    
-    setAccounts(updatedAccounts);
-    
-    // Rebuild remaining LANA map with updated accounts
-    const lanaMap = buildRemainingLanaMap(updatedAccounts, totalLanas);
-    
-    // Track which splits have passive account activity
-    const passiveSplits = getPassiveAccountSplits(updatedAccounts);
-    setPassiveAccountSplits(passiveSplits);
-    
-    // Recalculate portfolio projection with accurate remaining LANA
-    const projection = calculatePortfolioProjection(parseFloat(currentPrice), lanaMap);
     setPortfolioProjection(projection);
   };
   const toggleAccount = (accountNumber: number) => {
@@ -558,8 +582,35 @@ export default function TradingPlanCalculator() {
                         </tr>
                       </thead>
                       <tbody>
-                         {(account.number === 8 ? account.levels : account.levels.slice(0, 10)).map(level => <tr key={level.level} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                            <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
+                         {account.levels.slice(0, 10).map((level, idx) => {
+                           // Determine target value for highlighting
+                           const targetValue = account.number === 6 ? 1000000 :
+                                             account.number === 7 ? 10000000 :
+                                             account.number === 8 ? 88000000 : 0;
+                           
+                           const isPassiveAccount = account.number >= 6;
+                           const isTargetReached = isPassiveAccount && parseFloat(level.cashOut) === 0;
+                           const isFirstTarget = isTargetReached && (idx === 0 || parseFloat(account.levels[idx - 1].cashOut) > 0);
+                           const isPostTarget = isTargetReached && !isFirstTarget;
+                           
+                           return <tr key={level.level} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isFirstTarget ? 'bg-green-500/10 border-green-500/30' : isPostTarget ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
+                            <td className="py-3 px-4 font-medium">
+                              <div className="flex items-center gap-2">
+                                <span className={isFirstTarget ? 'text-green-600 dark:text-green-400 font-bold' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}>
+                                  {level.level}
+                                </span>
+                                {isFirstTarget && (
+                                  <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
+                                    TARGET
+                                  </span>
+                                )}
+                                {isPostTarget && (
+                                  <span className="text-xs bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
+                                    FIXED
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">{currencySymbol}{formatNumber(parseFloat(level.triggerPrice))}</td>
                             <td className="text-right py-3 px-4 text-primary font-medium">
                               Split {level.splitNumber}. {currencySymbol}{formatNumber(parseFloat(level.splitPrice))}
@@ -567,27 +618,20 @@ export default function TradingPlanCalculator() {
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.lanasOnSale)}
                             </td>
-                            <td className="text-right py-3 px-4 font-semibold text-secondary">
-                              {currencySymbol}{formatNumber(parseFloat(level.cashOut))}
+                            <td className={`text-right py-3 px-4 font-semibold ${isTargetReached ? 'text-muted-foreground italic' : 'text-secondary'}`}>
+                              {isTargetReached ? '-' : `${currencySymbol}${formatNumber(parseFloat(level.cashOut))}`}
                             </td>
                             <td className="text-right py-3 px-4 text-muted-foreground">
                               {formatNumber(level.remaining)}
                             </td>
-                          </tr>)}
+                          </tr>;
+                         })}
                       </tbody>
                     </table>
                   </div>
-                  {account.number !== 8 && account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
+                  {account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
                       Showing first 10 of {account.levels.length} levels
                     </p>}
-                  
-                  {/* Show "Load More" button for Account 8 */}
-                  {account.number === 8 && account.levels.length > 0 && account.levels[account.levels.length - 1].splitNumber < 37 && <div className="text-center mt-6 pt-6 border-t border-border">
-                      <Button onClick={loadMoreAccount8Levels} variant="outline" className="w-full max-w-md">
-                        <ChevronDown className="w-4 h-4 mr-2" />
-                        Load Next 100 Records (Current: {account.levels.length} levels, Split {account.levels[account.levels.length - 1].splitNumber})
-                      </Button>
-                    </div>}
                 </div>}
             </Card>)}
         </div>}
