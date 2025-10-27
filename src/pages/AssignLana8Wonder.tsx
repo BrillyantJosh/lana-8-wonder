@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { Html5Qrcode } from "html5-qrcode";
+import { getCurrencySymbol } from "@/lib/utils";
 
 interface WalletValidation {
   address: string;
@@ -230,6 +231,8 @@ const AssignLana8Wonder = () => {
   const amountPerWallet = totalFor8Wallets / 8;
   const totalTransferred = minRequiredLana;
   const remainingBalance = sourceBalance - totalTransferred;
+  
+  const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -270,7 +273,7 @@ const AssignLana8Wonder = () => {
                 <p className="text-sm font-semibold mb-3">Transaction Breakdown</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Required Deposit ({planCurrency}):</span>
+                    <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
                     <span className="font-mono">{minRequiredLana.toFixed(8)} LANA</span>
                   </div>
                   <div className="flex justify-between">

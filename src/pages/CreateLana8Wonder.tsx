@@ -10,6 +10,7 @@ import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrencySymbol } from "@/lib/utils";
 
 const CreateLana8Wonder = () => {
   const navigate = useNavigate();
@@ -137,6 +138,7 @@ const CreateLana8Wonder = () => {
   };
 
   const minimumRequired = getMinimumRequiredBalance(planCurrency);
+  const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -184,7 +186,7 @@ const CreateLana8Wonder = () => {
                 Select wallets from this list when creating your annuity plan.
                 {minimumRequired > 0 && (
                   <span className="block mt-1 text-foreground">
-                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {planCurrency} ÷ current exchange rate)
+                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {currencySymbol} ÷ current exchange rate)
                   </span>
                 )}
               </CardDescription>

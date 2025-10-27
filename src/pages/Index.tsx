@@ -9,10 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { getCurrencySymbol } from "@/lib/utils";
 
 const Index = () => {
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Get currency symbol from session if user is logged in
+  const sessionData = typeof window !== 'undefined' ? sessionStorage.getItem("lana_session") : null;
+  const sessionCurrency = sessionData ? JSON.parse(sessionData).currency : 'EUR';
+  const currencySymbol = getCurrencySymbol(sessionCurrency || 'EUR');
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -94,7 +100,7 @@ const Index = () => {
               </div>
               
               <p className="text-2xl md:text-3xl font-semibold text-foreground max-w-4xl mx-auto">
-                Transform your €88 investment into extraordinary wealth with 8-account.
+                Transform your {currencySymbol}88 investment into extraordinary wealth with 8-account.
               </p>
               
               <div className="flex items-center justify-center gap-6 pt-8 max-w-4xl mx-auto">
@@ -129,7 +135,7 @@ const Index = () => {
             © 2024 Lana8Wonder. Investment strategies calculated using proven mathematical formulas.
           </p>
           <p className="text-xs mt-2">
-            Initial investment: €88 | 8 Accounts | Linear, Compound & Passive Strategies
+            Initial investment: {currencySymbol}88 | 8 Accounts | Linear, Compound & Passive Strategies
           </p>
         </div>
       </footer>
