@@ -186,7 +186,7 @@ const Login = () => {
               <Label htmlFor="wif">WIF Key</Label>
               <Input
                 id="wif"
-                type="text"
+                type="password"
                 placeholder="Enter your WIF key..."
                 value={wif}
                 onChange={(e) => setWif(e.target.value)}
