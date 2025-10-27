@@ -30,6 +30,7 @@ interface ProjectionData {
   splitPrice: number;
   portfolioValue: number;
   remainingLana: number;
+  totalCashOut: number;
 }
 const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
   const symbol = getCurrencySymbol(currency);
@@ -320,13 +321,22 @@ export default function TradingPlanCalculator() {
     return passiveSplits;
   };
 
-  const calculatePortfolioProjection = (startingPrice: number, remainingLanaMap: Map<number, number>): ProjectionData[] => {
+  const calculatePortfolioProjection = (startingPrice: number, remainingLanaMap: Map<number, number>, accounts: Account[]): ProjectionData[] => {
     const projections: ProjectionData[] = [];
     // Increase starting price by 8% to skip the first split (Initial Recovery)
     const adjustedStartingPrice = startingPrice * 1.08;
     let startingSplit = calculateSplit(adjustedStartingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
     let hasReachedTarget = false;
+    
+    // Build a map of cash out per split from all accounts
+    const cashOutPerSplit = new Map<number, number>();
+    accounts.forEach(account => {
+      account.levels.forEach(level => {
+        const currentCashOut = cashOutPerSplit.get(level.splitNumber) || 0;
+        cashOutPerSplit.set(level.splitNumber, currentCashOut + parseFloat(level.cashOut));
+      });
+    });
     
     // Calculate portfolio value from starting split to Split 37
     for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
@@ -356,7 +366,8 @@ export default function TradingPlanCalculator() {
         splitNumber: splitNum,
         splitPrice: splitPrice,
         portfolioValue: portfolioValue,
-        remainingLana: adjustedRemainingLana
+        remainingLana: adjustedRemainingLana,
+        totalCashOut: cashOutPerSplit.get(splitNum) || 0
       });
     }
     
@@ -444,7 +455,7 @@ export default function TradingPlanCalculator() {
     setPassiveAccountSplits(passiveSplits);
     
     // Calculate portfolio projection with accurate remaining LANA
-    const projection = calculatePortfolioProjection(price, lanaMap);
+    const projection = calculatePortfolioProjection(price, lanaMap, newAccounts);
     setPortfolioProjection(projection);
   };
   const toggleAccount = (accountNumber: number) => {
@@ -706,6 +717,7 @@ export default function TradingPlanCalculator() {
                     <tr className="border-b-2 border-border">
                       <th className="text-left py-3 px-4 font-semibold text-foreground">Split</th>
                       <th className="text-right py-3 px-4 font-semibold text-foreground">LANA Price</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Cash Out</th>
                       <th className="text-right py-3 px-4 font-semibold text-foreground">Portfolio Value</th>
                       <th className="text-right py-3 px-4 font-semibold text-foreground">Remaining LANA</th>
                     </tr>
@@ -718,6 +730,9 @@ export default function TradingPlanCalculator() {
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
                             {currencySymbol}{formatNumber(projection.splitPrice)}
+                          </td>
+                          <td className="text-right py-3 px-4 font-semibold text-secondary">
+                            {projection.totalCashOut > 0 ? `${currencySymbol}${formatNumber(projection.totalCashOut)}` : '-'}
                           </td>
                           <td className="text-right py-3 px-4 font-semibold text-foreground">
                             {currencySymbol}{formatNumber(projection.portfolioValue)}
