@@ -589,11 +589,11 @@ export default function TradingPlanCalculator() {
                       </thead>
                       <tbody>
                           {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level, index, array) => {
-                            // For accounts 1-5, check if this is the start of a new split group
+                            // For accounts 1-5, add border only between different splits
                             const isNewSplitGroup = account.number < 6 && index > 0 && level.splitNumber !== array[index - 1].splitNumber;
                             const splitGroupClass = account.number < 6 && isNewSplitGroup ? 'border-t-2 border-primary/40' : '';
                             
-                            return <tr key={level.level} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${splitGroupClass}`}>
+                            return <tr key={level.level} className={`hover:bg-muted/50 transition-colors ${splitGroupClass}`}>
                             <td className="py-3 px-4 font-medium text-foreground">
                               {level.level}
                             </td>
