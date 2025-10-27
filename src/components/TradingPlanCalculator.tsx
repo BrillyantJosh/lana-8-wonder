@@ -275,27 +275,38 @@ export default function TradingPlanCalculator() {
     const adjustedStartingPrice = startingPrice * 1.08;
     let startingSplit = calculateSplit(adjustedStartingPrice);
     const TARGET_VALUE = 100000000; // €100,000,000
+    let hasReachedTarget = false;
     
-    // Calculate portfolio value from starting split until €100M is reached
+    // Calculate portfolio value from starting split to Split 37
     for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
       const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
       const remainingLana = remainingLanaMap.get(splitNum) || 0;
       const actualPortfolioValue = remainingLana * splitPrice;
       
-      // Cap portfolio value at €100M
-      const portfolioValue = Math.min(actualPortfolioValue, TARGET_VALUE);
+      // Check if we've reached £100M for the first time
+      if (!hasReachedTarget && actualPortfolioValue >= TARGET_VALUE) {
+        hasReachedTarget = true;
+      }
+      
+      let portfolioValue: number;
+      let adjustedRemainingLana: number;
+      
+      if (hasReachedTarget) {
+        // After £100M: portfolio stays fixed at £100M, LANA adjusts to maintain this value
+        portfolioValue = TARGET_VALUE;
+        adjustedRemainingLana = TARGET_VALUE / splitPrice;
+      } else {
+        // Before £100M: normal calculation
+        portfolioValue = actualPortfolioValue;
+        adjustedRemainingLana = remainingLana;
+      }
       
       projections.push({
         splitNumber: splitNum,
         splitPrice: splitPrice,
         portfolioValue: portfolioValue,
-        remainingLana: remainingLana
+        remainingLana: adjustedRemainingLana
       });
-      
-      // Stop when €100M is reached
-      if (actualPortfolioValue >= TARGET_VALUE) {
-        break;
-      }
     }
     
     return projections;
@@ -653,7 +664,10 @@ export default function TradingPlanCalculator() {
             {/* Full Projection Table */}
             <div>
               <h4 className="text-lg font-semibold text-foreground mb-4">Complete Split Projection</h4>
-              <div className="overflow-x-auto">
+              <p className="text-sm text-muted-foreground mb-4 italic">
+                After reaching {currencySymbol}100M, portfolio value remains fixed while remaining LANA adjusts to maintain this value as LANA price doubles with each split.
+              </p>
+              <div className="overflow-x-auto max-h-[600px]">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-border">
@@ -664,19 +678,33 @@ export default function TradingPlanCalculator() {
                     </tr>
                   </thead>
                   <tbody>
-                    {portfolioProjection.map(projection => {
-                    const isMillestone = projection.portfolioValue >= 100000000;
-                    const isSplit27 = projection.splitNumber === 27;
-                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isMillestone ? 'bg-green-500/10 border-green-500/30' : isSplit27 ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
+                    {portfolioProjection.map((projection, index) => {
+                    const isTargetReached = projection.portfolioValue >= 100000000;
+                    const isFirstTargetReached = isTargetReached && (index === 0 || portfolioProjection[index - 1].portfolioValue < 100000000);
+                    const isPostTarget = isTargetReached && !isFirstTargetReached;
+                    
+                    return <tr key={projection.splitNumber} className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${isFirstTargetReached ? 'bg-green-500/10 border-green-500/30' : isPostTarget ? 'bg-indigo-500/10 border-indigo-500/30' : ''}`}>
                           <td className="py-3 px-4 font-medium">
-                            <span className={isSplit27 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-primary'}>
-                              Split {projection.splitNumber}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={isFirstTargetReached ? 'text-green-600 dark:text-green-400 font-bold' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-primary'}>
+                                Split {projection.splitNumber}
+                              </span>
+                              {isFirstTargetReached && (
+                                <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
+                                  TARGET
+                                </span>
+                              )}
+                              {isPostTarget && (
+                                <span className="text-xs bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
+                                  FIXED
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
                             {currencySymbol}{formatNumber(projection.splitPrice)}
                           </td>
-                          <td className={`text-right py-3 px-4 font-semibold ${isMillestone ? 'text-green-600 dark:text-green-400' : isSplit27 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>
+                          <td className={`text-right py-3 px-4 font-semibold ${isFirstTargetReached ? 'text-green-600 dark:text-green-400' : isPostTarget ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>
                             {currencySymbol}{formatNumber(projection.portfolioValue)}
                           </td>
                           <td className="text-right py-3 px-4 text-muted-foreground">
