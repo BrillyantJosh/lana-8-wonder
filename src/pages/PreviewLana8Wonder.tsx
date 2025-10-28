@@ -220,8 +220,17 @@ const PreviewLana8Wonder = () => {
       // Fetch nostr hex id from session
       const sessionData = sessionStorage.getItem("nostrSession");
       if (sessionData) {
-        const session = JSON.parse(sessionData);
-        setNostrHexId(session.nostrHexId);
+        try {
+          const session = JSON.parse(sessionData);
+          console.log('📋 Session data:', session);
+          const hexId = session.nostrHexId || session.nostr_hex_id;
+          console.log('📋 Nostr Hex ID:', hexId);
+          setNostrHexId(hexId);
+        } catch (error) {
+          console.error('Error parsing session data:', error);
+        }
+      } else {
+        console.warn('⚠️ No session data found in sessionStorage');
       }
     };
     
@@ -344,8 +353,19 @@ const PreviewLana8Wonder = () => {
   };
 
   const handleRegisterWallets = async () => {
-    if (!nostrHexId || !wallets) {
-      toast.error('Missing required data for registration');
+    console.log('🔍 Registration check:', { 
+      nostrHexId, 
+      hasWallets: !!wallets, 
+      walletsCount: wallets?.length 
+    });
+
+    if (!nostrHexId) {
+      toast.error('Session not found. Please log in again.');
+      return;
+    }
+
+    if (!wallets || wallets.length === 0) {
+      toast.error('No wallets found to register');
       return;
     }
 
