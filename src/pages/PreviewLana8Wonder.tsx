@@ -192,6 +192,17 @@ const PreviewLana8Wonder = () => {
   const [publishedPlan, setPublishedPlan] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
+  // State for data loaded from database (when location.state is empty)
+  const [loadedPlanCurrency, setLoadedPlanCurrency] = useState<string>("");
+  const [loadedExchangeRate, setLoadedExchangeRate] = useState<number>(0);
+  const [loadedSourceWallet, setLoadedSourceWallet] = useState<string>("");
+  const [loadedWallets, setLoadedWallets] = useState<any[]>([]);
+  const [loadedMinRequiredLana, setLoadedMinRequiredLana] = useState<number>(0);
+  const [loadedPhiDonation, setLoadedPhiDonation] = useState<number>(0);
+  const [loadedAmountPerWallet, setLoadedAmountPerWallet] = useState<number>(0);
+  const [loadedTotalTransferred, setLoadedTotalTransferred] = useState<number>(0);
+  const [loadedSourceBalance, setLoadedSourceBalance] = useState<number>(0);
+
   const {
     sourceWallet,
     sourceBalance,
@@ -206,8 +217,20 @@ const PreviewLana8Wonder = () => {
     nostrHexId: stateNostrHexId
   } = location.state || {};
 
+  // Use effective values (from state or loaded from DB)
+  const effectiveSourceWallet = sourceWallet || loadedSourceWallet;
+  const effectivePlanCurrency = planCurrency || loadedPlanCurrency;
+  const effectiveExchangeRate = exchangeRate || loadedExchangeRate;
+  const effectiveWallets = (wallets && wallets.length > 0) ? wallets : loadedWallets;
+  const effectiveAmountPerWallet = amountPerWallet || loadedAmountPerWallet;
+  const effectiveMinRequiredLana = minRequiredLana || loadedMinRequiredLana;
+  const effectivePhiDonation = phiDonation || loadedPhiDonation;
+  const effectiveTotalTransferred = totalTransferred || loadedTotalTransferred;
+  const effectiveSourceBalance = sourceBalance || loadedSourceBalance;
+  const effectiveRemainingBalance = remainingBalance !== undefined ? remainingBalance : (effectiveSourceBalance - effectiveTotalTransferred);
+
   // Calculate start price (8% more than exchange rate)
-  const startPrice = exchangeRate ? exchangeRate * 1.08 : 0;
+  const startPrice = effectiveExchangeRate ? effectiveExchangeRate * 1.08 : 0;
 
   // Fetch donation wallet ID and set nostr hex id
   useEffect(() => {
@@ -280,10 +303,132 @@ const PreviewLana8Wonder = () => {
     checkWalletRegistration();
   }, [nostrHexId]);
 
+  // Load plan data from database if not in location.state
+  useEffect(() => {
+    const loadPlanDataFromDB = async () => {
+      // If we already have data from location.state, skip
+      if (sourceWallet && wallets && planCurrency && exchangeRate) return;
+      
+      // Wait for nostrHexId and params to be available
+      if (!nostrHexId || !params) return;
+      
+      try {
+        console.log('📊 Loading plan data from database...');
+        
+        // Fetch profile data
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, selected_wallet, tx")
+          .eq("nostr_hex_id", nostrHexId)
+          .maybeSingle();
+        
+        if (profileError) throw profileError;
+        
+        if (!profile?.selected_wallet) {
+          console.warn('No selected_wallet found in profile');
+          toast.error("No annuity plan found. Create a new one.");
+          navigate("/create-lana8wonder");
+          return;
+        }
+        
+        // Fetch wallets from database
+        const { data: dbWallets, error: walletsError } = await supabase
+          .from("wallets")
+          .select("wallet_address, wallet_type")
+          .eq("profile_id", profile.id)
+          .eq("wallet_type", "annuity");
+        
+        if (walletsError) throw walletsError;
+        
+        if (!dbWallets || dbWallets.length !== 8) {
+          console.warn('Incomplete wallets found:', dbWallets?.length);
+          toast.error("Incomplete annuity plan. Please set up again.");
+          navigate("/create-lana8wonder");
+          return;
+        }
+        
+        // Get session data for currency
+        const sessionData = sessionStorage.getItem("lana_session");
+        let currency = 'EUR';
+        if (sessionData) {
+          try {
+            const session = JSON.parse(sessionData);
+            currency = session.currency || 'EUR';
+          } catch (e) {
+            console.warn('Could not parse session data for currency');
+          }
+        }
+        
+        // Get exchange rate from params
+        const rate = params.exchangeRates[currency as keyof typeof params.exchangeRates];
+        if (!rate) {
+          toast.error("Exchange rate not available");
+          return;
+        }
+        
+        // Calculate all values
+        const minLana = 88 / rate;
+        const phi = minLana * 0.016180;
+        const perWallet = minLana / 8;
+        const total = minLana + phi;
+        
+        // Fetch source wallet balance
+        const electrumServers = params.electrum.map(e => ({
+          host: e.host,
+          port: parseInt(e.port)
+        }));
+        
+        let sourceBalanceValue = 0;
+        try {
+          const { data: balanceData } = await supabase.functions.invoke('check-wallet-balance', {
+            body: {
+              wallet_addresses: [profile.selected_wallet],
+              electrum_servers: electrumServers
+            }
+          });
+          
+          if (balanceData?.balances && balanceData.balances.length > 0) {
+            sourceBalanceValue = balanceData.balances[0].balance || 0;
+          }
+        } catch (balanceError) {
+          console.error('Error fetching source balance:', balanceError);
+        }
+        
+        // Set all loaded state
+        setLoadedSourceWallet(profile.selected_wallet);
+        setLoadedPlanCurrency(currency);
+        setLoadedExchangeRate(rate);
+        setLoadedWallets(dbWallets.map(w => ({ address: w.wallet_address })));
+        setLoadedMinRequiredLana(minLana);
+        setLoadedPhiDonation(phi);
+        setLoadedAmountPerWallet(perWallet);
+        setLoadedTotalTransferred(total);
+        setLoadedSourceBalance(sourceBalanceValue);
+        setTxHash(profile.tx || '');
+        
+        console.log('✅ Plan data loaded from database:', {
+          sourceWallet: profile.selected_wallet,
+          currency,
+          exchangeRate: rate,
+          wallets: dbWallets.length,
+          minRequiredLana: minLana,
+          amountPerWallet: perWallet
+        });
+        
+      } catch (error) {
+        console.error("Error loading plan from database:", error);
+        toast.error("Error loading plan. Please try again.");
+        navigate("/create-lana8wonder");
+      }
+    };
+    
+    loadPlanDataFromDB();
+  }, [nostrHexId, params, sourceWallet, wallets, planCurrency, exchangeRate, navigate]);
+
   // Fetch current balances from Electrum
   useEffect(() => {
     const fetchBalances = async () => {
-      if (!wallets || !params?.electrum) return;
+      if (!effectiveWallets || effectiveWallets.length === 0 || !params?.electrum) return;
       
       setLoadingBalances(true);
       try {
@@ -292,7 +437,7 @@ const PreviewLana8Wonder = () => {
           port: parseInt(e.port)
         }));
         
-        const addresses = wallets.map((w: any) => w.address);
+        const addresses = effectiveWallets.map((w: any) => w.address);
         
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
           body: {
@@ -321,66 +466,14 @@ const PreviewLana8Wonder = () => {
     };
     
     fetchBalances();
-  }, [wallets, params]);
+  }, [effectiveWallets, params]);
 
-  // Check if plan data exists (either from state or DB) and load from DB if needed
-  useEffect(() => {
-    const loadPlanFromDatabase = async () => {
-      // If we have data from location.state, we're good
-      if (sourceWallet) return;
-      
-      // If selectedWallet is set (from DB check), we're also good
-      if (selectedWallet) return;
-      
-      // If we don't have nostrHexId yet, wait
-      if (!nostrHexId) return;
-      
-      // Try to load plan data from database
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, selected_wallet, tx")
-          .eq("nostr_hex_id", nostrHexId)
-          .maybeSingle();
-        
-        if (!profile?.selected_wallet) {
-          // No plan found in DB either, redirect to create
-          toast.error("No annuity plan found. Create a new one.");
-          navigate("/create-lana8wonder");
-          return;
-        }
-        
-        // Load wallets from database
-        const { data: dbWallets } = await supabase
-          .from("wallets")
-          .select("wallet_address, wallet_type")
-          .eq("profile_id", profile.id)
-          .eq("wallet_type", "annuity");
-        
-        if (!dbWallets || dbWallets.length !== 8) {
-          // Invalid plan, redirect
-          toast.error("Incomplete annuity plan. Please set up again.");
-          navigate("/create-lana8wonder");
-          return;
-        }
-        
-        // We have data in DB, selectedWallet will be set by the other useEffect
-        // No need to redirect
-      } catch (error) {
-        console.error("Error loading plan from database:", error);
-        toast.error("Error loading plan. Please try again.");
-        navigate("/create-lana8wonder");
-      }
-    };
-    
-    loadPlanFromDatabase();
-  }, [selectedWallet, sourceWallet, navigate, nostrHexId]);
 
   // Generate trading plan accounts
   useEffect(() => {
-    if (!exchangeRate || !amountPerWallet) return;
+    if (!effectiveExchangeRate || !effectiveAmountPerWallet || !effectivePlanCurrency) return;
 
-    const adjustedStartingPrice = exchangeRate * 1.08;
+    const adjustedStartingPrice = effectiveExchangeRate * 1.08;
     
     const accountPrices = [
       adjustedStartingPrice,
@@ -393,7 +486,7 @@ const PreviewLana8Wonder = () => {
       adjustedStartingPrice * 10000000
     ];
     
-    const accountConfigs = getAccountConfigs(planCurrency as 'EUR' | 'USD' | 'GBP');
+    const accountConfigs = getAccountConfigs(effectivePlanCurrency as 'EUR' | 'USD' | 'GBP');
     
     const account6TargetValue = 1000000;
     const account7TargetValue = 10000000;
@@ -402,15 +495,15 @@ const PreviewLana8Wonder = () => {
     const newAccounts: Account[] = accountConfigs.map((config, index) => {
       let levels: TradingLevel[];
       if (config.type === "linear") {
-        levels = generateLinearLevels(amountPerWallet, accountPrices[index]);
+        levels = generateLinearLevels(effectiveAmountPerWallet, accountPrices[index]);
       } else if (config.type === "compound") {
-        levels = generateCompoundLevels(amountPerWallet, accountPrices[index]);
+        levels = generateCompoundLevels(effectiveAmountPerWallet, accountPrices[index]);
       } else {
         const targetValue = index === 5 ? account6TargetValue : 
                            index === 6 ? account7TargetValue : 
                            account8TargetValue;
         levels = generatePassiveLevelsBySplit(
-          amountPerWallet, 
+          effectiveAmountPerWallet, 
           accountPrices[index],
           targetValue
         );
@@ -429,7 +522,7 @@ const PreviewLana8Wonder = () => {
     });
     
     setAccounts(newAccounts);
-  }, [exchangeRate, amountPerWallet, planCurrency]);
+  }, [effectiveExchangeRate, effectiveAmountPerWallet, effectivePlanCurrency]);
 
   const toggleAccount = (accountNumber: number) => {
     const newExpanded = new Set(expandedAccounts);
@@ -453,7 +546,7 @@ const PreviewLana8Wonder = () => {
       return;
     }
 
-    if (!wallets || wallets.length === 0) {
+    if (!effectiveWallets || effectiveWallets.length === 0) {
       toast.error('No wallets found to register');
       return;
     }
@@ -462,7 +555,7 @@ const PreviewLana8Wonder = () => {
 
     try {
       // Prepare wallet data for API
-      const walletsData = wallets.map((wallet: any, index: number) => ({
+      const walletsData = effectiveWallets.map((wallet: any, index: number) => ({
         wallet_id: wallet.address,
         wallet_type: 'Lana8Wonder',
         notes: `Lana 8 Wonder Account ${index + 1}`
@@ -538,7 +631,7 @@ const PreviewLana8Wonder = () => {
       const session = JSON.parse(sessionData);
       const subjectHex = session.nostrHexId;
       
-      const walletAddresses = wallets.map((w: any) => w.address);
+      const walletAddresses = effectiveWallets.map((w: any) => w.address);
       
       const relays = params?.relays || [
         'wss://relay.lanavault.space',
@@ -548,17 +641,17 @@ const PreviewLana8Wonder = () => {
       console.log('📝 Publishing Lana8Wonder plan...', {
         subject_hex: subjectHex,
         wallets: walletAddresses.length,
-        currency: planCurrency,
-        exchange_rate: exchangeRate
+        currency: effectivePlanCurrency,
+        exchange_rate: effectiveExchangeRate
       });
       
       const { data, error } = await supabase.functions.invoke('publish-lana8wonder-plan', {
         body: {
           subject_hex: subjectHex,
           wallets: walletAddresses,
-          amount_per_wallet: amountPerWallet,
-          currency: planCurrency,
-          exchange_rate: exchangeRate,
+          amount_per_wallet: effectiveAmountPerWallet,
+          currency: effectivePlanCurrency,
+          exchange_rate: effectiveExchangeRate,
           start_price: startPrice,
           relays
         }
@@ -603,7 +696,7 @@ const PreviewLana8Wonder = () => {
     }
   };
 
-  const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
+  const currencySymbol = getCurrencySymbol(effectivePlanCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -638,9 +731,9 @@ const PreviewLana8Wonder = () => {
             ) : (
               <>
                 <div className="space-y-4 mb-6">
-                  {wallets?.map((wallet: any, index: number) => {
+                  {effectiveWallets?.map((wallet: any, index: number) => {
                     const currentBalance = walletBalances[wallet.address] || 0;
-                    const afterBalance = amountPerWallet || 0;
+                    const afterBalance = effectiveAmountPerWallet || 0;
                     
                     return (
                       <div key={index} className="p-3 border rounded-lg">
@@ -680,7 +773,7 @@ const PreviewLana8Wonder = () => {
                     {registrationResult && (
                       <div className="text-center text-sm text-green-700 dark:text-green-300">
                         <p>
-                          {registrationResult.data?.wallets_registered || wallets?.length} wallets registered as Lana8Wonder type
+                          {registrationResult.data?.wallets_registered || effectiveWallets?.length} wallets registered as Lana8Wonder type
                         </p>
                       </div>
                     )}
@@ -716,11 +809,11 @@ const PreviewLana8Wonder = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Wallet Address</p>
-                <p className="font-mono text-sm break-all">{sourceWallet}</p>
+                <p className="font-mono text-sm break-all">{effectiveSourceWallet}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="font-semibold">{sourceBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA</p>
+                <p className="font-semibold">{effectiveSourceBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA</p>
               </div>
               
               <div className="pt-4 border-t">
@@ -728,11 +821,11 @@ const PreviewLana8Wonder = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
-                    <span className="font-mono">{minRequiredLana?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectiveMinRequiredLana?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
-                    <span className="font-mono">{phiDonation?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectivePhiDonation?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   {donationWalletId && (
                     <div className="flex justify-between text-xs">
@@ -742,19 +835,19 @@ const PreviewLana8Wonder = () => {
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total to 8 Wallets:</span>
-                    <span className="font-mono">{(minRequiredLana - phiDonation)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{(effectiveMinRequiredLana - effectivePhiDonation)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
-                    <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectiveAmountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t font-semibold">
                     <span>Total to Transfer:</span>
-                    <span className="font-mono">{totalTransferred?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectiveTotalTransferred?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Remaining in Wallet:</span>
-                    <span className="font-mono">{remainingBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectiveRemainingBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                 </div>
               </div>
@@ -782,20 +875,20 @@ const PreviewLana8Wonder = () => {
                   <Button
                     onClick={() => navigate('/send-lana8wonder-transfer', {
                       state: {
-                        sourceWallet,
-                        sourceBalance: sourceBalance?.toString() || '0',
-                        wallets: wallets?.map((w: any, idx: number) => ({
+                        sourceWallet: effectiveSourceWallet,
+                        sourceBalance: effectiveSourceBalance?.toString() || '0',
+                        wallets: effectiveWallets?.map((w: any, idx: number) => ({
                           address: w.address,
-                          amount: amountPerWallet,
+                          amount: effectiveAmountPerWallet,
                           label: `Wallet ${idx + 1}`
                         })),
                         donationWalletId,
-                        totalAmount: minRequiredLana,
-                        phiDonation: phiDonation,
+                        totalAmount: effectiveMinRequiredLana,
+                        phiDonation: effectivePhiDonation,
                         nostrHexId
                       }
                     })}
-                    disabled={!sourceBalance || sourceBalance < minRequiredLana}
+                    disabled={!effectiveSourceBalance || effectiveSourceBalance < effectiveMinRequiredLana}
                     className="w-full"
                   >
                     Transfer Assets to 8 Wallets
@@ -824,11 +917,11 @@ const PreviewLana8Wonder = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Currency:</span>
-                  <span className="font-semibold">{planCurrency}</span>
+                  <span className="font-semibold">{effectivePlanCurrency}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Exchange Rate:</span>
-                  <span className="font-mono">{exchangeRate?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA/{currencySymbol}</span>
+                  <span className="font-mono">{effectiveExchangeRate?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA/{currencySymbol}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Start Price:</span>
@@ -840,7 +933,7 @@ const PreviewLana8Wonder = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Distribution per Account:</span>
-                  <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                  <span className="font-mono">{effectiveAmountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                 </div>
               </div>
             </div>
