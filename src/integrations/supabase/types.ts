@@ -72,15 +72,7 @@ export type Database = {
           updated_at?: string
           wallet_registered?: boolean | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_selected_wallet_fkey"
-            columns: ["selected_wallet"]
-            isOneToOne: false
-            referencedRelation: "wallets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       wallets: {
         Row: {

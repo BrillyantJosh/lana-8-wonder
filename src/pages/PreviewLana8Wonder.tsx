@@ -325,11 +325,11 @@ const PreviewLana8Wonder = () => {
 
   useEffect(() => {
     // Allow navigation if selected_wallet exists (user has already assigned wallets)
-    if (!sourceWallet || (!wallets && !selectedWallet)) {
-      toast.error("Missing plan data");
-      navigate("/assign-lana8wonder");
+    if (!selectedWallet && !sourceWallet) {
+      toast.error("No annuity plan found. Create a new one.");
+      navigate("/create-lana8wonder");
     }
-  }, [sourceWallet, wallets, selectedWallet, navigate]);
+  }, [selectedWallet, sourceWallet, navigate]);
 
   // Generate trading plan accounts
   useEffect(() => {

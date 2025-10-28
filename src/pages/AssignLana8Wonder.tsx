@@ -302,13 +302,12 @@ const AssignLana8Wonder = () => {
         wallet_type: "annuity"
       }));
       
-      const { data: insertedWallets, error: walletsInsertError } = await supabase
+      const { error: walletsInsertError } = await supabase
         .from("wallets")
         .upsert(walletsToInsert, { 
           onConflict: "profile_id,wallet_address",
-          ignoreDuplicates: false 
-        })
-        .select();
+          ignoreDuplicates: true 
+        });
       
       if (walletsInsertError) {
         console.error("Error inserting wallets:", walletsInsertError);
@@ -316,16 +315,14 @@ const AssignLana8Wonder = () => {
         return;
       }
       
-      // Update profile with selected_wallet (first wallet)
-      if (insertedWallets && insertedWallets.length > 0) {
-        const { error: updateProfileError } = await supabase
-          .from("profiles")
-          .update({ selected_wallet: insertedWallets[0].id })
-          .eq("id", profileId);
-        
-        if (updateProfileError) {
-          console.error("Error updating profile with selected wallet:", updateProfileError);
-        }
+      // Update profile with selected_wallet (wallet address, not ID)
+      const { error: updateProfileError } = await supabase
+        .from("profiles")
+        .update({ selected_wallet: sourceWallet })
+        .eq("id", profileId);
+      
+      if (updateProfileError) {
+        console.error("Error updating profile with selected wallet:", updateProfileError);
       }
       
       toast.success("Plan data saved successfully");

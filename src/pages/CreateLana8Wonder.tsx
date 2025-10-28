@@ -266,14 +266,14 @@ const CreateLana8Wonder = () => {
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      // Check if user already has wallets in the database
+                                      // Check if user already has selected_wallet in profile
                                       const { data: existingProfile } = await supabase
                                         .from("profiles")
-                                        .select("id")
+                                        .select("id, selected_wallet")
                                         .eq("nostr_hex_id", session.nostrHexId)
                                         .maybeSingle();
                                       
-                                      if (existingProfile) {
+                                      if (existingProfile?.selected_wallet) {
                                         // Check if there are existing wallets for this profile
                                         const { data: existingWallets, error: walletsError } = await supabase
                                           .from("wallets")
@@ -286,43 +286,14 @@ const CreateLana8Wonder = () => {
                                         }
                                         
                                         if (existingWallets && existingWallets.length === 8) {
-                                          // User already has 8 wallets saved, go directly to preview
-                                          toast.success("Found existing wallets, loading preview...");
-                                          
-                                          // Format wallets for preview
-                                          const formattedWallets = existingWallets.map(w => ({
-                                            address: w.wallet_address,
-                                            balance: 0,
-                                            isValid: true,
-                                            isChecking: false
-                                          }));
-                                          
-                                          // Calculate PHI donation and amounts
-                                          const phiDonation = exchangeRates?.[planCurrency as keyof typeof exchangeRates] ? 12 / exchangeRates[planCurrency as keyof typeof exchangeRates] : 0;
-                                          const totalFor8Wallets = minimumRequired - phiDonation;
-                                          const amountPerWallet = totalFor8Wallets / 8;
-                                          const totalTransferred = minimumRequired;
-                                          const remainingBalance = currentBalance - totalTransferred;
-                                          
-                                          navigate("/preview-lana8wonder", {
-                                            state: {
-                                              sourceWallet: wallet.wallet_address,
-                                              sourceBalance: currentBalance,
-                                              wallets: formattedWallets,
-                                              amountPerWallet,
-                                              planCurrency,
-                                              exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1,
-                                              minRequiredLana: minimumRequired,
-                                              phiDonation,
-                                              totalTransferred,
-                                              remainingBalance
-                                            }
-                                          });
+                                          // User already has selected wallet and 8 wallets saved, go directly to preview
+                                          toast.success("Found existing annuity plan, loading preview...");
+                                          navigate("/preview-lana8wonder");
                                           return;
                                         }
                                       }
                                       
-                                      // No existing wallets or less than 8, go to assign page
+                                      // No selected wallet or incomplete wallets, go to assign page
                                       navigate('/assign-lana8wonder', { 
                                         state: { 
                                           sourceWallet: wallet.wallet_address,
