@@ -644,9 +644,9 @@ async function buildSignedTx(
     const finalTx = new Uint8Array([
       ...version,
       ...nTime,
-      selectedUTXOs.length,
+      ...encodeVarint(selectedUTXOs.length),  // Must be varint!
       ...allInputs,
-      outputCount,
+      ...encodeVarint(outputCount),  // Must be varint!
       ...allOutputs,
       ...locktime
     ]);
