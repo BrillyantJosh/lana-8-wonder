@@ -521,12 +521,11 @@ async function buildSignedTx(
       console.log(`📤 Output ${outputs.length}: ${recipient.address} = ${(recipient.amount / 100000000).toFixed(8)} LANA`);
     }
     
-    // Calculate change with dust threshold (500,000 satoshis = 0.005 LANA)
-    const MIN_CHANGE_THRESHOLD = 500000; // Match dust threshold
+    // Calculate change
     const changeAmount = totalValue - totalAmount - fee;
     let outputCount = recipients.length;
     
-    if (changeAmount >= MIN_CHANGE_THRESHOLD) {
+    if (changeAmount > 1000) {
       const changeHash = base58CheckDecode(changeAddress).slice(1);
       const changeScript = new Uint8Array([0x76, 0xa9, 0x14, ...changeHash, 0x88, 0xac]);
       const changeValueBytes = new Uint8Array(8);
@@ -540,14 +539,13 @@ async function buildSignedTx(
       outputCount++;
       console.log(`✅ Change output added: ${(changeAmount / 100000000).toFixed(8)} LANA`);
     } else if (changeAmount > 0) {
-      console.log(`ℹ️ Change ${changeAmount} satoshis (${(changeAmount / 100000000).toFixed(8)} LANA) is dust, absorbed into fee`);
-    } else {
-      console.log('ℹ️ No change output needed (exact amount)');
+      console.log(`⚠️ Change amount too small (${changeAmount}), adding to fee`);
     }
     
     const version = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
-    // NOTE: LANA transactions do NOT use nTime field (only blocks do)
-    // const nTime = new Uint8Array(4);  // REMOVED
+    const nTime = new Uint8Array(4);
+    const timestamp = Math.floor(Date.now() / 1000);
+    new DataView(nTime.buffer).setUint32(0, timestamp, true);
     const locktime = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
     const hashType = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
     
@@ -578,14 +576,14 @@ async function buildSignedTx(
         
         const preimage = new Uint8Array([
           ...version,
-          // NO nTime in transaction format
-          ...encodeVarint(selectedUTXOs.length),
+          ...nTime,
+          selectedUTXOs.length,
           ...txid,
           ...voutBytes,
           ...encodeVarint(scriptPubkey.length),
           ...scriptPubkey,
           0xff, 0xff, 0xff, 0xff,
-          ...encodeVarint(outputCount),
+          outputCount,
           ...allOutputs,
           ...locktime,
           ...hashType
@@ -642,10 +640,10 @@ async function buildSignedTx(
     
     const finalTx = new Uint8Array([
       ...version,
-      // NO nTime in transaction format
-      ...encodeVarint(selectedUTXOs.length),  // Must be varint!
+      ...nTime,
+      selectedUTXOs.length,
       ...allInputs,
-      ...encodeVarint(outputCount),  // Must be varint!
+      outputCount,
       ...allOutputs,
       ...locktime
     ]);
@@ -739,55 +737,20 @@ serve(async (req) => {
     const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
     console.log(`💰 Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
     
-    console.log(`🔧 Building multi-output transaction with iterative fee calculation...`);
-    
-    // Iterative approach: select UTXOs, calculate exact fee, adjust if needed
+    // Calculate dynamic fee - simple formula like working function
+    const estimatedInputCount = Math.min(10, utxos.length);
     const outputCount = recipientsInSatoshis.length + 1; // recipients + change
-    const MIN_CHANGE_THRESHOLD = 500000; // 0.005 LANA - match dust threshold
+    const fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
+    console.log(`💸 Calculated dynamic fee: ${fee} satoshis for ~${estimatedInputCount} inputs, ${outputCount} outputs`);
     
-    // First pass: estimate with initial fee
-    let estimatedInputCount = Math.min(10, utxos.length);
-    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    console.log(`💸 Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
+    // Select UTXOs
+    const totalNeeded = totalAmountSatoshis + fee;
+    const selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
+    const selectedUTXOs = selection.selected;
+    const totalSelected = selection.totalValue;
     
-    // Select UTXOs with initial estimate
-    let totalNeeded = totalAmountSatoshis + fee;
-    let selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
-    let selectedUTXOs = selection.selected;
-    let totalSelected = selection.totalValue;
-    
-    // Recalculate fee based on ACTUAL number of inputs
-    const actualInputCount = selectedUTXOs.length;
-    const actualFee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
-    
-    console.log(`🔄 Adjusted fee: ${actualFee} satoshis for ${actualInputCount} actual inputs (was ${fee} for ${estimatedInputCount} estimated)`);
-    
-    // Check if we need more UTXOs with the adjusted fee
-    if (totalSelected < totalAmountSatoshis + actualFee) {
-      console.log(`⚠️ Need more UTXOs after fee adjustment`);
-      totalNeeded = totalAmountSatoshis + actualFee;
-      selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
-      selectedUTXOs = selection.selected;
-      totalSelected = selection.totalValue;
-      
-      // Recalculate fee one more time if input count changed
-      const finalInputCount = selectedUTXOs.length;
-      fee = (finalInputCount * 180 + outputCount * 34 + 10) * 100;
-      console.log(`✅ Final fee: ${fee} satoshis for ${finalInputCount} inputs`);
-    } else {
-      fee = actualFee;
-    }
-    
-    // Calculate change
-    const changeAmount = totalSelected - totalAmountSatoshis - fee;
-    console.log(`💸 Transaction breakdown: Amount=${totalAmountSatoshis}, Fee=${fee}, Change=${changeAmount}`);
-    
-    // Check if change is dust
-    if (changeAmount > 0 && changeAmount < MIN_CHANGE_THRESHOLD) {
-      console.log(`⚠️ Change ${changeAmount} satoshis is dust, absorbing into fee`);
-      fee += changeAmount; // Absorb dust into fee
-      console.log(`✅ Adjusted fee with absorbed dust: ${fee} satoshis`);
-    }
+    console.log(`💰 Selected ${selectedUTXOs.length} UTXOs with total value: ${totalSelected} satoshis`);
+    console.log(`💸 Transaction breakdown: Amount=${totalAmountSatoshis}, Fee=${fee}, Change=${totalSelected - totalAmountSatoshis - fee}`);
     
     const signedTx = await buildSignedTx(selectedUTXOs, private_key, recipientsInSatoshis, fee, sender_address, servers);
     console.log('✍️ Transaction signed successfully');
