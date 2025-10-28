@@ -632,15 +632,20 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
     
-    // Validate recipients format
-    for (const recipient of recipients) {
+    // Validate and convert recipients format (convert LANA to satoshis)
+    const recipientsInSatoshis = recipients.map((recipient: any) => {
       if (!recipient.address || typeof recipient.amount !== 'number') {
         throw new Error('Invalid recipient format: must have address and amount');
       }
-    }
+      // Convert LANA to satoshis: 1 LANA = 100,000,000 satoshis
+      return {
+        address: recipient.address,
+        amount: Math.round(recipient.amount * 100000000)
+      };
+    });
     
-    console.log(`📦 Processing transaction with ${recipients.length} outputs:`);
-    recipients.forEach((r: any, i: number) => {
+    console.log(`📦 Processing transaction with ${recipientsInSatoshis.length} outputs:`);
+    recipientsInSatoshis.forEach((r: any, i: number) => {
       console.log(`  ${i + 1}. ${r.address}: ${(r.amount / 100000000).toFixed(8)} LANA`);
     });
     
@@ -676,17 +681,17 @@ serve(async (req) => {
     if (!utxos || utxos.length === 0) throw new Error('No UTXOs available');
     console.log(`📦 Found ${utxos.length} UTXOs`);
     
-    // Calculate total amount in satoshis
-    const totalAmountSatoshis = recipients.reduce((sum: number, r: any) => sum + r.amount, 0);
+    // Calculate total amount in satoshis (already converted above)
+    const totalAmountSatoshis = recipientsInSatoshis.reduce((sum: number, r: any) => sum + r.amount, 0);
     console.log(`💰 Total to send: ${totalAmountSatoshis} satoshis (${(totalAmountSatoshis / 100000000).toFixed(8)} LANA)`);
     
     // Calculate dynamic fee based on number of outputs
-    const outputCount = recipients.length + 1; // recipients + change
+    const outputCount = recipientsInSatoshis.length + 1; // recipients + change
     const estimatedInputCount = Math.min(5, utxos.length);
     const fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
     console.log(`💸 Calculated dynamic fee: ${fee} satoshis (${estimatedInputCount} inputs × 180 + ${outputCount} outputs × 34 + 10) × 100 sat/byte`);
     
-    const signedTx = await buildSignedTx(utxos, private_key, recipients, fee, sender_address, servers);
+    const signedTx = await buildSignedTx(utxos, private_key, recipientsInSatoshis, fee, sender_address, servers);
     console.log('✍️ Transaction signed successfully');
     
     console.log('🚀 Broadcasting transaction...');
@@ -721,7 +726,7 @@ serve(async (req) => {
         txid, 
         total_amount: totalAmountSatoshis, 
         fee,
-        output_count: recipients.length
+        output_count: recipientsInSatoshis.length
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
