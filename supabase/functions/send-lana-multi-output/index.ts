@@ -475,7 +475,7 @@ function parseScriptPubkeyFromRawTx(rawHex: string, voutIndex: number): Uint8Arr
 }
 
 async function buildSignedTx(
-  utxos: any[],
+  selectedUTXOs: any[],
   privateKeyWIF: string,
   recipients: any[],
   fee: number,
@@ -484,20 +484,19 @@ async function buildSignedTx(
 ) {
   console.log('🔧 Building multi-output transaction with enhanced validation...');
   console.log(`📊 Recipients: ${recipients.length} outputs`);
+  console.log(`📊 Using ${selectedUTXOs.length} pre-selected UTXOs`);
   
   try {
-    if (!utxos || utxos.length === 0) throw new Error('No UTXOs provided for transaction building');
+    if (!selectedUTXOs || selectedUTXOs.length === 0) throw new Error('No UTXOs provided for transaction building');
     if (recipients.length === 0) throw new Error('No recipients provided');
     
     const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
     if (totalAmount <= 0) throw new Error('Invalid total amount: must be positive');
     if (fee <= 0) throw new Error('Invalid fee: must be positive');
     
-    const totalNeeded = totalAmount + fee;
-    const { selected: selectedUTXOs, totalValue } = UTXOSelector.selectUTXOs(utxos, totalNeeded);
-    
-    console.log(`💰 Selected ${selectedUTXOs.length} UTXOs with total value: ${totalValue} satoshis`);
-    console.log(`💸 Transaction breakdown: Amount=${totalAmount}, Fee=${fee}, Change=${totalValue - totalNeeded}`);
+    const totalValue = selectedUTXOs.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
+    console.log(`💰 Total input value from ${selectedUTXOs.length} UTXOs: ${totalValue} satoshis (${(totalValue / 100000000).toFixed(8)} LANA)`);
+    console.log(`💸 Transaction breakdown: Amount=${totalAmount}, Fee=${fee}, Change=${totalValue - totalAmount - fee}`);
     
     const privateKeyBytes = base58CheckDecode(privateKeyWIF);
     const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
@@ -741,36 +740,57 @@ serve(async (req) => {
     const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
     console.log(`💰 Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
     
-    // Filter and count non-dust UTXOs for better fee estimation
-    const DUST_THRESHOLD = 500000; // 0.005 LANA
-    const nonDustUtxos = utxos.filter((u: any) => u.value >= DUST_THRESHOLD);
-    const sortedByValue = [...nonDustUtxos].sort((a, b) => b.value - a.value);
+    console.log(`🔧 Building multi-output transaction with iterative fee calculation...`);
     
-    // Estimate using up to 10 largest UTXOs (our preferred strategy)
-    const estimatedInputCount = Math.min(10, sortedByValue.length > 0 ? sortedByValue.length : utxos.length);
-    console.log(`📊 Estimating fee for ${estimatedInputCount} inputs (combining largest UTXOs)`);
-    
+    // Iterative approach: select UTXOs, calculate exact fee, adjust if needed
     const outputCount = recipientsInSatoshis.length + 1; // recipients + change
-    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    
-    // Check if change would be dust, if so, absorb into fee
     const MIN_CHANGE_THRESHOLD = 500000; // 0.005 LANA - match dust threshold
     
-    // Calculate potential change with multiple UTXOs
-    let accumulatedValue = 0;
-    for (let i = 0; i < Math.min(estimatedInputCount, sortedByValue.length); i++) {
-      accumulatedValue += sortedByValue[i].value;
+    // First pass: estimate with initial fee
+    let estimatedInputCount = Math.min(10, utxos.length);
+    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
+    console.log(`💸 Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
+    
+    // Select UTXOs with initial estimate
+    let totalNeeded = totalAmountSatoshis + fee;
+    let selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
+    let selectedUTXOs = selection.selected;
+    let totalSelected = selection.totalValue;
+    
+    // Recalculate fee based on ACTUAL number of inputs
+    const actualInputCount = selectedUTXOs.length;
+    const actualFee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
+    
+    console.log(`🔄 Adjusted fee: ${actualFee} satoshis for ${actualInputCount} actual inputs (was ${fee} for ${estimatedInputCount} estimated)`);
+    
+    // Check if we need more UTXOs with the adjusted fee
+    if (totalSelected < totalAmountSatoshis + actualFee) {
+      console.log(`⚠️ Need more UTXOs after fee adjustment`);
+      totalNeeded = totalAmountSatoshis + actualFee;
+      selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
+      selectedUTXOs = selection.selected;
+      totalSelected = selection.totalValue;
+      
+      // Recalculate fee one more time if input count changed
+      const finalInputCount = selectedUTXOs.length;
+      fee = (finalInputCount * 180 + outputCount * 34 + 10) * 100;
+      console.log(`✅ Final fee: ${fee} satoshis for ${finalInputCount} inputs`);
+    } else {
+      fee = actualFee;
     }
     
-    const potentialChange = accumulatedValue - totalAmountSatoshis - fee;
+    // Calculate change
+    const changeAmount = totalSelected - totalAmountSatoshis - fee;
+    console.log(`💸 Transaction breakdown: Amount=${totalAmountSatoshis}, Fee=${fee}, Change=${changeAmount}`);
     
-    if (potentialChange > 0 && potentialChange < MIN_CHANGE_THRESHOLD) {
-      console.log(`ℹ️ Potential change ${potentialChange} satoshis is dust, will be absorbed into fee`);
+    // Check if change is dust
+    if (changeAmount > 0 && changeAmount < MIN_CHANGE_THRESHOLD) {
+      console.log(`⚠️ Change ${changeAmount} satoshis is dust, absorbing into fee`);
+      fee += changeAmount; // Absorb dust into fee
+      console.log(`✅ Adjusted fee with absorbed dust: ${fee} satoshis`);
     }
     
-    console.log(`💸 Estimated fee: ${fee} satoshis (${estimatedInputCount} inputs × 180 + ${outputCount} outputs × 34 + 10) × 100 sat/byte`);
-    
-    const signedTx = await buildSignedTx(utxos, private_key, recipientsInSatoshis, fee, sender_address, servers);
+    const signedTx = await buildSignedTx(selectedUTXOs, private_key, recipientsInSatoshis, fee, sender_address, servers);
     console.log('✍️ Transaction signed successfully');
     
     console.log('🚀 Broadcasting transaction...');
