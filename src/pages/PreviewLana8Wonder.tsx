@@ -322,14 +322,11 @@ const PreviewLana8Wonder = () => {
   }, [wallets, params]);
 
   useEffect(() => {
-    // Skip validation if transaction already exists (user has already paid)
-    if (txHash) return;
-    
     if (!sourceWallet || !wallets) {
       toast.error("Missing plan data");
       navigate("/assign-lana8wonder");
     }
-  }, [sourceWallet, wallets, navigate, txHash]);
+  }, [sourceWallet, wallets, navigate]);
 
   // Generate trading plan accounts
   useEffect(() => {
@@ -577,24 +574,23 @@ const PreviewLana8Wonder = () => {
           </p>
         </div>
 
-        {!txHash && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Annuity Wallet Accounts</CardTitle>
-              <CardDescription>
-                8 empty wallets that will receive the annuity payments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingBalances ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="ml-2 text-muted-foreground">Checking wallet balances...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4 mb-6">
-                    {wallets?.map((wallet: any, index: number) => {
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Annuity Wallet Accounts</CardTitle>
+            <CardDescription>
+              8 empty wallets that will receive the annuity payments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingBalances ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="ml-2 text-muted-foreground">Checking wallet balances...</span>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  {wallets?.map((wallet: any, index: number) => {
                     const currentBalance = walletBalances[wallet.address] || 0;
                     const afterBalance = amountPerWallet || 0;
                     
@@ -659,17 +655,15 @@ const PreviewLana8Wonder = () => {
                     </Button>
                   </div>
                 )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-        {!txHash && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Source Wallet</CardTitle>
-            </CardHeader>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Source Wallet</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
@@ -767,7 +761,6 @@ const PreviewLana8Wonder = () => {
             </div>
           </CardContent>
         </Card>
-        )}
 
         {/* Trading Plan Details - All 8 Accounts */}
         <Card className="mb-6">
