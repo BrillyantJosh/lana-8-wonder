@@ -538,20 +538,52 @@ async function buildSignedTx(
     const signedInputs = [];
     console.log(`🔄 Starting to process ${selectedUTXOs.length} UTXOs...`);
     
+    // Store scriptPubkeys for all UTXOs first
+    const scriptPubkeys: Uint8Array[] = [];
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+      const utxo = selectedUTXOs[i];
+      console.log(`🔍 Fetching scriptPubKey for UTXO ${i + 1}/${selectedUTXOs.length}: ${utxo.tx_hash}:${utxo.tx_pos}`);
+      const rawTx = await electrumCall('blockchain.transaction.get', [utxo.tx_hash], servers);
+      const scriptPubkey = parseScriptPubkeyFromRawTx(rawTx, utxo.tx_pos);
+      scriptPubkeys.push(scriptPubkey);
+    }
+    
+    // Now sign each input
     for (let i = 0; i < selectedUTXOs.length; i++) {
       const utxo = selectedUTXOs[i];
       console.log(`🔍 Processing UTXO ${i + 1}/${selectedUTXOs.length}: ${utxo.tx_hash}:${utxo.tx_pos}`);
       
       try {
-        const rawTx = await electrumCall('blockchain.transaction.get', [utxo.tx_hash], servers);
-        console.log(`📄 Retrieved raw transaction (${rawTx.length} chars)`);
+        console.log(`📜 Script pubkey for input ${i + 1}: ${scriptPubkeys[i].length} bytes`);
         
-        const scriptPubkey = parseScriptPubkeyFromRawTx(rawTx, utxo.tx_pos);
-        console.log(`📜 Script pubkey parsed (${scriptPubkey.length} bytes)`);
+        // Build ALL inputs for preimage (SIGHASH_ALL)
+        const preimageInputs: Uint8Array[] = [];
+        for (let j = 0; j < selectedUTXOs.length; j++) {
+          const uj = selectedUTXOs[j];
+          const txidJ = hexToUint8Array(uj.tx_hash).reverse();
+          const voutJ = new Uint8Array(4);
+          new DataView(voutJ.buffer).setUint32(0, uj.tx_pos, true);
+          
+          // Only input i gets its scriptPubKey, others get empty script
+          const scriptForJ = (j === i) ? scriptPubkeys[j] : new Uint8Array(0);
+          
+          const inputJ = new Uint8Array([
+            ...txidJ,
+            ...voutJ,
+            ...encodeVarint(scriptForJ.length),
+            ...scriptForJ,
+            0xff, 0xff, 0xff, 0xff // sequence
+          ]);
+          preimageInputs.push(inputJ);
+        }
         
-        const txid = hexToUint8Array(utxo.tx_hash).reverse();
-        const voutBytes = new Uint8Array(4);
-        new DataView(voutBytes.buffer).setUint32(0, utxo.tx_pos, true);
+        // Concatenate all preimage inputs
+        const allPreimageInputs = preimageInputs.reduce((acc, cur) => {
+          const out = new Uint8Array(acc.length + cur.length);
+          out.set(acc);
+          out.set(cur, acc.length);
+          return out;
+        }, new Uint8Array(0));
         
         // Build all outputs
         const allOutputs = new Uint8Array(outputs.reduce((total, output) => total + output.length, 0));
@@ -561,17 +593,13 @@ async function buildSignedTx(
           offset += output.length;
         }
         
-        // Build preimage
+        // Build preimage with ALL inputs and varint counts
         const preimage = new Uint8Array([
           ...version,
           ...nTime,
-          selectedUTXOs.length,
-          ...txid,
-          ...voutBytes,
-          ...encodeVarint(scriptPubkey.length),
-          ...scriptPubkey,
-          0xff, 0xff, 0xff, 0xff,
-          outputCount,
+          ...encodeVarint(selectedUTXOs.length),
+          ...allPreimageInputs,
+          ...encodeVarint(outputCount),
           ...allOutputs,
           ...locktime,
           ...hashType
@@ -587,6 +615,10 @@ async function buildSignedTx(
           ...pushData(signatureWithHashType),
           ...pushData(publicKey)
         ]);
+        
+        const txid = hexToUint8Array(utxo.tx_hash).reverse();
+        const voutBytes = new Uint8Array(4);
+        new DataView(voutBytes.buffer).setUint32(0, utxo.tx_pos, true);
         
         const signedInput = new Uint8Array([
           ...txid,
@@ -631,9 +663,9 @@ async function buildSignedTx(
     const finalTx = new Uint8Array([
       ...version,
       ...nTime,
-      selectedUTXOs.length,
+      ...encodeVarint(selectedUTXOs.length),
       ...allInputs,
-      outputCount,
+      ...encodeVarint(outputCount),
       ...allOutputs,
       ...locktime
     ]);
