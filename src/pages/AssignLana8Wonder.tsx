@@ -254,7 +254,7 @@ const AssignLana8Wonder = () => {
       }
       
       const session = JSON.parse(sessionData);
-      const nostrHexId = session.nostr_hex_id;
+      const nostrHexId = session.nostrHexId;
       
       if (!nostrHexId) {
         toast.error("Invalid session data");
