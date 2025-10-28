@@ -195,8 +195,8 @@ const SendLana8WonderTransfer = () => {
         }
       ];
 
-      // Call the send-lana-transaction edge function
-      const { data, error } = await supabase.functions.invoke('send-lana-transaction', {
+      // Call the send-lana-multi-output edge function
+      const { data, error } = await supabase.functions.invoke('send-lana-multi-output', {
         body: {
           sender_address: sourceWallet,
           recipients: recipients,
