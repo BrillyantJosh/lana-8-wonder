@@ -733,13 +733,14 @@ const PreviewLana8Wonder = () => {
                         })),
                         donationWalletId,
                         totalAmount: minRequiredLana,
+                        phiDonation: phiDonation,
                         nostrHexId
                       }
                     })}
                     disabled={!sourceBalance || sourceBalance < minRequiredLana}
                     className="w-full"
                   >
-                    Transfer Assets to 8 Wallets and Donation
+                    Transfer Assets to 8 Wallets
                   </Button>
                 ) : (
                   <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground">

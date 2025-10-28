@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { verifyWifMatchesWallet } from "@/lib/wifValidation";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface LocationState {
   sourceWallet: string;
@@ -14,6 +16,7 @@ interface LocationState {
   wallets: any[];
   donationWalletId: string;
   totalAmount: number;
+  phiDonation: number;
   nostrHexId: string;
 }
 
@@ -25,13 +28,17 @@ const SendLana8WonderTransfer = () => {
   const [privateKey, setPrivateKey] = useState("");
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   if (!state) {
     navigate('/preview-lana8wonder');
     return null;
   }
 
-  const { sourceWallet, sourceBalance, wallets, donationWalletId, totalAmount, nostrHexId } = state;
+  const { sourceWallet, sourceBalance, wallets, donationWalletId, totalAmount, phiDonation, nostrHexId } = state;
 
   // Calculate amounts
   const walletsWithAmounts = wallets.map((wallet: any) => ({
@@ -40,8 +47,9 @@ const SendLana8WonderTransfer = () => {
     label: wallet.label
   }));
 
-  const donationAmount = parseFloat((totalAmount * 0.01).toFixed(8)); // 1% donation
-  const totalWithDonation = totalAmount + donationAmount;
+  const donationAmount = phiDonation; // Use the actual PHI donation amount
+  const walletTotal = walletsWithAmounts.reduce((sum, w) => sum + w.amount, 0);
+  const totalWithDonation = walletTotal + donationAmount;
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -50,9 +58,79 @@ const SendLana8WonderTransfer = () => {
     }).format(num);
   };
 
+  const validatePrivateKey = async (wif: string) => {
+    if (!wif.trim()) {
+      setIsValid(null);
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const result = await verifyWifMatchesWallet(wif, sourceWallet);
+      setIsValid(result.matches);
+      
+      if (!result.matches) {
+        toast.error("Private key does not match the source wallet");
+      }
+    } catch (error) {
+      setIsValid(false);
+      toast.error("Invalid private key format");
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handlePrivateKeyChange = (value: string) => {
+    setPrivateKey(value);
+    validatePrivateKey(value);
+  };
+
+  const startScanner = async () => {
+    setShowScanner(true);
+    try {
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      scannerRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          handlePrivateKeyChange(decodedText);
+          stopScanner();
+          toast.success("Private key scanned successfully");
+        },
+        () => {}
+      );
+    } catch (error) {
+      console.error("Error starting scanner:", error);
+      toast.error("Failed to start camera");
+      setShowScanner(false);
+    }
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+      }
+    }
+    setShowScanner(false);
+  };
+
   const handleTransfer = async () => {
     if (!privateKey.trim()) {
       toast.error("Please enter your private key");
+      return;
+    }
+
+    if (isValid === false) {
+      toast.error("Private key does not match the source wallet");
       return;
     }
 
@@ -182,7 +260,7 @@ const SendLana8WonderTransfer = () => {
 
             {/* Donation */}
             <div className="pt-3 border-t">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Donation (1%)</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-2">PHI Donation (Lana 8 Wonder)</h3>
               <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-green-800 dark:text-green-200">Donation Wallet</span>
@@ -217,15 +295,49 @@ const SendLana8WonderTransfer = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="privateKey">Private Key (WIF Format)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="privateKey">Private Key (WIF Format)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={showScanner ? stopScanner : startScanner}
+                >
+                  {showScanner ? (
+                    <>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel Scan
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Scan QR
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {showScanner && (
+                <div className="relative border rounded-lg overflow-hidden">
+                  <div id="qr-reader" className="w-full"></div>
+                </div>
+              )}
+
               <div className="relative">
                 <Input
                   id="privateKey"
                   type={showPrivateKey ? "text" : "password"}
                   value={privateKey}
-                  onChange={(e) => setPrivateKey(e.target.value)}
+                  onChange={(e) => handlePrivateKeyChange(e.target.value)}
                   placeholder="Enter your private key..."
-                  className="pr-10"
+                  className={`pr-10 ${
+                    isValid === true 
+                      ? 'border-green-500' 
+                      : isValid === false 
+                      ? 'border-red-500' 
+                      : ''
+                  }`}
+                  disabled={isValidating}
                 />
                 <Button
                   type="button"
@@ -241,6 +353,25 @@ const SendLana8WonderTransfer = () => {
                   )}
                 </Button>
               </div>
+
+              {isValidating && (
+                <p className="text-xs text-muted-foreground">
+                  Validating private key...
+                </p>
+              )}
+              
+              {isValid === true && (
+                <p className="text-xs text-green-600">
+                  ✓ Private key matches the source wallet
+                </p>
+              )}
+              
+              {isValid === false && (
+                <p className="text-xs text-red-600">
+                  ✗ Private key does not match the source wallet
+                </p>
+              )}
+
               <p className="text-xs text-muted-foreground">
                 Your private key is used locally to sign the transaction and is never stored.
               </p>
@@ -248,7 +379,7 @@ const SendLana8WonderTransfer = () => {
 
             <Button
               onClick={handleTransfer}
-              disabled={isProcessing || !privateKey.trim()}
+              disabled={isProcessing || !privateKey.trim() || isValid === false || isValidating}
               className="w-full"
               size="lg"
             >
