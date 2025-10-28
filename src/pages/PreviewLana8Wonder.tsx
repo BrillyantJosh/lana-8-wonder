@@ -184,6 +184,8 @@ const PreviewLana8Wonder = () => {
   const [walletBalances, setWalletBalances] = useState<{ [address: string]: number }>({});
   const [loadingBalances, setLoadingBalances] = useState(true);
   const [donationWalletId, setDonationWalletId] = useState<string>('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [nostrHexId, setNostrHexId] = useState<string>('');
 
   const {
     sourceWallet,
@@ -201,21 +203,29 @@ const PreviewLana8Wonder = () => {
   // Calculate start price (8% more than exchange rate)
   const startPrice = exchangeRate ? exchangeRate * 1.08 : 0;
 
-  // Fetch donation wallet ID
+  // Fetch donation wallet ID and nostr hex id
   useEffect(() => {
-    const fetchDonationWallet = async () => {
-      const { data } = await supabase
+    const fetchData = async () => {
+      // Fetch donation wallet
+      const { data: settingData } = await supabase
         .from('app_settings')
         .select('setting_value')
         .eq('setting_key', 'donation_wallet_id')
         .single();
       
-      if (data) {
-        setDonationWalletId(data.setting_value);
+      if (settingData) {
+        setDonationWalletId(settingData.setting_value);
+      }
+
+      // Fetch nostr hex id from session
+      const sessionData = sessionStorage.getItem("nostrSession");
+      if (sessionData) {
+        const session = JSON.parse(sessionData);
+        setNostrHexId(session.nostrHexId);
       }
     };
     
-    fetchDonationWallet();
+    fetchData();
   }, []);
 
   // Fetch current balances from Electrum
@@ -333,6 +343,76 @@ const PreviewLana8Wonder = () => {
     setExpandedAccounts(newExpanded);
   };
 
+  const handleRegisterWallets = async () => {
+    if (!nostrHexId || !wallets) {
+      toast.error('Missing required data for registration');
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      // Prepare wallet data for API
+      const walletsData = wallets.map((wallet: any, index: number) => ({
+        wallet_id: wallet.address,
+        wallet_type: 'annuity',
+        notes: `Lana 8 Wonder Account ${index + 1}`
+      }));
+
+      console.log('🔄 Registering wallets...', {
+        nostr_id_hex: nostrHexId,
+        wallets_count: walletsData.length
+      });
+
+      // Call external API
+      const response = await fetch('https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          method: 'register_virgin_wallets_for_existing_user',
+          api_key: 'ak_4mh3c7k5mx4ibskeufyv8p',
+          data: {
+            nostr_id_hex: nostrHexId,
+            wallets: walletsData
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to register wallets');
+      }
+
+      console.log('✅ Wallets registered successfully:', result);
+
+      // Update profile to mark wallets as registered
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ wallet_registered: true })
+        .eq('nostr_hex_id', nostrHexId);
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        toast.error('Wallets registered but failed to update profile');
+        return;
+      }
+
+      toast.success(
+        `✅ Successfully registered ${result.data.wallets_registered} wallets`,
+        { duration: 5000 }
+      );
+
+    } catch (error) {
+      console.error('❌ Error registering wallets:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to register wallets');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   const handlePublish = async () => {
     setIsPublishing(true);
     
@@ -423,6 +503,73 @@ const PreviewLana8Wonder = () => {
 
         <Card className="mb-6">
           <CardHeader>
+            <CardTitle>Annuity Wallet Accounts</CardTitle>
+            <CardDescription>
+              8 empty wallets that will receive the annuity payments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingBalances ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="ml-2 text-muted-foreground">Checking wallet balances...</span>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  {wallets?.map((wallet: any, index: number) => {
+                    const currentBalance = walletBalances[wallet.address] || 0;
+                    const afterBalance = amountPerWallet || 0;
+                    
+                    return (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">Wallet {index + 1}</span>
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <Badge variant="default" className="bg-green-600">Valid</Badge>
+                          </div>
+                        </div>
+                        <p className="font-mono text-xs break-all text-muted-foreground mb-3">
+                          {wallet.address}
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs mb-1">Current Balance:</p>
+                            <p className="font-mono font-semibold">{currentBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs mb-1">After Transaction:</p>
+                            <p className="font-mono font-semibold text-green-600">{afterBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleRegisterWallets}
+                    disabled={isRegistering}
+                    className="w-full sm:w-auto"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Registering Wallets...
+                      </>
+                    ) : (
+                      "Register Wallets"
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
             <CardTitle>Source Wallet</CardTitle>
           </CardHeader>
           <CardContent>
@@ -475,85 +622,6 @@ const PreviewLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Annuity Wallet Accounts</CardTitle>
-            <CardDescription>
-              8 empty wallets that will receive the annuity payments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingBalances ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2 text-muted-foreground">Checking wallet balances...</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {wallets?.map((wallet: any, index: number) => {
-                  const currentBalance = walletBalances[wallet.address] || 0;
-                  const afterBalance = amountPerWallet || 0;
-                  
-                  return (
-                    <div key={index} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold">Wallet {index + 1}</span>
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <Badge variant="default" className="bg-green-600">Valid</Badge>
-                        </div>
-                      </div>
-                      <p className="font-mono text-xs break-all text-muted-foreground mb-3">
-                        {wallet.address}
-                      </p>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs mb-1">Current Balance:</p>
-                          <p className="font-mono font-semibold">{currentBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs mb-1">After Transaction:</p>
-                          <p className="font-mono font-semibold text-green-600">{afterBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6 border-primary">
-          <CardHeader>
-            <CardTitle>Plan Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Currency:</span>
-                <span className="font-semibold">{planCurrency}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Exchange Rate:</span>
-                <span className="font-mono">{exchangeRate?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA/{currencySymbol}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Start Price:</span>
-                <span className="font-mono">{startPrice.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} {currencySymbol}/LANA</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-muted-foreground">Total Accounts:</span>
-                <span className="font-semibold">8</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Distribution per Account:</span>
-                <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Trading Plan Details - All 8 Accounts */}
         <Card className="mb-6">
           <CardHeader>
@@ -562,8 +630,34 @@ const PreviewLana8Wonder = () => {
               All 8 accounts with detailed level information
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {accounts.map((account) => (
+          <CardContent>
+            <div className="mb-6 p-4 border rounded-lg bg-card">
+              <h3 className="font-semibold mb-3">Plan Summary</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Currency:</span>
+                  <span className="font-semibold">{planCurrency}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Exchange Rate:</span>
+                  <span className="font-mono">{exchangeRate?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA/{currencySymbol}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Start Price:</span>
+                  <span className="font-mono">{startPrice.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} {currencySymbol}/LANA</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-muted-foreground">Total Accounts:</span>
+                  <span className="font-semibold">8</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Distribution per Account:</span>
+                  <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">{accounts.map((account) => (
               <div key={account.number} className="border rounded-lg overflow-hidden">
                 <button
                   onClick={() => toggleAccount(account.number)}
@@ -622,7 +716,7 @@ const PreviewLana8Wonder = () => {
                   </div>
                 )}
               </div>
-            ))}
+            ))}</div>
           </CardContent>
         </Card>
 

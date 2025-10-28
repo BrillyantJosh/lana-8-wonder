@@ -46,19 +46,28 @@ export type Database = {
           created_at: string
           id: string
           nostr_hex_id: string
+          published_plan: boolean | null
+          tx: string | null
           updated_at: string
+          wallet_registered: boolean | null
         }
         Insert: {
           created_at?: string
           id?: string
           nostr_hex_id: string
+          published_plan?: boolean | null
+          tx?: string | null
           updated_at?: string
+          wallet_registered?: boolean | null
         }
         Update: {
           created_at?: string
           id?: string
           nostr_hex_id?: string
+          published_plan?: boolean | null
+          tx?: string | null
           updated_at?: string
+          wallet_registered?: boolean | null
         }
         Relationships: []
       }
