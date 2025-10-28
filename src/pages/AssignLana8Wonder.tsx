@@ -34,6 +34,7 @@ const AssignLana8Wonder = () => {
   );
   const [scannerActive, setScannerActive] = useState<number | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -221,6 +222,82 @@ const AssignLana8Wonder = () => {
     setIsScanning(false);
   };
 
+  const handleCreatePlan = async () => {
+    if (!allWalletsValid) return;
+    
+    setIsCreatingPlan(true);
+    
+    try {
+      // Get subject hex from session
+      const sessionData = sessionStorage.getItem("nostrSession");
+      if (!sessionData) {
+        throw new Error("No session data found");
+      }
+      
+      const session = JSON.parse(sessionData);
+      const subjectHex = session.nostrHexId; // Already in hex format from login
+      
+      // Prepare wallet addresses
+      const walletAddresses = wallets.map(w => w.address);
+      
+      // Get relays from params
+      const relays = params?.relays || [
+        'wss://relay.lanavault.space',
+        'wss://relay.lanacoin-eternity.com'
+      ];
+      
+      console.log('📝 Creating Lana8Wonder plan...', {
+        subject_hex: subjectHex,
+        wallets: walletAddresses.length,
+        currency: planCurrency,
+        exchange_rate: exchangeRate
+      });
+      
+      // Call edge function to create and publish plan
+      const { data, error } = await supabase.functions.invoke('publish-lana8wonder-plan', {
+        body: {
+          subject_hex: subjectHex,
+          wallets: walletAddresses,
+          amount_per_wallet: amountPerWallet,
+          currency: planCurrency,
+          exchange_rate: exchangeRate,
+          start_price: 0.075, // Starting price in EUR/LANA
+          relays
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        const successCount = data.publish_results.filter((r: any) => r.success).length;
+        toast.success(
+          `✅ Plan created and published to ${successCount}/${data.publish_results.length} relays`,
+          { duration: 5000 }
+        );
+        
+        console.log('✅ Plan published:', {
+          event_id: data.event_id,
+          accounts: data.plan.accounts,
+          total_levels: data.plan.total_levels,
+          publish_results: data.publish_results
+        });
+        
+        // Navigate to dashboard after success
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 2000);
+      } else {
+        throw new Error('Failed to create plan');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error creating plan:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create plan');
+    } finally {
+      setIsCreatingPlan(false);
+    }
+  };
+
   const allWalletsValid = wallets.every(w => w.isValid === true && w.address.trim() !== "");
 
   // Calculate PHI donation (12 in plan currency converted to LANA using monthly exchange rate)
@@ -377,14 +454,18 @@ const AssignLana8Wonder = () => {
             Cancel
           </Button>
           <Button
-            disabled={!allWalletsValid}
-            onClick={() => {
-              toast.success("All wallets verified! Proceeding with plan creation...");
-              // TODO: Implement plan creation logic
-            }}
+            disabled={!allWalletsValid || isCreatingPlan}
+            onClick={handleCreatePlan}
             className={allWalletsValid ? "bg-primary hover:bg-primary/90" : ""}
           >
-            Create Plan
+            {isCreatingPlan ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Plan...
+              </>
+            ) : (
+              "Create Plan"
+            )}
           </Button>
         </div>
       </div>

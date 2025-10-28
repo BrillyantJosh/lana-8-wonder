@@ -2,3 +2,6 @@ project_id = "birjdkjxtikhcneveoid"
 
 [functions.check-wallet-balance]
 verify_jwt = false
+
+[functions.publish-lana8wonder-plan]
+verify_jwt = false
