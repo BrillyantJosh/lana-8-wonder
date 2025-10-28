@@ -32,6 +32,11 @@ const SendLana8WonderTransfer = () => {
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [transactionResult, setTransactionResult] = useState<{
+    success: boolean;
+    txid?: string;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -181,6 +186,7 @@ const SendLana8WonderTransfer = () => {
     }
 
     setIsProcessing(true);
+    setTransactionResult(null); // Reset result
 
     try {
       // Prepare recipients: 8 wallets + donation wallet
@@ -214,6 +220,12 @@ const SendLana8WonderTransfer = () => {
         throw new Error(data.error || 'Transaction failed');
       }
 
+      // Set success result
+      setTransactionResult({
+        success: true,
+        txid: data.txid
+      });
+
       // Update profile with TX hash
       const { error: updateError } = await supabase
         .from('profiles')
@@ -226,13 +238,22 @@ const SendLana8WonderTransfer = () => {
 
       toast.success("Transfer successful!");
       
-      // Navigate back to preview
-      navigate('/preview-lana8wonder', {
-        state: { nostrHexId }
-      });
+      // Navigate back to preview after 3 seconds
+      setTimeout(() => {
+        navigate('/preview-lana8wonder', {
+          state: { nostrHexId }
+        });
+      }, 3000);
 
     } catch (error: any) {
       console.error('Transfer error:', error);
+      
+      // Set error result
+      setTransactionResult({
+        success: false,
+        error: error.message || "Transfer failed. Please try again."
+      });
+      
       toast.error(error.message || "Transfer failed. Please try again.");
     } finally {
       setIsProcessing(false);
@@ -446,6 +467,55 @@ const SendLana8WonderTransfer = () => {
                 </>
               )}
             </Button>
+
+            {/* Transaction Result Display */}
+            {transactionResult && (
+              <div className={`mt-4 p-4 rounded-lg border ${
+                transactionResult.success 
+                  ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                  : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+              }`}>
+                {transactionResult.success ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="font-semibold">Transaction Successful!</span>
+                    </div>
+                    <div className="text-sm text-green-600 dark:text-green-400">
+                      <span className="font-medium">Transaction ID:</span>
+                      <a 
+                        href={`https://chainz.cryptoid.info/lana/tx.dws?${transactionResult.txid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-1 break-all hover:underline font-mono text-xs"
+                      >
+                        {transactionResult.txid}
+                      </a>
+                    </div>
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      Redirecting to preview page...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="font-semibold">Transaction Failed</span>
+                    </div>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {transactionResult.error}
+                    </p>
+                    <p className="text-xs text-red-500 dark:text-red-500">
+                      Please check your input and try again.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
