@@ -236,6 +236,7 @@ function signECDSA(privateKeyHex: string, messageHash: Uint8Array): Uint8Array {
 
 class UTXOSelector {
   static MAX_INPUTS = 500;
+  static DUST_THRESHOLD = 1000000000; // 10 LANA minimum to avoid dust UTXOs
   
   static selectUTXOs(utxos: any[], totalNeeded: number) {
     if (!utxos || utxos.length === 0) {
@@ -253,6 +254,7 @@ class UTXOSelector {
       );
     }
     
+    // Sort by value (largest first)
     const sortedUTXOs = [...utxos].sort((a, b) => b.value - a.value);
     
     console.log('🏆 Top 10 largest UTXOs:');
@@ -260,18 +262,28 @@ class UTXOSelector {
       console.log(`  ${i + 1}. ${utxo.value} satoshis (${(utxo.value / 100000000).toFixed(8)} LANA) - ${utxo.tx_hash}:${utxo.tx_pos}`);
     });
     
-    for (const utxo of sortedUTXOs) {
+    // Filter out dust UTXOs (< 10 LANA) unless we have no choice
+    const nonDustUtxos = sortedUTXOs.filter(u => u.value >= this.DUST_THRESHOLD);
+    const workingSet = nonDustUtxos.length > 0 ? nonDustUtxos : sortedUTXOs;
+    
+    if (nonDustUtxos.length < sortedUTXOs.length) {
+      console.log(`⚠️ Filtered out ${sortedUTXOs.length - nonDustUtxos.length} dust UTXOs (< 10 LANA)`);
+    }
+    
+    // Try single large UTXO first (most efficient)
+    for (const utxo of workingSet) {
       if (utxo.value >= totalNeeded) {
         console.log(`✅ Single UTXO solution: ${(utxo.value / 100000000).toFixed(8)} LANA`);
         return { selected: [utxo], totalValue: utxo.value };
       }
     }
     
+    // Multi-UTXO strategy
     const selectedUTXOs = [];
     let totalSelected = 0;
     console.log(`📦 Using multi-UTXO strategy (max ${this.MAX_INPUTS} inputs)...`);
     
-    for (const utxo of sortedUTXOs) {
+    for (const utxo of workingSet) {
       if (selectedUTXOs.length >= this.MAX_INPUTS) {
         console.warn(`⚠️ Reached maximum input limit (${this.MAX_INPUTS})`);
         break;
@@ -289,6 +301,26 @@ class UTXOSelector {
           `total: ${(totalSelected / 100000000).toFixed(8)} LANA`
         );
         return { selected: selectedUTXOs, totalValue: totalSelected };
+      }
+    }
+    
+    // If still insufficient with non-dust UTXOs, try including dust
+    if (nonDustUtxos.length !== sortedUTXOs.length) {
+      console.log('⚠️ Including dust UTXOs to meet target...');
+      for (const utxo of sortedUTXOs) {
+        if (selectedUTXOs.some(s => s.tx_hash === utxo.tx_hash && s.tx_pos === utxo.tx_pos)) continue;
+        if (selectedUTXOs.length >= this.MAX_INPUTS) break;
+        
+        selectedUTXOs.push(utxo);
+        totalSelected += utxo.value;
+        
+        if (totalSelected >= totalNeeded) {
+          console.log(
+            `✅ Solution with dust UTXOs: ${selectedUTXOs.length} inputs, ` +
+            `total: ${(totalSelected / 100000000).toFixed(8)} LANA`
+          );
+          return { selected: selectedUTXOs, totalValue: totalSelected };
+        }
       }
     }
     
@@ -473,11 +505,12 @@ async function buildSignedTx(
       console.log(`📤 Output ${outputs.length}: ${recipient.address} = ${(recipient.amount / 100000000).toFixed(8)} LANA`);
     }
     
-    // Calculate change
+    // Calculate change with dust threshold (0.01 LANA = 1,000,000 satoshis)
+    const MIN_CHANGE_THRESHOLD = 1000000;
     const changeAmount = totalValue - totalAmount - fee;
     let outputCount = recipients.length;
     
-    if (changeAmount > 1000) {
+    if (changeAmount >= MIN_CHANGE_THRESHOLD) {
       const changeHash = base58CheckDecode(changeAddress).slice(1);
       const changeScript = new Uint8Array([0x76, 0xa9, 0x14, ...changeHash, 0x88, 0xac]);
       const changeValueBytes = new Uint8Array(8);
@@ -490,8 +523,10 @@ async function buildSignedTx(
       outputs.push(changeOut);
       outputCount++;
       console.log(`✅ Change output added: ${(changeAmount / 100000000).toFixed(8)} LANA`);
+    } else if (changeAmount > 0) {
+      console.log(`ℹ️ Change ${changeAmount} satoshis (${(changeAmount / 100000000).toFixed(8)} LANA) below threshold, absorbed into fee`);
     } else {
-      console.log('⚠️ Change amount too small, adding to fee');
+      console.log('⚠️ No change output needed');
     }
     
     const version = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
@@ -685,11 +720,35 @@ serve(async (req) => {
     const totalAmountSatoshis = recipientsInSatoshis.reduce((sum: number, r: any) => sum + r.amount, 0);
     console.log(`💰 Total to send: ${totalAmountSatoshis} satoshis (${(totalAmountSatoshis / 100000000).toFixed(8)} LANA)`);
     
-    // Calculate dynamic fee based on number of outputs
+    // Calculate available balance
+    const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
+    console.log(`💰 Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
+    
+    // Estimate fee (will be adjusted if needed)
+    // Use actual largest UTXOs to estimate input count
+    const sortedByValue = [...utxos].sort((a, b) => b.value - a.value);
+    let estimatedInputCount = 1;
+    let accumulatedValue = 0;
+    for (const utxo of sortedByValue) {
+      accumulatedValue += utxo.value;
+      if (accumulatedValue >= totalAmountSatoshis * 1.1) break; // 10% buffer
+      estimatedInputCount++;
+      if (estimatedInputCount >= 10) break; // Cap at 10 for initial estimate
+    }
+    
     const outputCount = recipientsInSatoshis.length + 1; // recipients + change
-    const estimatedInputCount = Math.min(5, utxos.length);
-    const fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    console.log(`💸 Calculated dynamic fee: ${fee} satoshis (${estimatedInputCount} inputs × 180 + ${outputCount} outputs × 34 + 10) × 100 sat/byte`);
+    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
+    
+    // Check if change would be dust, if so, absorb into fee
+    const MIN_CHANGE_THRESHOLD = 1000000; // 0.01 LANA
+    const potentialChange = totalAvailable - totalAmountSatoshis - fee;
+    
+    if (potentialChange > 0 && potentialChange < MIN_CHANGE_THRESHOLD) {
+      console.log(`ℹ️ Potential change ${potentialChange} satoshis is dust, will absorb into fee`);
+      // Fee will be adjusted during actual UTXO selection
+    }
+    
+    console.log(`💸 Estimated fee: ${fee} satoshis (${estimatedInputCount} inputs × 180 + ${outputCount} outputs × 34 + 10) × 100 sat/byte`);
     
     const signedTx = await buildSignedTx(utxos, private_key, recipientsInSatoshis, fee, sender_address, servers);
     console.log('✍️ Transaction signed successfully');
