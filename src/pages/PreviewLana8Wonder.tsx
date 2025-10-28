@@ -428,7 +428,10 @@ const PreviewLana8Wonder = () => {
   // Fetch current balances from Electrum
   useEffect(() => {
     const fetchBalances = async () => {
-      if (!effectiveWallets || effectiveWallets.length === 0 || !params?.electrum) return;
+      if (!params?.electrum) return;
+      
+      // Need to have at least source wallet or annuity wallets
+      if (!effectiveSourceWallet && (!effectiveWallets || effectiveWallets.length === 0)) return;
       
       setLoadingBalances(true);
       try {
@@ -437,11 +440,28 @@ const PreviewLana8Wonder = () => {
           port: parseInt(e.port)
         }));
         
-        const addresses = effectiveWallets.map((w: any) => w.address);
+        // Collect all addresses to check
+        const addressesToCheck: string[] = [];
+        
+        // Add source wallet
+        if (effectiveSourceWallet) {
+          addressesToCheck.push(effectiveSourceWallet);
+        }
+        
+        // Add annuity wallets - handle both array of strings and array of objects
+        if (effectiveWallets && effectiveWallets.length > 0) {
+          effectiveWallets.forEach((w: any) => {
+            // Handle both { address: "..." } and plain string formats
+            const addr = typeof w === 'string' ? w : w.address;
+            if (addr) addressesToCheck.push(addr);
+          });
+        }
+        
+        if (addressesToCheck.length === 0) return;
         
         const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
           body: {
-            wallet_addresses: addresses,
+            wallet_addresses: addressesToCheck,
             electrum_servers: electrumServers
           }
         });
@@ -450,13 +470,20 @@ const PreviewLana8Wonder = () => {
         
         // Create a map of address -> balance
         const balanceMap: { [address: string]: number } = {};
-        if (data?.balances) {
-          data.balances.forEach((item: any) => {
-            balanceMap[item.address] = item.balance || 0;
+        if (data?.wallets) {
+          data.wallets.forEach((item: any) => {
+            balanceMap[item.wallet_id] = item.balance || 0;
           });
         }
         
         setWalletBalances(balanceMap);
+        
+        // Update source balance in state if we got it
+        if (effectiveSourceWallet && balanceMap[effectiveSourceWallet] !== undefined) {
+          setLoadedSourceBalance(balanceMap[effectiveSourceWallet]);
+        }
+        
+        console.log('✅ Balances fetched:', balanceMap);
       } catch (error) {
         console.error('Error fetching wallet balances:', error);
         toast.error('Failed to fetch wallet balances');
@@ -466,7 +493,7 @@ const PreviewLana8Wonder = () => {
     };
     
     fetchBalances();
-  }, [effectiveWallets, params]);
+  }, [effectiveSourceWallet, effectiveWallets, params]);
 
 
   // Generate trading plan accounts
@@ -732,8 +759,10 @@ const PreviewLana8Wonder = () => {
               <>
                 <div className="space-y-4 mb-6">
                   {effectiveWallets?.map((wallet: any, index: number) => {
-                    const currentBalance = walletBalances[wallet.address] || 0;
-                    const afterBalance = effectiveAmountPerWallet || 0;
+                    // Handle both { address: "..." } and plain string formats
+                    const walletAddress = typeof wallet === 'string' ? wallet : wallet.address;
+                    const currentBalance = walletBalances[walletAddress] || 0;
+                    const afterBalance = currentBalance + (effectiveAmountPerWallet || 0);
                     
                     return (
                       <div key={index} className="p-3 border rounded-lg">
@@ -745,7 +774,7 @@ const PreviewLana8Wonder = () => {
                           </div>
                         </div>
                         <p className="font-mono text-xs break-all text-muted-foreground mb-3">
-                          {wallet.address}
+                          {walletAddress}
                         </p>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
@@ -813,7 +842,12 @@ const PreviewLana8Wonder = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="font-semibold">{effectiveSourceBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA</p>
+                <p className="font-semibold">
+                  {(walletBalances[effectiveSourceWallet] !== undefined 
+                    ? walletBalances[effectiveSourceWallet] 
+                    : effectiveSourceBalance
+                  )?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA
+                </p>
               </div>
               
               <div className="pt-4 border-t">
@@ -835,7 +869,7 @@ const PreviewLana8Wonder = () => {
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total to 8 Wallets:</span>
-                    <span className="font-mono">{(effectiveMinRequiredLana - effectivePhiDonation)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">{effectiveMinRequiredLana?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
@@ -847,7 +881,12 @@ const PreviewLana8Wonder = () => {
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Remaining in Wallet:</span>
-                    <span className="font-mono">{effectiveRemainingBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
+                    <span className="font-mono">
+                      {((walletBalances[effectiveSourceWallet] !== undefined 
+                        ? walletBalances[effectiveSourceWallet] 
+                        : effectiveSourceBalance
+                      ) - effectiveTotalTransferred)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA
+                    </span>
                   </div>
                 </div>
               </div>
