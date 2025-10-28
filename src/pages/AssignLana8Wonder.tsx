@@ -221,24 +221,101 @@ const AssignLana8Wonder = () => {
     setIsScanning(false);
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = async () => {
     if (!allWalletsValid) return;
     
-    // Navigate to preview page with plan data
-    navigate("/preview-lana8wonder", {
-      state: {
-        sourceWallet,
-        sourceBalance,
-        wallets,
-        amountPerWallet,
-        planCurrency,
-        exchangeRate,
-        minRequiredLana,
-        phiDonation,
-        totalTransferred,
-        remainingBalance
+    try {
+      // Get nostr_hex_id from session
+      const sessionData = sessionStorage.getItem("lana_session");
+      if (!sessionData) {
+        toast.error("Session not found. Please login again.");
+        navigate("/");
+        return;
       }
-    });
+      
+      const session = JSON.parse(sessionData);
+      const nostrHexId = session.nostr_hex_id;
+      
+      if (!nostrHexId) {
+        toast.error("Invalid session data");
+        return;
+      }
+      
+      // Check if profile exists
+      const { data: existingProfile, error: profileFetchError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("nostr_hex_id", nostrHexId)
+        .maybeSingle();
+      
+      if (profileFetchError) {
+        console.error("Error fetching profile:", profileFetchError);
+        toast.error("Failed to check profile");
+        return;
+      }
+      
+      let profileId: string;
+      
+      if (!existingProfile) {
+        // Create profile
+        const { data: newProfile, error: profileInsertError } = await supabase
+          .from("profiles")
+          .insert({ nostr_hex_id: nostrHexId })
+          .select("id")
+          .single();
+        
+        if (profileInsertError) {
+          console.error("Error creating profile:", profileInsertError);
+          toast.error("Failed to create profile");
+          return;
+        }
+        
+        profileId = newProfile.id;
+      } else {
+        profileId = existingProfile.id;
+      }
+      
+      // Insert wallets (unique constraint prevents duplicates)
+      const walletsToInsert = wallets.map(w => ({
+        profile_id: profileId,
+        wallet_address: w.address,
+        wallet_type: "annuity"
+      }));
+      
+      const { error: walletsInsertError } = await supabase
+        .from("wallets")
+        .upsert(walletsToInsert, { 
+          onConflict: "profile_id,wallet_address",
+          ignoreDuplicates: true 
+        });
+      
+      if (walletsInsertError) {
+        console.error("Error inserting wallets:", walletsInsertError);
+        toast.error("Failed to save wallets");
+        return;
+      }
+      
+      toast.success("Plan data saved successfully");
+      
+      // Navigate to preview page with plan data
+      navigate("/preview-lana8wonder", {
+        state: {
+          sourceWallet,
+          sourceBalance,
+          wallets,
+          amountPerWallet,
+          planCurrency,
+          exchangeRate,
+          minRequiredLana,
+          phiDonation,
+          totalTransferred,
+          remainingBalance
+        }
+      });
+    } catch (error) {
+      console.error("Error creating plan:", error);
+      toast.error("Failed to create plan");
+    }
   };
 
   const allWalletsValid = wallets.every(w => w.isValid === true && w.address.trim() !== "");
