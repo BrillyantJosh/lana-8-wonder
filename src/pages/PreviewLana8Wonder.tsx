@@ -323,13 +323,58 @@ const PreviewLana8Wonder = () => {
     fetchBalances();
   }, [wallets, params]);
 
+  // Check if plan data exists (either from state or DB) and load from DB if needed
   useEffect(() => {
-    // Allow navigation if selected_wallet exists (user has already assigned wallets)
-    if (!selectedWallet && !sourceWallet) {
-      toast.error("No annuity plan found. Create a new one.");
-      navigate("/create-lana8wonder");
-    }
-  }, [selectedWallet, sourceWallet, navigate]);
+    const loadPlanFromDatabase = async () => {
+      // If we have data from location.state, we're good
+      if (sourceWallet) return;
+      
+      // If selectedWallet is set (from DB check), we're also good
+      if (selectedWallet) return;
+      
+      // If we don't have nostrHexId yet, wait
+      if (!nostrHexId) return;
+      
+      // Try to load plan data from database
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, selected_wallet, tx")
+          .eq("nostr_hex_id", nostrHexId)
+          .maybeSingle();
+        
+        if (!profile?.selected_wallet) {
+          // No plan found in DB either, redirect to create
+          toast.error("No annuity plan found. Create a new one.");
+          navigate("/create-lana8wonder");
+          return;
+        }
+        
+        // Load wallets from database
+        const { data: dbWallets } = await supabase
+          .from("wallets")
+          .select("wallet_address, wallet_type")
+          .eq("profile_id", profile.id)
+          .eq("wallet_type", "annuity");
+        
+        if (!dbWallets || dbWallets.length !== 8) {
+          // Invalid plan, redirect
+          toast.error("Incomplete annuity plan. Please set up again.");
+          navigate("/create-lana8wonder");
+          return;
+        }
+        
+        // We have data in DB, selectedWallet will be set by the other useEffect
+        // No need to redirect
+      } catch (error) {
+        console.error("Error loading plan from database:", error);
+        toast.error("Error loading plan. Please try again.");
+        navigate("/create-lana8wonder");
+      }
+    };
+    
+    loadPlanFromDatabase();
+  }, [selectedWallet, sourceWallet, navigate, nostrHexId]);
 
   // Generate trading plan accounts
   useEffect(() => {
