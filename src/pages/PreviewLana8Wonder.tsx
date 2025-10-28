@@ -190,6 +190,7 @@ const PreviewLana8Wonder = () => {
   const [registrationResult, setRegistrationResult] = useState<any>(null);
   const [txHash, setTxHash] = useState<string>('');
   const [publishedPlan, setPublishedPlan] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
   const {
     sourceWallet,
@@ -256,7 +257,7 @@ const PreviewLana8Wonder = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('wallet_registered, tx, published_plan')
+          .select('wallet_registered, tx, published_plan, selected_wallet')
           .eq('nostr_hex_id', nostrHexId)
           .single();
         
@@ -269,6 +270,7 @@ const PreviewLana8Wonder = () => {
           setWalletRegistered(data.wallet_registered || false);
           setTxHash(data.tx || '');
           setPublishedPlan(data.published_plan || false);
+          setSelectedWallet(data.selected_wallet || null);
         }
       } catch (error) {
         console.error('Error checking wallet registration:', error);
@@ -322,11 +324,12 @@ const PreviewLana8Wonder = () => {
   }, [wallets, params]);
 
   useEffect(() => {
-    if (!sourceWallet || !wallets) {
+    // Allow navigation if selected_wallet exists (user has already assigned wallets)
+    if (!sourceWallet || (!wallets && !selectedWallet)) {
       toast.error("Missing plan data");
       navigate("/assign-lana8wonder");
     }
-  }, [sourceWallet, wallets, navigate]);
+  }, [sourceWallet, wallets, selectedWallet, navigate]);
 
   // Generate trading plan accounts
   useEffect(() => {

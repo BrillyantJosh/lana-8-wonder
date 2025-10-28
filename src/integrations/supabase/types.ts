@@ -47,6 +47,7 @@ export type Database = {
           id: string
           nostr_hex_id: string
           published_plan: boolean | null
+          selected_wallet: string | null
           tx: string | null
           updated_at: string
           wallet_registered: boolean | null
@@ -56,6 +57,7 @@ export type Database = {
           id?: string
           nostr_hex_id: string
           published_plan?: boolean | null
+          selected_wallet?: string | null
           tx?: string | null
           updated_at?: string
           wallet_registered?: boolean | null
@@ -65,11 +67,20 @@ export type Database = {
           id?: string
           nostr_hex_id?: string
           published_plan?: boolean | null
+          selected_wallet?: string | null
           tx?: string | null
           updated_at?: string
           wallet_registered?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_selected_wallet_fkey"
+            columns: ["selected_wallet"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallets: {
         Row: {
