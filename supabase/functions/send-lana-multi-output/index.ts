@@ -737,19 +737,47 @@ serve(async (req) => {
     const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
     console.log(`💰 Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
     
-    // Calculate dynamic fee - simple formula like working function
-    const estimatedInputCount = Math.min(10, utxos.length);
-    const outputCount = recipientsInSatoshis.length + 1; // recipients + change
-    const fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    console.log(`💸 Calculated dynamic fee: ${fee} satoshis for ~${estimatedInputCount} inputs, ${outputCount} outputs`);
+    // STEP 1: First select UTXOs for the base amount (without fee)
+    let initialSelection = UTXOSelector.selectUTXOs(utxos, totalAmountSatoshis);
+    let selectedUTXOs = initialSelection.selected;
+    let totalSelected = initialSelection.totalValue;
     
-    // Select UTXOs
-    const totalNeeded = totalAmountSatoshis + fee;
-    const selection = UTXOSelector.selectUTXOs(utxos, totalNeeded);
-    const selectedUTXOs = selection.selected;
-    const totalSelected = selection.totalValue;
+    console.log(`📊 Initial selection: ${selectedUTXOs.length} UTXOs with ${totalSelected} satoshis`);
     
-    console.log(`💰 Selected ${selectedUTXOs.length} UTXOs with total value: ${totalSelected} satoshis`);
+    // STEP 2: Calculate fee based on ACTUAL number of selected UTXOs
+    const actualOutputCount = recipientsInSatoshis.length + 1; // recipients + change
+    let baseFee = (selectedUTXOs.length * 180 + actualOutputCount * 34 + 10) * 100;
+    let fee = Math.floor(baseFee * 1.5); // Add 50% safety buffer
+    
+    console.log(`💸 Calculated fee: ${fee} satoshis (base: ${baseFee}, 50% buffer) for ${selectedUTXOs.length} inputs, ${actualOutputCount} outputs`);
+    
+    // STEP 3: Check if we have enough for amount + fee, if not, iteratively add more UTXOs
+    let iterations = 0;
+    const maxIterations = 10;
+    
+    while (totalSelected < totalAmountSatoshis + fee && selectedUTXOs.length < utxos.length && iterations < maxIterations) {
+      iterations++;
+      const needed = totalAmountSatoshis + fee;
+      console.log(`🔄 Iteration ${iterations}: Need ${needed} satoshis, have ${totalSelected} satoshis, reselecting...`);
+      
+      // Reselect with updated total needed
+      const reSelection = UTXOSelector.selectUTXOs(utxos, needed);
+      selectedUTXOs = reSelection.selected;
+      totalSelected = reSelection.totalValue;
+      
+      // Recalculate fee based on new input count
+      baseFee = (selectedUTXOs.length * 180 + actualOutputCount * 34 + 10) * 100;
+      fee = Math.floor(baseFee * 1.5);
+      
+      console.log(`   → Selected ${selectedUTXOs.length} UTXOs, total: ${totalSelected} satoshis, new fee: ${fee} satoshis`);
+    }
+    
+    // Final validation
+    if (totalSelected < totalAmountSatoshis + fee) {
+      throw new Error(`Insufficient funds: need ${totalAmountSatoshis + fee} satoshis, have ${totalSelected} satoshis`);
+    }
+    
+    console.log(`✅ Final selection: ${selectedUTXOs.length} UTXOs with ${totalSelected} satoshis`);
     console.log(`💸 Transaction breakdown: Amount=${totalAmountSatoshis}, Fee=${fee}, Change=${totalSelected - totalAmountSatoshis - fee}`);
     
     const signedTx = await buildSignedTx(selectedUTXOs, private_key, recipientsInSatoshis, fee, sender_address, servers);
