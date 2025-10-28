@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
 import AssignLana8Wonder from "./pages/AssignLana8Wonder";
+import PreviewLana8Wonder from "./pages/PreviewLana8Wonder";
 import SendLana from "./pages/SendLana";
 import SendLanaConfirm from "./pages/SendLanaConfirm";
 import SendLanaResult from "./pages/SendLanaResult";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
           <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
+          <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />
           <Route path="/send-lana" element={<SendLana />} />
           <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
           <Route path="/send-lana-result" element={<SendLanaResult />} />
