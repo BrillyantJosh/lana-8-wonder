@@ -236,7 +236,8 @@ function signECDSA(privateKeyHex: string, messageHash: Uint8Array): Uint8Array {
 
 class UTXOSelector {
   static MAX_INPUTS = 500;
-  static DUST_THRESHOLD = 1000000000; // 10 LANA minimum to avoid dust UTXOs
+  static DUST_THRESHOLD = 500000; // 0.005 LANA = 500,000 satoshis - anything below is dust
+  static PREFERRED_INPUT_COUNT = 10; // Try to combine up to 10 largest UTXOs
   
   static selectUTXOs(utxos: any[], totalNeeded: number) {
     if (!utxos || utxos.length === 0) {
@@ -262,34 +263,50 @@ class UTXOSelector {
       console.log(`  ${i + 1}. ${utxo.value} satoshis (${(utxo.value / 100000000).toFixed(8)} LANA) - ${utxo.tx_hash}:${utxo.tx_pos}`);
     });
     
-    // Filter out dust UTXOs (< 10 LANA) unless we have no choice
+    // Filter out dust UTXOs (< 500,000 satoshis)
     const nonDustUtxos = sortedUTXOs.filter(u => u.value >= this.DUST_THRESHOLD);
-    const workingSet = nonDustUtxos.length > 0 ? nonDustUtxos : sortedUTXOs;
     
     if (nonDustUtxos.length < sortedUTXOs.length) {
-      console.log(`⚠️ Filtered out ${sortedUTXOs.length - nonDustUtxos.length} dust UTXOs (< 10 LANA)`);
+      console.log(`⚠️ Filtered out ${sortedUTXOs.length - nonDustUtxos.length} dust UTXOs (< ${this.DUST_THRESHOLD} satoshis = ${(this.DUST_THRESHOLD / 100000000).toFixed(8)} LANA)`);
     }
     
-    // Try single large UTXO first (most efficient)
-    for (const utxo of workingSet) {
-      if (utxo.value >= totalNeeded) {
-        console.log(`✅ Single UTXO solution: ${(utxo.value / 100000000).toFixed(8)} LANA`);
-        return { selected: [utxo], totalValue: utxo.value };
+    if (nonDustUtxos.length === 0) {
+      console.warn('⚠️ No non-dust UTXOs available, using all UTXOs');
+    }
+    
+    const workingSet = nonDustUtxos.length > 0 ? nonDustUtxos : sortedUTXOs;
+    
+    // Strategy: Combine up to 10 largest non-dust UTXOs for better UTXO consolidation
+    console.log(`📦 Combining up to ${this.PREFERRED_INPUT_COUNT} largest UTXOs...`);
+    
+    const selectedUTXOs = [];
+    let totalSelected = 0;
+    
+    // Take up to 10 largest UTXOs
+    for (let i = 0; i < Math.min(this.PREFERRED_INPUT_COUNT, workingSet.length); i++) {
+      selectedUTXOs.push(workingSet[i]);
+      totalSelected += workingSet[i].value;
+      
+      if (totalSelected >= totalNeeded) {
+        console.log(
+          `✅ Solution using ${selectedUTXOs.length} largest UTXOs: ` +
+          `total: ${(totalSelected / 100000000).toFixed(8)} LANA`
+        );
+        return { selected: selectedUTXOs, totalValue: totalSelected };
       }
     }
     
-    // Multi-UTXO strategy
-    const selectedUTXOs = [];
-    let totalSelected = 0;
-    console.log(`📦 Using multi-UTXO strategy (max ${this.MAX_INPUTS} inputs)...`);
+    // If top 10 aren't enough, continue adding more
+    console.log(`ℹ️ Top ${selectedUTXOs.length} UTXOs insufficient, adding more...`);
     
-    for (const utxo of workingSet) {
+    for (let i = this.PREFERRED_INPUT_COUNT; i < workingSet.length; i++) {
       if (selectedUTXOs.length >= this.MAX_INPUTS) {
         console.warn(`⚠️ Reached maximum input limit (${this.MAX_INPUTS})`);
         break;
       }
-      selectedUTXOs.push(utxo);
-      totalSelected += utxo.value;
+      
+      selectedUTXOs.push(workingSet[i]);
+      totalSelected += workingSet[i].value;
       
       if (selectedUTXOs.length % 50 === 0) {
         console.log(`📊 Progress: ${selectedUTXOs.length} UTXOs, ${(totalSelected / 100000000).toFixed(8)} LANA`);
@@ -326,7 +343,7 @@ class UTXOSelector {
     
     throw new Error(
       `Cannot build transaction: Need ${(totalNeeded / 100000000).toFixed(8)} LANA but ` +
-      `only ${(totalSelected / 100000000).toFixed(8)} LANA available in top ${this.MAX_INPUTS} UTXOs. ` +
+      `only ${(totalSelected / 100000000).toFixed(8)} LANA available in ${selectedUTXOs.length} UTXOs. ` +
       `Total wallet balance: ${(totalAvailable / 100000000).toFixed(8)} LANA. ` +
       `Recommendation: Consolidate UTXOs first by sending all funds to yourself.`
     );
@@ -505,8 +522,8 @@ async function buildSignedTx(
       console.log(`📤 Output ${outputs.length}: ${recipient.address} = ${(recipient.amount / 100000000).toFixed(8)} LANA`);
     }
     
-    // Calculate change with dust threshold (0.01 LANA = 1,000,000 satoshis)
-    const MIN_CHANGE_THRESHOLD = 1000000;
+    // Calculate change with dust threshold (500,000 satoshis = 0.005 LANA)
+    const MIN_CHANGE_THRESHOLD = 500000; // Match dust threshold
     const changeAmount = totalValue - totalAmount - fee;
     let outputCount = recipients.length;
     
@@ -524,9 +541,9 @@ async function buildSignedTx(
       outputCount++;
       console.log(`✅ Change output added: ${(changeAmount / 100000000).toFixed(8)} LANA`);
     } else if (changeAmount > 0) {
-      console.log(`ℹ️ Change ${changeAmount} satoshis (${(changeAmount / 100000000).toFixed(8)} LANA) below threshold, absorbed into fee`);
+      console.log(`ℹ️ Change ${changeAmount} satoshis (${(changeAmount / 100000000).toFixed(8)} LANA) is dust, absorbed into fee`);
     } else {
-      console.log('⚠️ No change output needed');
+      console.log('ℹ️ No change output needed (exact amount)');
     }
     
     const version = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
@@ -724,28 +741,31 @@ serve(async (req) => {
     const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
     console.log(`💰 Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
     
-    // Estimate fee (will be adjusted if needed)
-    // Use actual largest UTXOs to estimate input count
-    const sortedByValue = [...utxos].sort((a, b) => b.value - a.value);
-    let estimatedInputCount = 1;
-    let accumulatedValue = 0;
-    for (const utxo of sortedByValue) {
-      accumulatedValue += utxo.value;
-      if (accumulatedValue >= totalAmountSatoshis * 1.1) break; // 10% buffer
-      estimatedInputCount++;
-      if (estimatedInputCount >= 10) break; // Cap at 10 for initial estimate
-    }
+    // Filter and count non-dust UTXOs for better fee estimation
+    const DUST_THRESHOLD = 500000; // 0.005 LANA
+    const nonDustUtxos = utxos.filter((u: any) => u.value >= DUST_THRESHOLD);
+    const sortedByValue = [...nonDustUtxos].sort((a, b) => b.value - a.value);
+    
+    // Estimate using up to 10 largest UTXOs (our preferred strategy)
+    const estimatedInputCount = Math.min(10, sortedByValue.length > 0 ? sortedByValue.length : utxos.length);
+    console.log(`📊 Estimating fee for ${estimatedInputCount} inputs (combining largest UTXOs)`);
     
     const outputCount = recipientsInSatoshis.length + 1; // recipients + change
     let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
     
     // Check if change would be dust, if so, absorb into fee
-    const MIN_CHANGE_THRESHOLD = 1000000; // 0.01 LANA
-    const potentialChange = totalAvailable - totalAmountSatoshis - fee;
+    const MIN_CHANGE_THRESHOLD = 500000; // 0.005 LANA - match dust threshold
+    
+    // Calculate potential change with multiple UTXOs
+    let accumulatedValue = 0;
+    for (let i = 0; i < Math.min(estimatedInputCount, sortedByValue.length); i++) {
+      accumulatedValue += sortedByValue[i].value;
+    }
+    
+    const potentialChange = accumulatedValue - totalAmountSatoshis - fee;
     
     if (potentialChange > 0 && potentialChange < MIN_CHANGE_THRESHOLD) {
-      console.log(`ℹ️ Potential change ${potentialChange} satoshis is dust, will absorb into fee`);
-      // Fee will be adjusted during actual UTXO selection
+      console.log(`ℹ️ Potential change ${potentialChange} satoshis is dust, will be absorbed into fee`);
     }
     
     console.log(`💸 Estimated fee: ${fee} satoshis (${estimatedInputCount} inputs × 180 + ${outputCount} outputs × 34 + 10) × 100 sat/byte`);
