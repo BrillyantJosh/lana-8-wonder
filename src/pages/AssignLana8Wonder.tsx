@@ -329,7 +329,8 @@ const AssignLana8Wonder = () => {
           minRequiredLana,
           phiDonation,
           totalTransferred,
-          remainingBalance
+          remainingBalance,
+          nostrHexId
         }
       });
     } catch (error) {

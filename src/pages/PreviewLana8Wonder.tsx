@@ -197,13 +197,14 @@ const PreviewLana8Wonder = () => {
     minRequiredLana,
     phiDonation,
     totalTransferred,
-    remainingBalance
+    remainingBalance,
+    nostrHexId: stateNostrHexId
   } = location.state || {};
 
   // Calculate start price (8% more than exchange rate)
   const startPrice = exchangeRate ? exchangeRate * 1.08 : 0;
 
-  // Fetch donation wallet ID and nostr hex id
+  // Fetch donation wallet ID and set nostr hex id
   useEffect(() => {
     const fetchData = async () => {
       // Fetch donation wallet
@@ -217,25 +218,31 @@ const PreviewLana8Wonder = () => {
         setDonationWalletId(settingData.setting_value);
       }
 
-      // Fetch nostr hex id from session
-      const sessionData = sessionStorage.getItem("nostrSession");
-      if (sessionData) {
-        try {
-          const session = JSON.parse(sessionData);
-          console.log('📋 Session data:', session);
-          const hexId = session.nostrHexId || session.nostr_hex_id;
-          console.log('📋 Nostr Hex ID:', hexId);
-          setNostrHexId(hexId);
-        } catch (error) {
-          console.error('Error parsing session data:', error);
-        }
+      // Set nostr hex id from location state (passed from previous page)
+      if (stateNostrHexId) {
+        console.log('📋 Nostr Hex ID from state:', stateNostrHexId);
+        setNostrHexId(stateNostrHexId);
       } else {
-        console.warn('⚠️ No session data found in sessionStorage');
+        // Fallback to sessionStorage if not in state
+        const sessionData = sessionStorage.getItem("nostrSession");
+        if (sessionData) {
+          try {
+            const session = JSON.parse(sessionData);
+            console.log('📋 Session data:', session);
+            const hexId = session.nostrHexId || session.nostr_hex_id;
+            console.log('📋 Nostr Hex ID from session:', hexId);
+            setNostrHexId(hexId);
+          } catch (error) {
+            console.error('Error parsing session data:', error);
+          }
+        } else {
+          console.warn('⚠️ No session data found');
+        }
       }
     };
     
     fetchData();
-  }, []);
+  }, [stateNostrHexId]);
 
   // Fetch current balances from Electrum
   useEffect(() => {
