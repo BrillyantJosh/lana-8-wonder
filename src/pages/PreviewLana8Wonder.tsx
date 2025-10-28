@@ -186,6 +186,8 @@ const PreviewLana8Wonder = () => {
   const [donationWalletId, setDonationWalletId] = useState<string>('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [nostrHexId, setNostrHexId] = useState<string>('');
+  const [walletRegistered, setWalletRegistered] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<any>(null);
 
   const {
     sourceWallet,
@@ -243,6 +245,34 @@ const PreviewLana8Wonder = () => {
     
     fetchData();
   }, [stateNostrHexId]);
+
+  // Check wallet registration status
+  useEffect(() => {
+    const checkWalletRegistration = async () => {
+      if (!nostrHexId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('wallet_registered')
+          .eq('nostr_hex_id', nostrHexId)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return;
+        }
+        
+        if (data) {
+          setWalletRegistered(data.wallet_registered || false);
+        }
+      } catch (error) {
+        console.error('Error checking wallet registration:', error);
+      }
+    };
+    
+    checkWalletRegistration();
+  }, [nostrHexId]);
 
   // Fetch current balances from Electrum
   useEffect(() => {
@@ -382,7 +412,7 @@ const PreviewLana8Wonder = () => {
       // Prepare wallet data for API
       const walletsData = wallets.map((wallet: any, index: number) => ({
         wallet_id: wallet.address,
-        wallet_type: 'annuity',
+        wallet_type: 'Lana8Wonder',
         notes: `Lana 8 Wonder Account ${index + 1}`
       }));
 
@@ -426,6 +456,10 @@ const PreviewLana8Wonder = () => {
         toast.error('Wallets registered but failed to update profile');
         return;
       }
+
+      // Set registration result for display
+      setRegistrationResult(result);
+      setWalletRegistered(true);
 
       toast.success(
         `✅ Successfully registered ${result.data.wallets_registered} wallets`,
@@ -574,22 +608,41 @@ const PreviewLana8Wonder = () => {
                     );
                   })}
                 </div>
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleRegisterWallets}
-                    disabled={isRegistering}
-                    className="w-full sm:w-auto"
-                  >
-                    {isRegistering ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registering Wallets...
-                      </>
-                    ) : (
-                      "Register Wallets"
+                
+                {walletRegistered ? (
+                  <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <p className="font-semibold text-green-800 dark:text-green-200">
+                        Wallets have been successfully registered!
+                      </p>
+                    </div>
+                    {registrationResult && (
+                      <div className="text-center text-sm text-green-700 dark:text-green-300">
+                        <p>
+                          {registrationResult.data?.wallets_registered || wallets?.length} wallets registered as Lana8Wonder type
+                        </p>
+                      </div>
                     )}
-                  </Button>
-                </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 mt-6">
+                    <Button
+                      onClick={handleRegisterWallets}
+                      disabled={isRegistering}
+                      className="w-full sm:w-auto"
+                    >
+                      {isRegistering ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Registering Wallets...
+                        </>
+                      ) : (
+                        "Register Wallets"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </CardContent>
