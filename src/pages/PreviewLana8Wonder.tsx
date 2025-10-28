@@ -3,17 +3,184 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { getCurrencySymbol } from "@/lib/utils";
+
+interface TradingLevel {
+  level: number;
+  triggerPrice: string;
+  splitNumber: number;
+  splitPrice: string;
+  lanasOnSale: number;
+  cashOut: string;
+  remaining: number;
+}
+
+interface Account {
+  number: number;
+  name: string;
+  type: "linear" | "compound" | "passive";
+  color: string;
+  description: string;
+  levels: TradingLevel[];
+  totalCashOut: number;
+}
+
+const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
+  const symbol = getCurrencySymbol(currency);
+  return [{
+    name: "Initial Recovery",
+    type: "linear" as const,
+    color: "from-orange-400 to-orange-600",
+    description: `Recover your initial ${symbol}88 investment`
+  }, {
+    name: "Growth Acceleration",
+    type: "linear" as const,
+    color: "from-orange-500 to-orange-700",
+    description: "Double your returns with strategic growth"
+  }, {
+    name: "Breakthrough Point",
+    type: "compound" as const,
+    color: "from-green-400 to-green-600",
+    description: `${symbol}50,000+ compound growth strategy`
+  }, {
+    name: "Expansion Phase",
+    type: "compound" as const,
+    color: "from-green-500 to-green-700",
+    description: `${symbol}500,000+ wealth multiplication`
+  }, {
+    name: "Wealth Creation",
+    type: "compound" as const,
+    color: "from-green-600 to-green-800",
+    description: `${symbol}2,670,000+ substantial returns`
+  }, {
+    name: "Passive Income",
+    type: "passive" as const,
+    color: "from-purple-400 to-purple-600",
+    description: ""
+  }, {
+    name: "Legacy Portfolio",
+    type: "passive" as const,
+    color: "from-purple-500 to-purple-700",
+    description: ""
+  }, {
+    name: "Ultimate Freedom",
+    type: "passive" as const,
+    color: "from-purple-600 to-purple-800",
+    description: ""
+  }];
+};
+
+function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
+  const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
+  const splitNumber = Math.log2(splitPrice / 0.001) + 1;
+  return { splitNumber, splitPrice };
+}
+
+function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  const lanasPerLevel = lanas / 10;
+  let remaining = lanas;
+  for (let i = 1; i <= 10; i++) {
+    const triggerPrice = startPrice * i;
+    const lanasOnSale = lanasPerLevel;
+    const cashOut = triggerPrice * lanasOnSale;
+    remaining -= lanasPerLevel;
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    levels.push({
+      level: i,
+      triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(remaining.toFixed(2))
+    });
+  }
+  return levels;
+}
+
+function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  const sellPercentages = [0, 0.25, 0.20, 0.15, 0.12, 0.09, 0.07, 0.05, 0.04, 0.03];
+  let remaining = lanas;
+  for (let i = 1; i <= 10; i++) {
+    const triggerPrice = startPrice * i;
+    const lanasOnSale = lanas * sellPercentages[i - 1];
+    const cashOut = triggerPrice * lanasOnSale;
+    remaining -= lanasOnSale;
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    levels.push({
+      level: i,
+      triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(remaining.toFixed(2))
+    });
+  }
+  return levels;
+}
+
+function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetValue: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  let remaining = lanas;
+  let hasReachedTarget = false;
+  let previousRemaining = lanas;
+  
+  const startingSplit = calculateSplit(startPrice);
+  
+  for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
+    const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
+    const actualPortfolioValue = remaining * splitPrice;
+    
+    let lanasOnSale: number;
+    let cashOut: number;
+    let newRemaining: number;
+    
+    if (!hasReachedTarget && actualPortfolioValue >= targetValue) {
+      hasReachedTarget = true;
+    }
+    
+    if (hasReachedTarget) {
+      newRemaining = targetValue / splitPrice;
+      lanasOnSale = previousRemaining - newRemaining;
+      cashOut = lanasOnSale * splitPrice;
+    } else {
+      lanasOnSale = remaining * 0.01;
+      cashOut = lanasOnSale * splitPrice;
+      newRemaining = remaining - lanasOnSale;
+    }
+    
+    levels.push({
+      level: splitNum,
+      triggerPrice: splitPrice.toFixed(5),
+      splitNumber: splitNum,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(newRemaining.toFixed(2))
+    });
+    
+    previousRemaining = newRemaining;
+    remaining = newRemaining;
+  }
+  
+  return levels;
+}
 
 const PreviewLana8Wonder = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { params } = useNostrLanaParams();
   const [isPublishing, setIsPublishing] = useState(false);
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   const {
     sourceWallet,
@@ -28,12 +195,80 @@ const PreviewLana8Wonder = () => {
     remainingBalance
   } = location.state || {};
 
+  // Calculate start price (8% more than exchange rate)
+  const startPrice = exchangeRate ? exchangeRate * 1.08 : 0;
+
   useEffect(() => {
     if (!sourceWallet || !wallets) {
       toast.error("Missing plan data");
       navigate("/assign-lana8wonder");
     }
   }, [sourceWallet, wallets, navigate]);
+
+  // Generate trading plan accounts
+  useEffect(() => {
+    if (!exchangeRate || !amountPerWallet) return;
+
+    const adjustedStartingPrice = exchangeRate * 1.08;
+    
+    const accountPrices = [
+      adjustedStartingPrice,
+      adjustedStartingPrice * 10,
+      adjustedStartingPrice * 100,
+      adjustedStartingPrice * 1000,
+      adjustedStartingPrice * 10000,
+      adjustedStartingPrice * 100000,
+      adjustedStartingPrice * 1000000,
+      adjustedStartingPrice * 10000000
+    ];
+    
+    const accountConfigs = getAccountConfigs(planCurrency as 'EUR' | 'USD' | 'GBP');
+    
+    const account6TargetValue = 1000000;
+    const account7TargetValue = 10000000;
+    const account8TargetValue = 88000000;
+    
+    const newAccounts: Account[] = accountConfigs.map((config, index) => {
+      let levels: TradingLevel[];
+      if (config.type === "linear") {
+        levels = generateLinearLevels(amountPerWallet, accountPrices[index]);
+      } else if (config.type === "compound") {
+        levels = generateCompoundLevels(amountPerWallet, accountPrices[index]);
+      } else {
+        const targetValue = index === 5 ? account6TargetValue : 
+                           index === 6 ? account7TargetValue : 
+                           account8TargetValue;
+        levels = generatePassiveLevelsBySplit(
+          amountPerWallet, 
+          accountPrices[index],
+          targetValue
+        );
+      }
+      const totalCashOut = levels.reduce((sum, level) => sum + parseFloat(level.cashOut), 0);
+      
+      return {
+        number: index + 1,
+        name: config.name,
+        type: config.type,
+        color: config.color,
+        description: config.description,
+        levels,
+        totalCashOut
+      };
+    });
+    
+    setAccounts(newAccounts);
+  }, [exchangeRate, amountPerWallet, planCurrency]);
+
+  const toggleAccount = (accountNumber: number) => {
+    const newExpanded = new Set(expandedAccounts);
+    if (newExpanded.has(accountNumber)) {
+      newExpanded.delete(accountNumber);
+    } else {
+      newExpanded.add(accountNumber);
+    }
+    setExpandedAccounts(newExpanded);
+  };
 
   const handlePublish = async () => {
     setIsPublishing(true);
@@ -68,7 +303,7 @@ const PreviewLana8Wonder = () => {
           amount_per_wallet: amountPerWallet,
           currency: planCurrency,
           exchange_rate: exchangeRate,
-          start_price: 0.075,
+          start_price: startPrice,
           relays
         }
       });
@@ -217,7 +452,7 @@ const PreviewLana8Wonder = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Start Price:</span>
-                <span className="font-mono">0.075 {currencySymbol}/LANA</span>
+                <span className="font-mono">{startPrice.toFixed(8)} {currencySymbol}/LANA</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <span className="text-muted-foreground">Total Accounts:</span>
@@ -228,6 +463,78 @@ const PreviewLana8Wonder = () => {
                 <span className="font-mono">{amountPerWallet?.toFixed(8)} LANA</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Trading Plan Details - All 8 Accounts */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Trading Plan Breakdown</CardTitle>
+            <CardDescription>
+              All 8 accounts with detailed level information
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {accounts.map((account) => (
+              <div key={account.number} className="border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleAccount(account.number)}
+                  className={`w-full p-4 text-left bg-gradient-to-r ${account.color} hover:opacity-90 transition-opacity`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-white text-lg">
+                        Account {account.number}: {account.name}
+                      </h3>
+                      {account.description && (
+                        <p className="text-white/90 text-sm mt-1">{account.description}</p>
+                      )}
+                      <p className="text-white/80 text-xs mt-2">
+                        {account.levels.length} levels • Total Cash Out: {currencySymbol}{account.totalCashOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    {expandedAccounts.has(account.number) ? (
+                      <ChevronUp className="h-5 w-5 text-white" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                </button>
+                
+                {expandedAccounts.has(account.number) && (
+                  <div className="p-4 bg-card">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Level</TableHead>
+                            <TableHead>Trigger Price</TableHead>
+                            <TableHead>Split #</TableHead>
+                            <TableHead>Split Price</TableHead>
+                            <TableHead>LANAs on Sale</TableHead>
+                            <TableHead>Cash Out ({currencySymbol})</TableHead>
+                            <TableHead>Remaining</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {account.levels.map((level) => (
+                            <TableRow key={level.level}>
+                              <TableCell className="font-medium">{level.level}</TableCell>
+                              <TableCell className="font-mono text-xs">{level.triggerPrice}</TableCell>
+                              <TableCell>{level.splitNumber}</TableCell>
+                              <TableCell className="font-mono text-xs">{level.splitPrice}</TableCell>
+                              <TableCell>{level.lanasOnSale.toFixed(2)}</TableCell>
+                              <TableCell>{parseFloat(level.cashOut).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell>{level.remaining.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
 
