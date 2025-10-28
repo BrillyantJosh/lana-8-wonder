@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { Html5Qrcode } from "html5-qrcode";
 import { getCurrencySymbol } from "@/lib/utils";
+import { validateLanaAddress } from "@/lib/walletValidation";
 
 interface WalletValidation {
   address: string;
@@ -71,6 +72,23 @@ const AssignLana8Wonder = () => {
     ));
 
     try {
+      // First, validate the LanaCoin address format
+      const validation = await validateLanaAddress(address);
+      
+      if (!validation.valid) {
+        setWallets(prev => prev.map((w, i) => 
+          i === index ? {
+            ...w,
+            isChecking: false,
+            isValid: false,
+            error: validation.error || "Invalid LanaCoin address"
+          } : w
+        ));
+        toast.error(`Wallet ${index + 1}: ${validation.error || "Invalid address"}`);
+        return;
+      }
+
+      // If address is valid, check balance via Electrum
       const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
         body: { 
           wallet_addresses: [address],
@@ -188,10 +206,12 @@ const AssignLana8Wonder = () => {
             fps: 10,
             qrbox: { width: 250, height: 250 }
           },
-          (decodedText) => {
+          async (decodedText) => {
             handleAddressChange(index, decodedText);
             stopScanner();
             toast.success("QR code scanned successfully");
+            // Trigger validation immediately after scan
+            await checkWalletBalance(decodedText, index);
           },
           (errorMessage) => {
             // Ignore scan errors during operation
