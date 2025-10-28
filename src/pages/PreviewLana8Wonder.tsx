@@ -650,13 +650,17 @@ const PreviewLana8Wonder = () => {
     setIsPublishing(true);
     
     try {
-      const sessionData = sessionStorage.getItem("nostrSession");
+      console.log('📋 Session storage key used: lana_session');
+      const sessionData = sessionStorage.getItem("lana_session");
       if (!sessionData) {
-        throw new Error("No session data found");
+        console.error('❌ No session data found in sessionStorage');
+        console.log('Available keys:', Object.keys(sessionStorage));
+        throw new Error("Session expired. Please log in again.");
       }
       
+      console.log('📋 Session data found');
       const session = JSON.parse(sessionData);
-      const subjectHex = session.nostrHexId;
+      const subjectHex = session.nostrHexId || session.nostr_hex_id;
       
       const walletAddresses = effectiveWallets.map((w: any) => w.address);
       
