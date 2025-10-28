@@ -224,7 +224,7 @@ const PreviewLana8Wonder = () => {
         setNostrHexId(stateNostrHexId);
       } else {
         // Fallback to sessionStorage if not in state
-        const sessionData = sessionStorage.getItem("nostrSession");
+        const sessionData = sessionStorage.getItem("lana_session");
         if (sessionData) {
           try {
             const session = JSON.parse(sessionData);
