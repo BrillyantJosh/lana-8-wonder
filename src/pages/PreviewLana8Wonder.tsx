@@ -188,6 +188,7 @@ const PreviewLana8Wonder = () => {
   const [nostrHexId, setNostrHexId] = useState<string>('');
   const [walletRegistered, setWalletRegistered] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<any>(null);
+  const [txHash, setTxHash] = useState<string>('');
 
   const {
     sourceWallet,
@@ -246,7 +247,7 @@ const PreviewLana8Wonder = () => {
     fetchData();
   }, [stateNostrHexId]);
 
-  // Check wallet registration status
+  // Check wallet registration status and TX
   useEffect(() => {
     const checkWalletRegistration = async () => {
       if (!nostrHexId) return;
@@ -254,7 +255,7 @@ const PreviewLana8Wonder = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('wallet_registered')
+          .select('wallet_registered, tx')
           .eq('nostr_hex_id', nostrHexId)
           .single();
         
@@ -265,6 +266,7 @@ const PreviewLana8Wonder = () => {
         
         if (data) {
           setWalletRegistered(data.wallet_registered || false);
+          setTxHash(data.tx || '');
         }
       } catch (error) {
         console.error('Error checking wallet registration:', error);
@@ -697,6 +699,53 @@ const PreviewLana8Wonder = () => {
                     <span className="font-mono">{remainingBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Transfer Button or Status */}
+              <div className="mt-6 pt-4 border-t">
+                {txHash ? (
+                  <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <p className="font-semibold text-green-800 dark:text-green-200">
+                        LANAs have been transferred
+                      </p>
+                    </div>
+                    <a
+                      href={`https://chainz.cryptoid.info/lana/tx.dws?${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      View transaction on explorer →
+                    </a>
+                  </div>
+                ) : walletRegistered ? (
+                  <Button
+                    onClick={() => navigate('/send-lana8wonder-transfer', {
+                      state: {
+                        sourceWallet,
+                        sourceBalance: sourceBalance?.toString() || '0',
+                        wallets: wallets?.map((w: any, idx: number) => ({
+                          address: w.address,
+                          amount: amountPerWallet,
+                          label: `Wallet ${idx + 1}`
+                        })),
+                        donationWalletId,
+                        totalAmount: minRequiredLana,
+                        nostrHexId
+                      }
+                    })}
+                    disabled={!sourceBalance || sourceBalance < minRequiredLana}
+                    className="w-full"
+                  >
+                    Transfer Assets to 8 Wallets and Donation
+                  </Button>
+                ) : (
+                  <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground">
+                    Please register wallets first to enable transfer
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
