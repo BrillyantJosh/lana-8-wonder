@@ -368,7 +368,7 @@ const PreviewLana8Wonder = () => {
         
         // Calculate all values
         const minLana = 88 / rate;
-        const phi = minLana * 0.016180;
+        const phi = 12 / rate;  // 12 EUR fixed donation
         const perWallet = minLana / 8;
         const total = minLana + phi;
         
@@ -762,7 +762,8 @@ const PreviewLana8Wonder = () => {
                     // Handle both { address: "..." } and plain string formats
                     const walletAddress = typeof wallet === 'string' ? wallet : wallet.address;
                     const currentBalance = walletBalances[walletAddress] || 0;
-                    const afterBalance = currentBalance + (effectiveAmountPerWallet || 0);
+                    // After transaction should just show the amountPerWallet, not added to current
+                    const afterBalance = effectiveAmountPerWallet || 0;
                     
                     return (
                       <div key={index} className="p-3 border rounded-lg">
@@ -879,15 +880,17 @@ const PreviewLana8Wonder = () => {
                     <span>Total to Transfer:</span>
                     <span className="font-mono">{effectiveTotalTransferred?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Remaining in Wallet:</span>
-                    <span className="font-mono">
-                      {((walletBalances[effectiveSourceWallet] !== undefined 
-                        ? walletBalances[effectiveSourceWallet] 
-                        : effectiveSourceBalance
-                      ) - effectiveTotalTransferred)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA
-                    </span>
-                  </div>
+                  {!txHash && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Remaining in Wallet:</span>
+                      <span className="font-mono">
+                        {((walletBalances[effectiveSourceWallet] !== undefined 
+                          ? walletBalances[effectiveSourceWallet] 
+                          : effectiveSourceBalance
+                        ) - effectiveTotalTransferred)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
