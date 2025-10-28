@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { finalizeEvent, EventTemplate } from 'npm:nostr-tools@2.17.0/pure';
 import { hexToBytes } from 'npm:nostr-tools@2.17.0/utils';
+import { SimplePool } from 'npm:nostr-tools@2.17.0/pool';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,54 +41,91 @@ function generateAnnuityLevels(
   return levels;
 }
 
-// Publish event to Nostr relays
-async function publishToNostr(signedEvent: any, relays: string[]): Promise<any> {
-  const results: any[] = [];
+// Publish event to Nostr relays using SimplePool
+interface PublishResult {
+  relay: string;
+  success: boolean;
+  error?: string;
+}
+
+async function publishToNostr(
+  signedEvent: any, 
+  relays: string[]
+): Promise<PublishResult[]> {
+  const pool = new SimplePool();
+  const results: PublishResult[] = [];
   
-  for (const relay of relays) {
-    try {
-      console.log(`🔄 Publishing to ${relay}...`);
+  try {
+    // Create a promise for EACH relay
+    const publishPromises = relays.map(async (relay: string) => {
+      console.log(`🔄 Connecting to ${relay}...`);
       
-      const ws = new WebSocket(relay);
-      
-      const result = await new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
+        // ⏱️ TIMEOUT MECHANISM (10s)
         const timeout = setTimeout(() => {
-          ws.close();
-          resolve({ relay, success: false, error: 'Timeout (10s)' });
+          results.push({ 
+            relay, 
+            success: false, 
+            error: 'Connection timeout (10s)' 
+          });
+          console.error(`❌ ${relay}: Timeout`);
+          resolve(); // ⚠️ IMPORTANT: resolve, not reject!
         }, 10000);
-        
-        ws.onopen = () => {
-          ws.send(JSON.stringify(['EVENT', signedEvent]));
-        };
-        
-        ws.onmessage = (event) => {
-          try {
-            const response = JSON.parse(event.data);
-            if (response[0] === 'OK') {
-              clearTimeout(timeout);
-              ws.close();
-              resolve({ relay, success: response[2], error: response[3] });
-            }
-          } catch (e) {
-            console.error('Parse error:', e);
-          }
-        };
-        
-        ws.onerror = (error) => {
+
+        try {
+          // 📤 PUBLISH TO RELAY
+          const pubs = pool.publish([relay], signedEvent);
+          
+          // 🏁 RACE: publish vs timeout (8s inner timeout)
+          Promise.race([
+            Promise.all(pubs),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Publish timeout')), 8000)
+            )
+          ]).then(() => {
+            clearTimeout(timeout);
+            results.push({ relay, success: true });
+            console.log(`✅ ${relay}: Successfully published`);
+            resolve();
+          }).catch((error) => {
+            clearTimeout(timeout);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            results.push({ relay, success: false, error: errorMsg });
+            console.error(`❌ ${relay}: ${errorMsg}`);
+            resolve(); // ⚠️ IMPORTANT: resolve, not reject!
+          });
+        } catch (error) {
           clearTimeout(timeout);
-          ws.close();
-          resolve({ relay, success: false, error: 'Connection error' });
-        };
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          results.push({ relay, success: false, error: errorMsg });
+          console.error(`❌ ${relay}: ${errorMsg}`);
+          resolve(); // ⚠️ IMPORTANT: resolve, not reject!
+        }
       });
-      
-      results.push(result);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      results.push({ relay, success: false, error: errorMsg });
-    }
+    });
+    
+    // ⏳ WAIT FOR ALL RELAYS TO COMPLETE OR TIMEOUT
+    await Promise.all(publishPromises);
+    
+    // 📊 SUMMARY
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+    
+    console.log('📊 Publishing summary:', {
+      eventId: signedEvent.id,
+      total: results.length,
+      successful: successCount,
+      failed: failedCount,
+      details: results
+    });
+
+    return results;
+    
+  } finally {
+    // 🔒 CRITICAL: ALWAYS close pool
+    console.log('🔒 Closing pool connections...');
+    pool.close(relays);
   }
-  
-  return results;
 }
 
 serve(async (req) => {
@@ -179,11 +217,25 @@ serve(async (req) => {
     console.log('📤 Publishing to relays...');
     const publishResults = await publishToNostr(signedEvent, relays);
     
-    const successCount = publishResults.filter((r: any) => r.success).length;
+    const successCount = publishResults.filter(r => r.success).length;
     console.log(`📊 Published to ${successCount}/${relays.length} relays`);
 
     if (successCount === 0) {
       throw new Error('Failed to publish to any relay');
+    }
+
+    // 6. Update profile in database
+    console.log('💾 Updating profile.published_plan...');
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ published_plan: true })
+      .eq('nostr_hex_id', subject_hex);
+
+    if (updateError) {
+      console.error('⚠️ Failed to update profile:', updateError);
+      // Don't throw - event was published successfully
+    } else {
+      console.log('✅ Profile updated: published_plan = true');
     }
 
     return new Response(
