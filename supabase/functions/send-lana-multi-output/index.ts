@@ -546,9 +546,8 @@ async function buildSignedTx(
     }
     
     const version = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
-    const nTime = new Uint8Array(4);
-    const timestamp = Math.floor(Date.now() / 1000);
-    new DataView(nTime.buffer).setUint32(0, timestamp, true);
+    // NOTE: LANA transactions do NOT use nTime field (only blocks do)
+    // const nTime = new Uint8Array(4);  // REMOVED
     const locktime = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
     const hashType = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
     
@@ -579,14 +578,14 @@ async function buildSignedTx(
         
         const preimage = new Uint8Array([
           ...version,
-          ...nTime,
-          selectedUTXOs.length,
+          // NO nTime in transaction format
+          ...encodeVarint(selectedUTXOs.length),
           ...txid,
           ...voutBytes,
           ...encodeVarint(scriptPubkey.length),
           ...scriptPubkey,
           0xff, 0xff, 0xff, 0xff,
-          outputCount,
+          ...encodeVarint(outputCount),
           ...allOutputs,
           ...locktime,
           ...hashType
@@ -643,7 +642,7 @@ async function buildSignedTx(
     
     const finalTx = new Uint8Array([
       ...version,
-      ...nTime,
+      // NO nTime in transaction format
       ...encodeVarint(selectedUTXOs.length),  // Must be varint!
       ...allInputs,
       ...encodeVarint(outputCount),  // Must be varint!
