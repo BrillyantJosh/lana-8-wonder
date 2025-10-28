@@ -276,45 +276,20 @@ class UTXOSelector {
     
     const workingSet = nonDustUtxos.length > 0 ? nonDustUtxos : sortedUTXOs;
     
-    // Strategy: Combine up to 10 largest non-dust UTXOs for better UTXO consolidation
-    console.log(`📦 Combining up to ${this.PREFERRED_INPUT_COUNT} largest UTXOs...`);
+    // Strategy: Add UTXOs ONE BY ONE until we have enough (minimizes transaction size)
+    console.log(`📦 Selecting minimum UTXOs needed for ${(totalNeeded / 100000000).toFixed(8)} LANA...`);
     
     const selectedUTXOs = [];
     let totalSelected = 0;
     
-    // Take up to 10 largest UTXOs
-    for (let i = 0; i < Math.min(this.PREFERRED_INPUT_COUNT, workingSet.length); i++) {
+    // Add UTXOs one by one until we have enough
+    for (let i = 0; i < workingSet.length && selectedUTXOs.length < this.MAX_INPUTS; i++) {
       selectedUTXOs.push(workingSet[i]);
       totalSelected += workingSet[i].value;
       
       if (totalSelected >= totalNeeded) {
         console.log(
-          `✅ Solution using ${selectedUTXOs.length} largest UTXOs: ` +
-          `total: ${(totalSelected / 100000000).toFixed(8)} LANA`
-        );
-        return { selected: selectedUTXOs, totalValue: totalSelected };
-      }
-    }
-    
-    // If top 10 aren't enough, continue adding more
-    console.log(`ℹ️ Top ${selectedUTXOs.length} UTXOs insufficient, adding more...`);
-    
-    for (let i = this.PREFERRED_INPUT_COUNT; i < workingSet.length; i++) {
-      if (selectedUTXOs.length >= this.MAX_INPUTS) {
-        console.warn(`⚠️ Reached maximum input limit (${this.MAX_INPUTS})`);
-        break;
-      }
-      
-      selectedUTXOs.push(workingSet[i]);
-      totalSelected += workingSet[i].value;
-      
-      if (selectedUTXOs.length % 50 === 0) {
-        console.log(`📊 Progress: ${selectedUTXOs.length} UTXOs, ${(totalSelected / 100000000).toFixed(8)} LANA`);
-      }
-      
-      if (totalSelected >= totalNeeded) {
-        console.log(
-          `✅ Multi-UTXO solution: ${selectedUTXOs.length} inputs, ` +
+          `✅ Sufficient funds reached with ${selectedUTXOs.length} UTXOs: ` +
           `total: ${(totalSelected / 100000000).toFixed(8)} LANA`
         );
         return { selected: selectedUTXOs, totalValue: totalSelected };
