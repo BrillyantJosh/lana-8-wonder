@@ -114,6 +114,40 @@ const CreateLana8Wonder = () => {
     }
   }, [navigate, params]);
 
+  // Auto-redirect to preview if user already has a complete plan
+  useEffect(() => {
+    const checkExistingPlan = async () => {
+      if (!session || loading) return;
+
+      try {
+        // Check if user has selected_wallet in profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, selected_wallet")
+          .eq("nostr_hex_id", session.nostrHexId)
+          .maybeSingle();
+        
+        if (!profile?.selected_wallet) return;
+        
+        // Check if there are 8 annuity wallets for this profile
+        const { data: wallets } = await supabase
+          .from("wallets")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .eq("wallet_type", "annuity");
+        
+        if (wallets && wallets.length === 8) {
+          toast.success("Loading your existing Lana8Wonder plan...");
+          navigate("/preview-lana8wonder");
+        }
+      } catch (error) {
+        console.error("Error checking existing plan:", error);
+      }
+    };
+
+    checkExistingPlan();
+  }, [session, loading, navigate]);
+
   const handleLogout = () => {
     sessionStorage.removeItem("lana_session");
     navigate("/login");
