@@ -181,6 +181,9 @@ const PreviewLana8Wonder = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [walletBalances, setWalletBalances] = useState<{ [address: string]: number }>({});
+  const [loadingBalances, setLoadingBalances] = useState(true);
+  const [donationWalletId, setDonationWalletId] = useState<string>('');
 
   const {
     sourceWallet,
@@ -197,6 +200,66 @@ const PreviewLana8Wonder = () => {
 
   // Calculate start price (8% more than exchange rate)
   const startPrice = exchangeRate ? exchangeRate * 1.08 : 0;
+
+  // Fetch donation wallet ID
+  useEffect(() => {
+    const fetchDonationWallet = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'donation_wallet_id')
+        .single();
+      
+      if (data) {
+        setDonationWalletId(data.setting_value);
+      }
+    };
+    
+    fetchDonationWallet();
+  }, []);
+
+  // Fetch current balances from Electrum
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!wallets || !params?.electrum) return;
+      
+      setLoadingBalances(true);
+      try {
+        const electrumServers = params.electrum.map(e => ({
+          host: e.host,
+          port: parseInt(e.port)
+        }));
+        
+        const addresses = wallets.map((w: any) => w.address);
+        
+        const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+          body: {
+            wallet_addresses: addresses,
+            electrum_servers: electrumServers
+          }
+        });
+        
+        if (error) throw error;
+        
+        // Create a map of address -> balance
+        const balanceMap: { [address: string]: number } = {};
+        if (data?.balances) {
+          data.balances.forEach((item: any) => {
+            balanceMap[item.address] = item.balance || 0;
+          });
+        }
+        
+        setWalletBalances(balanceMap);
+      } catch (error) {
+        console.error('Error fetching wallet balances:', error);
+        toast.error('Failed to fetch wallet balances');
+      } finally {
+        setLoadingBalances(false);
+      }
+    };
+    
+    fetchBalances();
+  }, [wallets, params]);
 
   useEffect(() => {
     if (!sourceWallet || !wallets) {
@@ -370,7 +433,7 @@ const PreviewLana8Wonder = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="font-semibold">{sourceBalance?.toFixed(8) || "0.00000000"} LANA</p>
+                <p className="font-semibold">{sourceBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA</p>
               </div>
               
               <div className="pt-4 border-t">
@@ -378,27 +441,33 @@ const PreviewLana8Wonder = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
-                    <span className="font-mono">{minRequiredLana?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{minRequiredLana?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
-                    <span className="font-mono">{phiDonation?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{phiDonation?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
+                  {donationWalletId && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Donation Wallet:</span>
+                      <span className="font-mono text-muted-foreground">{donationWalletId}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total to 8 Wallets:</span>
-                    <span className="font-mono">{(minRequiredLana - phiDonation)?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{(minRequiredLana - phiDonation)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
-                    <span className="font-mono">{amountPerWallet?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t font-semibold">
                     <span>Total to Transfer:</span>
-                    <span className="font-mono">{totalTransferred?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{totalTransferred?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Remaining in Wallet:</span>
-                    <span className="font-mono">{remainingBalance?.toFixed(8)} LANA</span>
+                    <span className="font-mono">{remainingBalance?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
                   </div>
                 </div>
               </div>
@@ -414,25 +483,44 @@ const PreviewLana8Wonder = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {wallets?.map((wallet: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold">Wallet {index + 1}</span>
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <Badge variant="default" className="bg-green-600">Valid</Badge>
+            {loadingBalances ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="ml-2 text-muted-foreground">Checking wallet balances...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {wallets?.map((wallet: any, index: number) => {
+                  const currentBalance = walletBalances[wallet.address] || 0;
+                  const afterBalance = amountPerWallet || 0;
+                  
+                  return (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">Wallet {index + 1}</span>
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <Badge variant="default" className="bg-green-600">Valid</Badge>
+                        </div>
+                      </div>
+                      <p className="font-mono text-xs break-all text-muted-foreground mb-3">
+                        {wallet.address}
+                      </p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs mb-1">Current Balance:</p>
+                          <p className="font-mono font-semibold">{currentBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs mb-1">After Transaction:</p>
+                          <p className="font-mono font-semibold text-green-600">{afterBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="font-mono text-xs break-all text-muted-foreground">
-                      {wallet.address}
-                    </p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="text-sm font-semibold">{amountPerWallet?.toFixed(8)} LANA</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -448,11 +536,11 @@ const PreviewLana8Wonder = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Exchange Rate:</span>
-                <span className="font-mono">{exchangeRate?.toFixed(8)} LANA/{currencySymbol}</span>
+                <span className="font-mono">{exchangeRate?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA/{currencySymbol}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Start Price:</span>
-                <span className="font-mono">{startPrice.toFixed(8)} {currencySymbol}/LANA</span>
+                <span className="font-mono">{startPrice.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} {currencySymbol}/LANA</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <span className="text-muted-foreground">Total Accounts:</span>
@@ -460,7 +548,7 @@ const PreviewLana8Wonder = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Distribution per Account:</span>
-                <span className="font-mono">{amountPerWallet?.toFixed(8)} LANA</span>
+                <span className="font-mono">{amountPerWallet?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA</span>
               </div>
             </div>
           </CardContent>
@@ -523,9 +611,9 @@ const PreviewLana8Wonder = () => {
                               <TableCell className="font-mono text-xs">{level.triggerPrice}</TableCell>
                               <TableCell>{level.splitNumber}</TableCell>
                               <TableCell className="font-mono text-xs">{level.splitPrice}</TableCell>
-                              <TableCell>{level.lanasOnSale.toFixed(2)}</TableCell>
-                              <TableCell>{parseFloat(level.cashOut).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
-                              <TableCell>{level.remaining.toFixed(2)}</TableCell>
+                              <TableCell>{level.lanasOnSale.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell>{parseFloat(level.cashOut).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell>{level.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
