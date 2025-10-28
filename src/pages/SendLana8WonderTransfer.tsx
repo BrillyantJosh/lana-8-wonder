@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode, X } from "lucide-react";
+import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
@@ -32,6 +32,14 @@ const SendLana8WonderTransfer = () => {
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
 
   if (!state) {
     navigate('/preview-lana8wonder');
@@ -87,28 +95,66 @@ const SendLana8WonderTransfer = () => {
 
   const startScanner = async () => {
     setShowScanner(true);
-    try {
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      scannerRef.current = html5QrCode;
+    
+    // CRITICAL: 100ms delay to ensure DOM is ready
+    setTimeout(async () => {
+      try {
+        // 1. Enumerate cameras
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (!cameras || cameras.length === 0) {
+          toast.error("No camera found on this device");
+          setShowScanner(false);
+          return;
+        }
 
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        (decodedText) => {
-          handlePrivateKeyChange(decodedText);
-          stopScanner();
-          toast.success("Private key scanned successfully");
-        },
-        () => {}
-      );
-    } catch (error) {
-      console.error("Error starting scanner:", error);
-      toast.error("Failed to start camera");
-      setShowScanner(false);
-    }
+        // 2. Select camera (priority: back camera)
+        let selectedCamera = cameras[0];
+        if (cameras.length > 1) {
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear')
+          );
+          if (backCamera) {
+            selectedCamera = backCamera;
+          }
+        }
+
+        // 3. Initialize scanner with unique ID
+        const scanner = new Html5Qrcode("qr-reader-transfer");
+        scannerRef.current = scanner;
+
+        // 4. Start scanner with camera.id
+        await scanner.start(
+          selectedCamera.id,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            handlePrivateKeyChange(decodedText);
+            stopScanner();
+            toast.success("Private key scanned successfully!");
+          },
+          (errorMessage) => {
+            // Ignore scan errors during operation
+          }
+        );
+      } catch (error: any) {
+        console.error("Error starting QR scanner:", error);
+        setShowScanner(false);
+        
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
+        } else if (error.name === "NotFoundError") {
+          toast.error("No camera found on this device");
+        } else if (error.name === "NotReadableError") {
+          toast.error("Camera is already in use by another application");
+        } else {
+          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
+        }
+      }
+    }, 100);
   };
 
   const stopScanner = async () => {
@@ -295,64 +341,69 @@ const SendLana8WonderTransfer = () => {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="privateKey">Private Key (WIF Format)</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={showScanner ? stopScanner : startScanner}
-                >
-                  {showScanner ? (
-                    <>
-                      <X className="h-4 w-4 mr-2" />
-                      Cancel Scan
-                    </>
-                  ) : (
-                    <>
+              {!showScanner ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="privateKey">Private Key (WIF Format)</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={startScanner}
+                    >
                       <QrCode className="h-4 w-4 mr-2" />
                       Scan QR
-                    </>
-                  )}
-                </Button>
-              </div>
+                    </Button>
+                  </div>
 
-              {showScanner && (
-                <div className="relative border rounded-lg overflow-hidden">
-                  <div id="qr-reader" className="w-full"></div>
+                  <div className="relative">
+                    <Input
+                      id="privateKey"
+                      type={showPrivateKey ? "text" : "password"}
+                      value={privateKey}
+                      onChange={(e) => handlePrivateKeyChange(e.target.value)}
+                      placeholder="Enter your private key..."
+                      className={`pr-10 ${
+                        isValid === true 
+                          ? 'border-green-500' 
+                          : isValid === false 
+                          ? 'border-red-500' 
+                          : ''
+                      }`}
+                      disabled={isValidating}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowPrivateKey(!showPrivateKey)}
+                    >
+                      {showPrivateKey ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Label>Scan Private Key QR Code</Label>
+                  <div
+                    id="qr-reader-transfer"
+                    className="rounded-lg overflow-hidden border-2 border-primary"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={stopScanner}
+                  >
+                    Stop Scanning
+                  </Button>
                 </div>
               )}
-
-              <div className="relative">
-                <Input
-                  id="privateKey"
-                  type={showPrivateKey ? "text" : "password"}
-                  value={privateKey}
-                  onChange={(e) => handlePrivateKeyChange(e.target.value)}
-                  placeholder="Enter your private key..."
-                  className={`pr-10 ${
-                    isValid === true 
-                      ? 'border-green-500' 
-                      : isValid === false 
-                      ? 'border-red-500' 
-                      : ''
-                  }`}
-                  disabled={isValidating}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowPrivateKey(!showPrivateKey)}
-                >
-                  {showPrivateKey ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
 
               {isValidating && (
                 <p className="text-xs text-muted-foreground">
