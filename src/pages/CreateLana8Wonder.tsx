@@ -264,15 +264,79 @@ const CreateLana8Wonder = () => {
                               {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
                                 <Button 
                                   size="sm"
-                                  onClick={() => navigate('/assign-lana8wonder', { 
-                                    state: { 
-                                      sourceWallet: wallet.wallet_address,
-                                      balance: currentBalance,
-                                      minRequiredLana: minimumRequired,
-                                      planCurrency: planCurrency,
-                                      exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
-                                    } 
-                                  })}
+                                  onClick={async () => {
+                                    try {
+                                      // Check if user already has wallets in the database
+                                      const { data: existingProfile } = await supabase
+                                        .from("profiles")
+                                        .select("id")
+                                        .eq("nostr_hex_id", session.nostrHexId)
+                                        .maybeSingle();
+                                      
+                                      if (existingProfile) {
+                                        // Check if there are existing wallets for this profile
+                                        const { data: existingWallets, error: walletsError } = await supabase
+                                          .from("wallets")
+                                          .select("wallet_address")
+                                          .eq("profile_id", existingProfile.id)
+                                          .eq("wallet_type", "annuity");
+                                        
+                                        if (walletsError) {
+                                          console.error("Error checking wallets:", walletsError);
+                                        }
+                                        
+                                        if (existingWallets && existingWallets.length === 8) {
+                                          // User already has 8 wallets saved, go directly to preview
+                                          toast.success("Found existing wallets, loading preview...");
+                                          
+                                          // Format wallets for preview
+                                          const formattedWallets = existingWallets.map(w => ({
+                                            address: w.wallet_address,
+                                            balance: 0,
+                                            isValid: true,
+                                            isChecking: false
+                                          }));
+                                          
+                                          // Calculate PHI donation and amounts
+                                          const phiDonation = exchangeRates?.[planCurrency as keyof typeof exchangeRates] ? 12 / exchangeRates[planCurrency as keyof typeof exchangeRates] : 0;
+                                          const totalFor8Wallets = minimumRequired - phiDonation;
+                                          const amountPerWallet = totalFor8Wallets / 8;
+                                          const totalTransferred = minimumRequired;
+                                          const remainingBalance = currentBalance - totalTransferred;
+                                          
+                                          navigate("/preview-lana8wonder", {
+                                            state: {
+                                              sourceWallet: wallet.wallet_address,
+                                              sourceBalance: currentBalance,
+                                              wallets: formattedWallets,
+                                              amountPerWallet,
+                                              planCurrency,
+                                              exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1,
+                                              minRequiredLana: minimumRequired,
+                                              phiDonation,
+                                              totalTransferred,
+                                              remainingBalance
+                                            }
+                                          });
+                                          return;
+                                        }
+                                      }
+                                      
+                                      // No existing wallets or less than 8, go to assign page
+                                      navigate('/assign-lana8wonder', { 
+                                        state: { 
+                                          sourceWallet: wallet.wallet_address,
+                                          balance: currentBalance,
+                                          minRequiredLana: minimumRequired,
+                                          planCurrency: planCurrency,
+                                          exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
+                                        } 
+                                      });
+                                    } catch (error) {
+                                      console.error("Error checking existing wallets:", error);
+                                      toast.error("Failed to check existing wallets");
+                                    }
+                                  }}
                                 >
                                   Assign to Lana 8 Wonder
                                 </Button>
