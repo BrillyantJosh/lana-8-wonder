@@ -189,6 +189,7 @@ const PreviewLana8Wonder = () => {
   const [walletRegistered, setWalletRegistered] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<any>(null);
   const [txHash, setTxHash] = useState<string>('');
+  const [publishedPlan, setPublishedPlan] = useState(false);
 
   const {
     sourceWallet,
@@ -255,7 +256,7 @@ const PreviewLana8Wonder = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('wallet_registered, tx')
+          .select('wallet_registered, tx, published_plan')
           .eq('nostr_hex_id', nostrHexId)
           .single();
         
@@ -267,6 +268,7 @@ const PreviewLana8Wonder = () => {
         if (data) {
           setWalletRegistered(data.wallet_registered || false);
           setTxHash(data.tx || '');
+          setPublishedPlan(data.published_plan || false);
         }
       } catch (error) {
         console.error('Error checking wallet registration:', error);
@@ -529,6 +531,14 @@ const PreviewLana8Wonder = () => {
           total_levels: data.plan.total_levels,
           publish_results: data.publish_results
         });
+        
+        // Update published_plan in database
+        await supabase
+          .from('profiles')
+          .update({ published_plan: true })
+          .eq('nostr_hex_id', nostrHexId);
+        
+        setPublishedPlan(true);
         
         setTimeout(() => {
           navigate("/dashboard");
@@ -850,13 +860,11 @@ const PreviewLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        <div className="mt-6 flex justify-end gap-4">
-          <Button variant="outline" onClick={() => navigate("/assign-lana8wonder")}>
-            Cancel
-          </Button>
+        <div className="mt-6 flex justify-center">
           <Button
-            disabled={isPublishing}
+            disabled={isPublishing || !txHash || publishedPlan}
             onClick={handlePublish}
+            size="lg"
             className="bg-primary hover:bg-primary/90"
           >
             {isPublishing ? (
@@ -864,6 +872,10 @@ const PreviewLana8Wonder = () => {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Publishing to Nostr...
               </>
+            ) : publishedPlan ? (
+              "Plan Already Published"
+            ) : !txHash ? (
+              "Complete Transfer First"
             ) : (
               "Publish Plan"
             )}
