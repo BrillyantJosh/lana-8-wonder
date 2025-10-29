@@ -271,17 +271,17 @@ serve(async (req) => {
     console.log('🔑 Retrieved main publisher key');
 
     // 2. Generate annuity plan (matching PreviewLana8Wonder.tsx logic)
-    const adjustedStartingPrice = start_price * 1.08;
+    // NOTE: start_price is ALREADY adjusted (+8%) by frontend, don't adjust again!
     
     const accountPrices = [
-      adjustedStartingPrice,
-      adjustedStartingPrice * 10,
-      adjustedStartingPrice * 100,
-      adjustedStartingPrice * 1000,
-      adjustedStartingPrice * 10000,
-      adjustedStartingPrice * 100000,
-      adjustedStartingPrice * 1000000,
-      adjustedStartingPrice * 10000000
+      start_price,
+      start_price * 10,
+      start_price * 100,
+      start_price * 1000,
+      start_price * 10000,
+      start_price * 100000,
+      start_price * 1000000,
+      start_price * 10000000
     ];
     
     const targetValues = [
