@@ -395,9 +395,11 @@ const Dashboard = () => {
                           // Check if trigger price is reached
                           const isTriggered = currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate;
                           
-                          // Check if level has been paid out (balance is at or below remaining_lanas)
+                          // Check if level has been paid out with 2% tolerance
                           const currentBalance = walletBalances[account.wallet] || 0;
-                          const isPaidOut = isTriggered && currentBalance <= level.remaining_lanas && !balancesLoading;
+                          const tolerance = level.remaining_lanas * 0.02;
+                          const difference = Math.abs(currentBalance - level.remaining_lanas);
+                          const isPaidOut = isTriggered && difference <= tolerance && !balancesLoading;
                           
                           return (
                             <TableRow 
