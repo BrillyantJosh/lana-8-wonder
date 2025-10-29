@@ -396,10 +396,10 @@ const Dashboard = () => {
                           const isTriggered = currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate;
                           
                           // Check if level has been paid out with 2% tolerance
+                          // If balance is at or below remaining_lanas (with tolerance), it means withdrawal happened
                           const currentBalance = walletBalances[account.wallet] || 0;
                           const tolerance = level.remaining_lanas * 0.02;
-                          const difference = Math.abs(currentBalance - level.remaining_lanas);
-                          const isPaidOut = isTriggered && difference <= tolerance && !balancesLoading;
+                          const isPaidOut = isTriggered && currentBalance <= (level.remaining_lanas + tolerance) && !balancesLoading;
                           
                           return (
                             <TableRow 
