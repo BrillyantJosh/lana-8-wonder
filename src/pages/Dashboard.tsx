@@ -248,8 +248,9 @@ const Dashboard = () => {
               const requiredBalance = lastTriggeredLevel.remaining_lanas;
               const withdrawalAmount = currentBalance - requiredBalance;
               
-              // Only show accounts that need withdrawal (positive amount)
-              if (withdrawalAmount > 0.0001) {
+              // Apply 2% tolerance - only show withdrawal if amount exceeds 2% of required balance
+              const tolerance = requiredBalance * 0.02;
+              if (withdrawalAmount > tolerance) {
                 return {
                   accountId: account.account_id,
                   currentBalance,
