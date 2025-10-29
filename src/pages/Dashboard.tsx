@@ -11,6 +11,14 @@ import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper function to format numbers with thousands separator
+const formatNumber = (value: number, decimals: number = 4): string => {
+  return new Intl.NumberFormat('sl-SI', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(value);
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
@@ -268,7 +276,7 @@ const Dashboard = () => {
                     Withdrawal Required
                   </CardTitle>
                   <CardDescription>
-                    Based on current {plan.currency} exchange rate: {currentExchangeRate.toFixed(4)}
+                    Based on current {plan.currency} exchange rate: {formatNumber(currentExchangeRate, 4)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -293,7 +301,7 @@ const Dashboard = () => {
                             </div>
                             <div className="text-right">
                               <p className="text-2xl font-bold text-green-600">
-                                {info.withdrawalAmount.toFixed(4)} LANA
+                                {formatNumber(info.withdrawalAmount, 4)} LANA
                               </p>
                               <p className="text-xs text-muted-foreground mb-2">to withdraw</p>
                               <Button 
@@ -308,11 +316,11 @@ const Dashboard = () => {
                           <div className="grid grid-cols-2 gap-2 text-sm mt-3 pt-3 border-t">
                             <div>
                               <p className="text-muted-foreground">Current Balance:</p>
-                              <p className="font-mono">{info.currentBalance.toFixed(4)} LANA</p>
+                              <p className="font-mono">{formatNumber(info.currentBalance, 4)} LANA</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Required Balance:</p>
-                              <p className="font-mono">{info.requiredBalance.toFixed(4)} LANA</p>
+                              <p className="font-mono">{formatNumber(info.requiredBalance, 4)} LANA</p>
                             </div>
                           </div>
                         </div>
@@ -324,7 +332,7 @@ const Dashboard = () => {
                         <div className="flex justify-between items-center">
                           <p className="font-semibold text-lg">Total Withdrawal Required:</p>
                           <p className="text-3xl font-bold text-green-600">
-                            {totalWithdrawal.toFixed(4)} LANA
+                            {formatNumber(totalWithdrawal, 4)} LANA
                           </p>
                         </div>
                       </div>
@@ -353,12 +361,12 @@ const Dashboard = () => {
                       </span>
                     ) : walletBalances[account.wallet] !== undefined ? (
                       <span className="ml-2 font-semibold text-primary">
-                        • Balance: {walletBalances[account.wallet].toFixed(8)} LANA
+                        • Balance: {formatNumber(walletBalances[account.wallet], 8)} LANA
                       </span>
                     ) : null}
                     {currentExchangeRate > 0 && (
                       <span className="ml-2 text-muted-foreground">
-                        • Current {plan.currency} rate: {currentExchangeRate.toFixed(4)}
+                        • Current {plan.currency} rate: {formatNumber(currentExchangeRate, 4)}
                       </span>
                     )}
                   </CardDescription>
@@ -392,11 +400,11 @@ const Dashboard = () => {
                             >
                               <TableCell className="font-medium">{level.level_no}</TableCell>
                               <TableCell className={isTriggered ? "font-semibold text-green-600" : ""}>
-                                {level.trigger_price.toFixed(4)}
+                                {formatNumber(level.trigger_price, 4)}
                               </TableCell>
-                              <TableCell>{level.coins_to_give.toFixed(4)}</TableCell>
-                              <TableCell>{level.cash_out.toFixed(2)}</TableCell>
-                              <TableCell>{level.remaining_lanas.toFixed(4)}</TableCell>
+                              <TableCell>{formatNumber(level.coins_to_give, 4)}</TableCell>
+                              <TableCell>{formatNumber(level.cash_out, 2)}</TableCell>
+                              <TableCell>{formatNumber(level.remaining_lanas, 4)}</TableCell>
                               <TableCell>
                                 {isPaidOut && (
                                   <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
