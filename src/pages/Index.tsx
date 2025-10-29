@@ -24,25 +24,25 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-hero">
       {/* Top Navigation Bar */}
       <nav className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             {/* Connection Status */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <button className="flex items-center gap-1 sm:gap-2 hover:opacity-80 transition-opacity min-w-0">
                   {loading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Connecting...</span>
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Connecting...</span>
                     </>
                   ) : error ? (
                     <>
-                      <Wifi className="w-5 h-5 text-destructive" />
+                      <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0" />
                       <Badge variant="destructive" className="text-xs">Disconnected</Badge>
                     </>
                   ) : params ? (
                     <>
-                      <Wifi className="w-5 h-5 text-green-500" />
+                      <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
                       <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
                         Connected
                       </Badge>
@@ -50,19 +50,19 @@ const Index = () => {
                   ) : null}
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-[90vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Nostr Network Status</DialogTitle>
                 </DialogHeader>
                 {loading && (
                   <div className="flex items-center justify-center gap-3 py-8">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Connecting to Nostr Network...</span>
+                    <span className="text-sm text-muted-foreground">Connecting to Nostr Network...</span>
                   </div>
                 )}
                 {error && (
-                  <div className="p-6 bg-destructive/10 border border-destructive/30 rounded-lg">
-                    <p className="text-sm text-destructive">Error: {error}</p>
+                  <div className="p-4 sm:p-6 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-xs sm:text-sm text-destructive break-words">{error}</p>
                   </div>
                 )}
                 {params && <NostrStatusCard params={params} />}
@@ -70,7 +70,7 @@ const Index = () => {
             </Dialog>
           </div>
           
-          <Button variant="default" size="sm" asChild>
+          <Button variant="default" size="sm" asChild className="flex-shrink-0 text-xs sm:text-sm">
             <Link to="/login">Log in</Link>
           </Button>
         </div>
@@ -78,10 +78,10 @@ const Index = () => {
 
       {/* Hero Header */}
       <header className="relative overflow-hidden bg-gradient-hero">
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex flex-col items-center text-center space-y-8">
+        <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
+          <div className="flex flex-col items-center text-center space-y-4 sm:space-y-8">
             {/* LANA Coin Image - Full width */}
-            <div className="w-full max-w-6xl">
+            <div className="w-full max-w-6xl px-2">
               <img 
                 src={lanaCoin} 
                 alt="LANA Crypto Coin" 
@@ -90,32 +90,32 @@ const Index = () => {
             </div>
 
             {/* Title and Description */}
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-700">
-              <div className="flex items-center justify-center gap-3">
-                <Sparkles className="w-8 h-8 text-primary animate-pulse" />
-                <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <div className="space-y-3 sm:space-y-6 animate-in fade-in slide-in-from-bottom duration-700 px-2">
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-primary animate-pulse flex-shrink-0" />
+                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                   Lana8Wonder
                 </h1>
-                <Sparkles className="w-8 h-8 text-accent animate-pulse" />
+                <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-accent animate-pulse flex-shrink-0" />
               </div>
               
-              <p className="text-2xl md:text-3xl font-semibold text-foreground max-w-4xl mx-auto">
+              <p className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-foreground max-w-4xl mx-auto px-2">
                 Transform your {currencySymbol}88 investment into extraordinary wealth with 8-account.
               </p>
               
-              <div className="flex items-center justify-center gap-6 pt-8 max-w-4xl mx-auto">
-                <div className="w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-4 sm:pt-8 max-w-4xl mx-auto">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
                   <img 
                     src={einsteinImg} 
                     alt="Albert Einstein" 
                     className="w-full h-full object-cover object-center"
                   />
                 </div>
-                <blockquote className="text-left">
-                  <p className="text-lg md:text-xl font-medium text-foreground italic">
+                <blockquote className="text-left px-2">
+                  <p className="text-sm sm:text-base md:text-lg lg:text-xl font-medium text-foreground italic">
                     "Compound interest is the eighth wonder of the world. He who understands it, earns it… He who doesn't, pays it."
                   </p>
-                  <cite className="block mt-3 text-sm text-muted-foreground not-italic">— Albert Einstein</cite>
+                  <cite className="block mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground not-italic">— Albert Einstein</cite>
                 </blockquote>
               </div>
             </div>
@@ -124,14 +124,14 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
         <TradingPlanCalculator />
       </main>
 
       {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 mt-12 border-t border-border">
-        <div className="text-center text-muted-foreground">
-          <p className="text-sm">
+      <footer className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-border">
+        <div className="text-center text-muted-foreground px-2">
+          <p className="text-xs sm:text-sm">
             © 2024 Lana8Wonder. Investment strategies calculated using proven mathematical formulas.
           </p>
           <p className="text-xs mt-2">

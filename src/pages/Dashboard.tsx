@@ -157,19 +157,19 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-7xl mx-auto">
         {greeting && (
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">{greeting}</h1>
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greeting}</h1>
           </div>
         )}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold">Lana8Wonder Dashboard</h2>
-            <p className="text-muted-foreground">Your Annuity Plan</p>
+            <h2 className="text-xl sm:text-2xl font-bold">Lana8Wonder Dashboard</h2>
+            <p className="text-sm text-muted-foreground">Your Annuity Plan</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -180,18 +180,18 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle>Account Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Wallet ID</p>
-                <p className="font-mono text-sm break-all">{session.walletId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Wallet ID</p>
+                <p className="font-mono text-xs sm:text-sm break-all">{session.walletId}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Nostr HEX ID</p>
-                <p className="font-mono text-sm break-all">{session.nostrHexId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Nostr HEX ID</p>
+                <p className="font-mono text-xs sm:text-sm break-all">{session.nostrHexId}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Nostr npub</p>
-                <p className="font-mono text-sm break-all">{session.nostrNpubId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Nostr npub</p>
+                <p className="font-mono text-xs sm:text-sm break-all">{session.nostrNpubId}</p>
               </div>
             </CardContent>
           </Card>
@@ -204,24 +204,24 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Accounts</p>
-                  <p className="text-2xl font-bold">{plan.accounts.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Accounts</p>
+                  <p className="text-xl sm:text-2xl font-bold">{plan.accounts.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Levels</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Levels</p>
+                  <p className="text-xl sm:text-2xl font-bold">
                     {plan.accounts.reduce((sum, acc) => sum + acc.levels.length, 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Currency</p>
-                  <p className="text-2xl font-bold">{plan.currency}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Currency</p>
+                  <p className="text-xl sm:text-2xl font-bold">{plan.currency}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Asset</p>
-                  <p className="text-2xl font-bold">{plan.coin}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Asset</p>
+                  <p className="text-xl sm:text-2xl font-bold">{plan.coin}</p>
                 </div>
               </div>
             </CardContent>
@@ -287,11 +287,11 @@ const Dashboard = () => {
                       const account = plan.accounts.find(acc => acc.account_id === info.accountId);
                       
                       return (
-                        <div key={info.accountId} className="border rounded-lg p-4 bg-background">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <p className="font-semibold text-lg">Account {info.accountId}</p>
-                              <p className="text-sm text-muted-foreground mb-1">
+                        <div key={info.accountId} className="border rounded-lg p-3 sm:p-4 bg-background">
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-2">
+                            <div className="flex-1 w-full">
+                              <p className="font-semibold text-base sm:text-lg">Account {info.accountId}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                                 {info.triggeredCount} level{info.triggeredCount !== 1 ? 's' : ''} triggered
                               </p>
                               {account && (
@@ -300,28 +300,29 @@ const Dashboard = () => {
                                 </p>
                               )}
                             </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-green-600">
+                            <div className="text-left sm:text-right w-full sm:w-auto">
+                              <p className="text-xl sm:text-2xl font-bold text-green-600">
                                 {formatNumber(info.withdrawalAmount, 4)} LANA
                               </p>
                               <p className="text-xs text-muted-foreground mb-2">to withdraw</p>
                               <Button 
                                 size="sm"
                                 onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount)}
+                                className="w-full sm:w-auto"
                               >
                                 <Send className="mr-2 h-4 w-4" />
                                 Send LANA
                               </Button>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm mt-3 pt-3 border-t">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm mt-3 pt-3 border-t">
                             <div>
                               <p className="text-muted-foreground">Current Balance:</p>
-                              <p className="font-mono">{formatNumber(info.currentBalance, 4)} LANA</p>
+                              <p className="font-mono text-xs sm:text-sm">{formatNumber(info.currentBalance, 4)} LANA</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Required Balance:</p>
-                              <p className="font-mono">{formatNumber(info.requiredBalance, 4)} LANA</p>
+                              <p className="font-mono text-xs sm:text-sm">{formatNumber(info.requiredBalance, 4)} LANA</p>
                             </div>
                           </div>
                         </div>
@@ -330,9 +331,9 @@ const Dashboard = () => {
                     
                     {withdrawalInfo.length > 1 && (
                       <div className="border-t pt-4 mt-4">
-                        <div className="flex justify-between items-center">
-                          <p className="font-semibold text-lg">Total Withdrawal Required:</p>
-                          <p className="text-3xl font-bold text-green-600">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <p className="font-semibold text-base sm:text-lg">Total Withdrawal Required:</p>
+                          <p className="text-2xl sm:text-3xl font-bold text-green-600">
                             {formatNumber(totalWithdrawal, 4)} LANA
                           </p>
                         </div>
@@ -353,36 +354,40 @@ const Dashboard = () => {
             return (
               <Card key={account.account_id}>
                 <CardHeader>
-                  <CardTitle>Account {account.account_id}</CardTitle>
-                  <CardDescription>
-                    Wallet: <span className="font-mono">{account.wallet}</span> • {account.levels.length} levels
-                    {balancesLoading ? (
-                      <span className="ml-2 text-muted-foreground">
-                        <Loader2 className="inline h-3 w-3 animate-spin" /> Loading balance...
-                      </span>
-                    ) : walletBalances[account.wallet] !== undefined ? (
-                      <span className="ml-2 font-semibold text-primary">
-                        • Balance: {formatNumber(walletBalances[account.wallet], 8)} LANA
-                      </span>
-                    ) : null}
-                    {currentExchangeRate > 0 && (
-                      <span className="ml-2 text-muted-foreground">
-                        • Current {plan.currency} rate: {formatNumber(currentExchangeRate, 4)}
-                      </span>
-                    )}
+                  <CardTitle className="text-lg sm:text-xl">Account {account.account_id}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    <div className="space-y-1">
+                      <div>Wallet: <span className="font-mono break-all">{account.wallet}</span></div>
+                      <div>{account.levels.length} levels
+                        {balancesLoading ? (
+                          <span className="ml-2 text-muted-foreground">
+                            <Loader2 className="inline h-3 w-3 animate-spin" /> Loading...
+                          </span>
+                        ) : walletBalances[account.wallet] !== undefined ? (
+                          <span className="ml-2 font-semibold text-primary">
+                            • Balance: {formatNumber(walletBalances[account.wallet], 8)} LANA
+                          </span>
+                        ) : null}
+                      </div>
+                      {currentExchangeRate > 0 && (
+                        <div className="text-muted-foreground">
+                          Current {plan.currency} rate: {formatNumber(currentExchangeRate, 4)}
+                        </div>
+                      )}
+                    </div>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className="overflow-x-auto -mx-4 sm:mx-0">
+                    <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Level</TableHead>
-                          <TableHead>Trigger Price ({plan.currency})</TableHead>
-                          <TableHead>Coins to Give</TableHead>
-                          <TableHead>Cash Out ({plan.currency})</TableHead>
-                          <TableHead>Remaining LANAs</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Level</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Trigger ({plan.currency})</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Coins</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Cash Out</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Remaining</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -399,18 +404,19 @@ const Dashboard = () => {
                               key={level.row_id}
                               className={isTriggered ? "bg-green-500/10 hover:bg-green-500/20" : ""}
                             >
-                              <TableCell className="font-medium">{level.level_no}</TableCell>
-                              <TableCell className={isTriggered ? "font-semibold text-green-600" : ""}>
+                              <TableCell className="font-medium text-xs sm:text-sm">{level.level_no}</TableCell>
+                              <TableCell className={`text-xs sm:text-sm ${isTriggered ? "font-semibold text-green-600" : ""}`}>
                                 {formatNumber(level.trigger_price, 4)}
                               </TableCell>
-                              <TableCell>{formatNumber(level.coins_to_give, 4)}</TableCell>
-                              <TableCell>{formatNumber(level.cash_out, 2)}</TableCell>
-                              <TableCell>{formatNumber(level.remaining_lanas, 4)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{formatNumber(level.coins_to_give, 4)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{formatNumber(level.cash_out, 2)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{formatNumber(level.remaining_lanas, 4)}</TableCell>
                               <TableCell>
                                 {isPaidOut && (
-                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
                                     <CheckCircle2 className="mr-1 h-3 w-3" />
-                                    Paid Out
+                                    <span className="hidden sm:inline">Paid Out</span>
+                                    <span className="sm:hidden">✓</span>
                                   </Badge>
                                 )}
                               </TableCell>

@@ -175,37 +175,37 @@ const CreateLana8Wonder = () => {
   const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-4xl mx-auto">
         {greeting && (
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">{greeting}</h1>
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greeting}</h1>
           </div>
         )}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold">Create Lana8Wonder Plan</h2>
-            <p className="text-muted-foreground">Set up your annuity structure</p>
+            <h2 className="text-xl sm:text-2xl font-bold">Create Lana8Wonder Plan</h2>
+            <p className="text-sm text-muted-foreground">Set up your annuity structure</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
         </div>
 
-        <div className="grid gap-6 mb-8">
+        <div className="grid gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>Account Information</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Account Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Wallet ID</p>
-                <p className="font-mono text-sm break-all">{session.walletId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Wallet ID</p>
+                <p className="font-mono text-xs sm:text-sm break-all">{session.walletId}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Nostr HEX ID</p>
-                <p className="font-mono text-sm break-all">{session.nostrHexId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Nostr HEX ID</p>
+                <p className="font-mono text-xs sm:text-sm break-all">{session.nostrHexId}</p>
               </div>
             </CardContent>
           </Card>
@@ -213,10 +213,10 @@ const CreateLana8Wonder = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                <CardTitle>Your Registered Wallets</CardTitle>
+                <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
+                <CardTitle className="text-lg sm:text-xl">Your Registered Wallets</CardTitle>
               </div>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Select wallets from this list when creating your annuity plan.
                 {minimumRequired > 0 && (
                   <span className="block mt-1 text-foreground">
@@ -232,22 +232,22 @@ const CreateLana8Wonder = () => {
                 </div>
               ) : allWallets.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No wallets found for your account</p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-sm text-muted-foreground">No wallets found for your account</p>
+                  <p className="text-xs text-muted-foreground mt-2">
                     Contact your registrar to add wallets
                   </p>
                 </div>
               ) : (
-                <div className="border rounded-lg">
-                  <Table>
+                <div className="border rounded-lg overflow-x-auto -mx-4 sm:mx-0">
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="font-semibold">Wallet Address</TableHead>
-                        <TableHead className="font-semibold">Wallet Type</TableHead>
-                        <TableHead className="font-semibold">Balance (LANA)</TableHead>
-                        <TableHead className="font-semibold">Note</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Action</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Wallet Address</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Type</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Balance</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Note</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
+                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -257,13 +257,13 @@ const CreateLana8Wonder = () => {
                         
                         return (
                           <TableRow key={idx}>
-                            <TableCell className="font-mono text-sm">{wallet.wallet_address}</TableCell>
+                            <TableCell className="font-mono text-xs sm:text-sm">{wallet.wallet_address}</TableCell>
                             <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
                                 {wallet.wallet_type}
                               </span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs sm:text-sm">
                               {balancesLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : walletBalances[wallet.wallet_address] !== undefined ? (
@@ -274,20 +274,20 @@ const CreateLana8Wonder = () => {
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">{wallet.note || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs sm:text-sm">{wallet.note || "—"}</TableCell>
                             <TableCell>
                               {!balancesLoading && minimumRequired > 0 && (
                                 hasEnoughBalance ? (
-                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
                                     ✓ Sufficient
                                   </Badge>
                                 ) : (
                                   <div className="space-y-1">
-                                    <Badge variant="destructive" className="flex items-center gap-1">
+                                    <Badge variant="destructive" className="flex items-center gap-1 text-xs whitespace-nowrap">
                                       <AlertCircle className="h-3 w-3" />
                                       Insufficient
                                     </Badge>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground whitespace-nowrap">
                                       Min: {minimumRequired.toFixed(4)} LANA
                                     </p>
                                   </div>
@@ -342,8 +342,9 @@ const CreateLana8Wonder = () => {
                                       toast.error("Failed to check existing wallets");
                                     }
                                   }}
+                                  className="text-xs whitespace-nowrap"
                                 >
-                                  Assign to Lana 8 Wonder
+                                  Assign to L8W
                                 </Button>
                               )}
                             </TableCell>

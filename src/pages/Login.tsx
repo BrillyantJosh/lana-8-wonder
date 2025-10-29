@@ -169,21 +169,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-            <KeyRound className="w-6 h-6 text-primary" />
+        <CardHeader className="text-center space-y-2 px-4 sm:px-6">
+          <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+            <KeyRound className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">LANA Login</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl">LANA Login</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Enter your LANA WIF key or scan QR code
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="wif">WIF Key</Label>
+              <Label htmlFor="wif" className="text-sm">WIF Key</Label>
               <Input
                 id="wif"
                 type="password"
@@ -191,23 +191,23 @@ const Login = () => {
                 value={wif}
                 onChange={(e) => setWif(e.target.value)}
                 disabled={isScanning}
-                className="font-mono text-sm"
+                className="font-mono text-xs sm:text-sm"
               />
             </div>
 
             {!isScanning ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-sm"
                   onClick={startScanning}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
                   Scan QR Code
                 </Button>
 
-                <Button type="submit" className="w-full" disabled={!wif.trim() || isProcessing}>
+                <Button type="submit" className="w-full text-sm" disabled={!wif.trim() || isProcessing}>
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -219,7 +219,7 @@ const Login = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div
                   id="qr-reader-login"
                   ref={scannerDivRef}
@@ -228,7 +228,7 @@ const Login = () => {
                 <Button
                   type="button"
                   variant="destructive"
-                  className="w-full"
+                  className="w-full text-sm"
                   onClick={stopScanning}
                 >
                   Stop Scanning
@@ -237,7 +237,7 @@ const Login = () => {
             )}
           </form>
 
-          <div className="pt-4 border-t border-border">
+          <div className="pt-3 sm:pt-4 border-t border-border">
             <p className="text-xs text-muted-foreground text-center">
               Your WIF key is secure and stored locally in your browser
             </p>
