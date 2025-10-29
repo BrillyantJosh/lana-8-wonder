@@ -9,36 +9,142 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Generate annuity plan levels (similar to TradingPlanCalculator)
-function generateAnnuityLevels(
-  accountId: number,
-  initialBalance: number,
-  startPrice: number,
-  exchangeRate: number
-): any[] {
-  const levels: any[] = [];
-  let remainingLanas = initialBalance;
-  const numLevels = accountId <= 5 ? 10 : 8; // Accounts 1-5 have 10 levels, 6-8 have 8 levels
+// ============================================================================
+// HELPER FUNCTIONS - Copied from PreviewLana8Wonder.tsx
+// ============================================================================
+
+interface TradingLevel {
+  level: number;
+  triggerPrice: string;
+  splitNumber: number;
+  splitPrice: string;
+  lanasOnSale: number;
+  cashOut: string;
+  remaining: number;
+}
+
+function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
+  const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
+  const splitNumber = Math.log2(splitPrice / 0.001) + 1;
+  return { splitNumber, splitPrice };
+}
+
+function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  const lanasPerLevel = lanas / 10;
+  let remaining = lanas;
+  for (let i = 1; i <= 10; i++) {
+    const triggerPrice = startPrice * i;
+    const lanasOnSale = lanasPerLevel;
+    const cashOut = triggerPrice * lanasOnSale;
+    remaining -= lanasPerLevel;
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    levels.push({
+      level: i,
+      triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(remaining.toFixed(2))
+    });
+  }
+  return levels;
+}
+
+function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  const sellPercentages = [0, 0.25, 0.20, 0.15, 0.12, 0.09, 0.07, 0.05, 0.04, 0.03];
+  let remaining = lanas;
+  for (let i = 1; i <= 10; i++) {
+    const triggerPrice = startPrice * i;
+    const lanasOnSale = lanas * sellPercentages[i - 1];
+    const cashOut = triggerPrice * lanasOnSale;
+    remaining -= lanasOnSale;
+    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
+    levels.push({
+      level: i,
+      triggerPrice: triggerPrice.toFixed(5),
+      splitNumber,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(remaining.toFixed(2))
+    });
+  }
+  return levels;
+}
+
+function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetValue: number): TradingLevel[] {
+  const levels: TradingLevel[] = [];
+  let remaining = lanas;
+  let hasReachedTarget = false;
+  let previousRemaining = lanas;
   
-  for (let levelNo = 1; levelNo <= numLevels; levelNo++) {
-    const triggerPrice = startPrice * Math.pow(2, levelNo - 1);
-    const splitPercentage = levelNo === 1 ? 0.20 : 0.25;
-    const coinsToGive = remainingLanas * splitPercentage;
-    const cashOut = coinsToGive * triggerPrice * exchangeRate;
+  const startingSplit = calculateSplit(startPrice);
+  
+  for (let splitNum = startingSplit.splitNumber; splitNum <= 37; splitNum++) {
+    const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
+    const actualPortfolioValue = remaining * splitPrice;
     
-    remainingLanas -= coinsToGive;
+    let lanasOnSale: number;
+    let cashOut: number;
+    let newRemaining: number;
+    
+    if (!hasReachedTarget && actualPortfolioValue >= targetValue) {
+      hasReachedTarget = true;
+    }
+    
+    if (hasReachedTarget) {
+      newRemaining = targetValue / splitPrice;
+      lanasOnSale = previousRemaining - newRemaining;
+      cashOut = lanasOnSale * splitPrice;
+    } else {
+      lanasOnSale = remaining * 0.01;
+      cashOut = lanasOnSale * splitPrice;
+      newRemaining = remaining - lanasOnSale;
+    }
     
     levels.push({
-      row_id: `a${accountId}-l${levelNo}`,
-      level_no: levelNo,
-      trigger_price: triggerPrice,
-      coins_to_give: coinsToGive,
-      cash_out: cashOut,
-      remaining_lanas: remainingLanas
+      level: splitNum,
+      triggerPrice: splitPrice.toFixed(5),
+      splitNumber: splitNum,
+      splitPrice: splitPrice.toFixed(3),
+      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
+      cashOut: cashOut.toFixed(2),
+      remaining: parseFloat(newRemaining.toFixed(2))
     });
+    
+    previousRemaining = newRemaining;
+    remaining = newRemaining;
   }
   
   return levels;
+}
+
+function getAccountConfigs(): Array<{ type: "linear" | "compound" | "passive" }> {
+  return [
+    { type: "linear" },    // Account 1
+    { type: "linear" },    // Account 2
+    { type: "compound" },  // Account 3
+    { type: "compound" },  // Account 4
+    { type: "compound" },  // Account 5
+    { type: "passive" },   // Account 6
+    { type: "passive" },   // Account 7
+    { type: "passive" }    // Account 8
+  ];
+}
+
+// Convert TradingLevel to KIND 88888 format
+function convertToKind88888Level(accountId: number, level: TradingLevel, levelIndex: number): any {
+  return {
+    row_id: `a${accountId}-l${levelIndex + 1}`,
+    level_no: level.level,
+    trigger_price: parseFloat(level.triggerPrice),
+    coins_to_give: level.lanasOnSale,
+    cash_out: parseFloat(level.cashOut),
+    remaining_lanas: level.remaining
+  };
 }
 
 // Publish event to Nostr relays using SimplePool
@@ -164,15 +270,53 @@ serve(async (req) => {
     const mainPublisherPrivateKey = settingData.setting_value;
     console.log('🔑 Retrieved main publisher key');
 
-    // 2. Generate annuity plan
+    // 2. Generate annuity plan (matching PreviewLana8Wonder.tsx logic)
+    const adjustedStartingPrice = start_price * 1.08;
+    
+    const accountPrices = [
+      adjustedStartingPrice,
+      adjustedStartingPrice * 10,
+      adjustedStartingPrice * 100,
+      adjustedStartingPrice * 1000,
+      adjustedStartingPrice * 10000,
+      adjustedStartingPrice * 100000,
+      adjustedStartingPrice * 1000000,
+      adjustedStartingPrice * 10000000
+    ];
+    
+    const targetValues = [
+      null, null, null, null, null, // Accounts 1-5 don't need target
+      1000000,   // Account 6
+      10000000,  // Account 7
+      88000000   // Account 8
+    ];
+    
+    const accountConfigs = getAccountConfigs();
+    
     const accounts = wallets.map((wallet: string, index: number) => {
       const accountId = index + 1;
-      const levels = generateAnnuityLevels(
-        accountId,
-        amount_per_wallet,
-        start_price,
-        exchange_rate
+      const config = accountConfigs[index];
+      
+      let tradingLevels: TradingLevel[];
+      
+      if (config.type === "linear") {
+        tradingLevels = generateLinearLevels(amount_per_wallet, accountPrices[index]);
+      } else if (config.type === "compound") {
+        tradingLevels = generateCompoundLevels(amount_per_wallet, accountPrices[index]);
+      } else { // passive
+        tradingLevels = generatePassiveLevelsBySplit(
+          amount_per_wallet, 
+          accountPrices[index],
+          targetValues[index]!
+        );
+      }
+      
+      // Convert to KIND 88888 format
+      const levels = tradingLevels.map((level, levelIndex) => 
+        convertToKind88888Level(accountId, level, levelIndex)
       );
+      
+      console.log(`📊 Account ${accountId} (${config.type}): ${levels.length} levels`);
       
       return {
         account_id: accountId,
