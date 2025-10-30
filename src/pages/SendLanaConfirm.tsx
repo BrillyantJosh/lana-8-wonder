@@ -310,6 +310,22 @@ const SendLanaConfirm = () => {
 
               {/* Private Key Input */}
               <div className="space-y-4">
+                {/* Critical Instruction Box */}
+                <Alert className="border-blue-500 bg-blue-500/10">
+                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <AlertDescription>
+                    <p className="font-bold text-base text-blue-600">
+                      ⚠️ IMPORTANT: Enter SENDER's Private Key
+                    </p>
+                    <p className="text-sm mt-1">
+                      You need the private key for the <strong>FROM account (sender)</strong>:
+                    </p>
+                    <p className="text-xs font-mono bg-blue-500/10 p-2 rounded mt-2 break-all">
+                      {fromWallet}
+                    </p>
+                  </AlertDescription>
+                </Alert>
+
                 <div>
                   <Label htmlFor="wif-key">LANA WIF Private Key</Label>
                   <p className="text-xs text-muted-foreground mt-1 mb-2">
@@ -354,35 +370,67 @@ const SendLanaConfirm = () => {
                 {/* Validation Result */}
                 {validationResult?.validated && (
                   <Alert className={validationResult.matches ? "border-green-500 bg-green-500/10" : "border-red-500 bg-red-500/10"}>
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-3">
                       {validationResult.matches ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                        <CheckCircle2 className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
                       ) : (
-                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                        <AlertCircle className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-3">
                         <AlertDescription>
                           {validationResult.matches ? (
                             <>
-                              <p className="font-semibold text-green-600">Private key validated successfully!</p>
-                              <p className="text-xs mt-1 text-muted-foreground">
-                                Derived wallet: <span className="font-mono">{validationResult.derivedWalletId}</span>
+                              <p className="font-bold text-lg text-green-600">✓ Private key validated successfully!</p>
+                              <p className="text-sm mt-2 text-muted-foreground">
+                                Derived wallet: <span className="font-mono text-xs">{validationResult.derivedWalletId}</span>
                               </p>
                             </>
                           ) : (
                             <>
-                              <p className="font-semibold text-red-600">Invalid private key for this wallet</p>
-                              <p className="text-xs mt-1">
-                                {validationResult.error || "The private key does not match the source wallet address"}
+                              <p className="font-bold text-xl text-red-600 mb-3">
+                                ⚠️ COMMON MISTAKE DETECTED!
                               </p>
-                              {validationResult.derivedWalletId && (
-                                <p className="text-xs mt-1 text-muted-foreground">
-                                  This key belongs to: <span className="font-mono">{validationResult.derivedWalletId}</span>
+                              
+                              <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 mb-3">
+                                <p className="font-bold text-base text-red-600">
+                                  You entered the WRONG private key!
                                 </p>
+                                <p className="text-sm mt-2">
+                                  This private key belongs to a DIFFERENT wallet.
+                                </p>
+                              </div>
+
+                              {validationResult.derivedWalletId && (
+                                <div className="space-y-3 text-sm">
+                                  <div className="bg-red-500/10 p-3 rounded">
+                                    <p className="font-semibold text-red-600 mb-1">❌ RECIPIENT's Wallet (WRONG):</p>
+                                    <p className="font-mono text-xs break-all">{validationResult.derivedWalletId}</p>
+                                    <p className="text-xs mt-1 text-muted-foreground">
+                                      This is probably the recipient's key - you can't use this!
+                                    </p>
+                                  </div>
+
+                                  <div className="bg-green-500/10 border border-green-500 p-3 rounded">
+                                    <p className="font-semibold text-green-600 mb-1">✓ SENDER's Wallet (CORRECT):</p>
+                                    <p className="font-mono text-xs break-all">{fromWallet}</p>
+                                    <p className="text-xs mt-1 font-bold">
+                                      You need the private key for THIS wallet!
+                                    </p>
+                                  </div>
+                                </div>
                               )}
-                              <p className="text-xs mt-2 font-medium">
-                                Please enter the correct private key for wallet: <span className="font-mono">{fromWallet}</span>
-                              </p>
+
+                              {!validationResult.derivedWalletId && (
+                                <div className="mt-3">
+                                  <p className="text-sm font-medium text-red-600">
+                                    {validationResult.error || "The private key does not match the source wallet address"}
+                                  </p>
+                                  <div className="bg-green-500/10 border border-green-500 p-3 rounded mt-3">
+                                    <p className="font-semibold text-green-600 mb-1">✓ Required Wallet:</p>
+                                    <p className="font-mono text-xs break-all">{fromWallet}</p>
+                                  </div>
+                                </div>
+                              )}
                             </>
                           )}
                         </AlertDescription>
