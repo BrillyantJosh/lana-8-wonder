@@ -311,16 +311,16 @@ const SendLanaConfirm = () => {
               {/* Private Key Input */}
               <div className="space-y-4">
                 {/* Critical Instruction Box */}
-                <Alert className="border-blue-500 bg-blue-500/10">
-                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                <Alert className="border-red-500 bg-red-500/10">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
                   <AlertDescription>
-                    <p className="font-bold text-base text-blue-600">
+                    <p className="font-bold text-base text-red-600">
                       ⚠️ IMPORTANT: Enter SENDER's Private Key
                     </p>
                     <p className="text-sm mt-1">
                       You need the private key for the <strong>FROM account (sender)</strong>:
                     </p>
-                    <p className="text-xs font-mono bg-blue-500/10 p-2 rounded mt-2 break-all">
+                    <p className="text-xs font-mono bg-red-500/10 p-2 rounded mt-2 break-all">
                       {fromWallet}
                     </p>
                   </AlertDescription>
