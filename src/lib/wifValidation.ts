@@ -77,8 +77,11 @@ function base58Decode(encoded: string): Uint8Array {
 // Convert WIF to raw private key hex
 async function wifToPrivateKey(wif: string): Promise<string> {
   try {
+    // CRITICAL: Normalize WIF to remove invisible characters (spaces, zero-width chars)
+    const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
     // Decode Base58
-    const decoded = base58Decode(wif);
+    const decoded = base58Decode(normalizedWif);
     
     // Extract components
     const payload = decoded.slice(0, -4);
@@ -178,6 +181,9 @@ export async function verifyWifMatchesWallet(wif: string, expectedWalletId: stri
   error?: string;
 }> {
   try {
+    // CRITICAL: Normalize both the WIF and expected wallet ID to remove invisible characters
+    const normalizedExpectedWalletId = expectedWalletId.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
     const result = await validateWifAndGetAddress(wif);
     
     if (!result.valid || !result.walletId) {
@@ -187,8 +193,11 @@ export async function verifyWifMatchesWallet(wif: string, expectedWalletId: stri
       };
     }
     
+    // CRITICAL: Compare normalized wallet IDs
+    const normalizedDerivedWalletId = result.walletId.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
     return {
-      matches: result.walletId === expectedWalletId,
+      matches: normalizedDerivedWalletId === normalizedExpectedWalletId,
       derivedWalletId: result.walletId
     };
     

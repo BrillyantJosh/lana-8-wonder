@@ -107,7 +107,10 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!wif.trim()) {
+    // CRITICAL: Normalize WIF to remove invisible characters (spaces, zero-width chars)
+    const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
+    if (!normalizedWif) {
       toast.error("Enter WIF key");
       return;
     }
@@ -120,8 +123,8 @@ const Login = () => {
     setIsProcessing(true);
 
     try {
-      // Convert WIF to all identifiers
-      const ids = await convertWifToIds(wif);
+      // Convert WIF to all identifiers (already normalized in convertWifToIds)
+      const ids = await convertWifToIds(normalizedWif);
       
       console.log("Derived identifiers:", {
         walletId: ids.walletId,
@@ -192,6 +195,9 @@ const Login = () => {
                 onChange={(e) => setWif(e.target.value)}
                 disabled={isScanning}
                 className="font-mono text-xs sm:text-sm"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
             </div>
 

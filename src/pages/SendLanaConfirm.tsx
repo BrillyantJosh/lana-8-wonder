@@ -68,7 +68,9 @@ const SendLanaConfirm = () => {
       setIsValidating(true);
 
       try {
-        const result = await verifyWifMatchesWallet(wifPrivateKey.trim(), fromWallet);
+        // CRITICAL: Normalize WIF to remove invisible characters (already handled in verifyWifMatchesWallet)
+        const normalizedWif = wifPrivateKey.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+        const result = await verifyWifMatchesWallet(normalizedWif, fromWallet);
         
         setValidationResult({
           validated: true,
@@ -200,11 +202,14 @@ const SendLanaConfirm = () => {
       }
 
       // Prepare transaction data
+      // CRITICAL: Normalize private key to remove invisible characters
+      const normalizedPrivateKey = wifPrivateKey.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+      
       const transactionData = {
         senderAddress: fromWallet,
         recipientAddress: toWallet,
         amount: parseFloat(amount!),
-        privateKey: wifPrivateKey.trim(),
+        privateKey: normalizedPrivateKey,
         electrumServers
       };
 
@@ -339,6 +344,9 @@ const SendLanaConfirm = () => {
                       onChange={(e) => setWifPrivateKey(e.target.value)}
                       placeholder="Enter WIF private key"
                       className="font-mono pr-10"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
                     />
                     {isValidating && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">

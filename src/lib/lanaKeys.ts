@@ -78,7 +78,10 @@ function base58Decode(encoded: string): Uint8Array {
 // Convert WIF to private key hex
 async function wifToPrivateKey(wif: string): Promise<string> {
   try {
-    const decoded = base58Decode(wif);
+    // CRITICAL: Normalize WIF to remove invisible characters (spaces, zero-width chars)
+    const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
+    const decoded = base58Decode(normalizedWif);
     const payload = decoded.slice(0, -4);
     const checksum = decoded.slice(-4);
     
