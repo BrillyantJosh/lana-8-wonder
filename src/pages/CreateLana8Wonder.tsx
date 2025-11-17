@@ -168,10 +168,13 @@ const CreateLana8Wonder = () => {
     if (!exchangeRates) return 0;
     const rate = exchangeRates[currency as keyof typeof exchangeRates];
     if (!rate || rate === 0) return 0;
-    return 100 / rate;
+    return (100 / rate) + 0.5;
   };
 
   const minimumRequired = getMinimumRequiredBalance(planCurrency);
+  const depositAmount = exchangeRates && exchangeRates[planCurrency as keyof typeof exchangeRates] 
+    ? 100 / exchangeRates[planCurrency as keyof typeof exchangeRates] 
+    : 0;
   const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
@@ -220,7 +223,7 @@ const CreateLana8Wonder = () => {
                 Select wallets from this list when creating your annuity plan.
                 {minimumRequired > 0 && (
                   <span className="block mt-1 text-foreground">
-                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {currencySymbol} ÷ current exchange rate)
+                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {currencySymbol} deposit + 0.5 LANA for transaction fees)
                   </span>
                 )}
               </CardDescription>
@@ -332,7 +335,7 @@ const CreateLana8Wonder = () => {
                                         state: { 
                                           sourceWallet: wallet.wallet_address,
                                           balance: currentBalance,
-                                          minRequiredLana: minimumRequired,
+                                          minRequiredLana: depositAmount,
                                           planCurrency: planCurrency,
                                           exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
                                         } 
