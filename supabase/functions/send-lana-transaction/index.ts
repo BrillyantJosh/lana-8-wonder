@@ -675,7 +675,12 @@ async function buildSignedTx(
     console.log(`🎯 Final transaction built: ${finalTxHex.length} chars, ${selectedUTXOs.length} inputs, ${outputCount} outputs`);
     console.log(`📊 Transaction size: ${finalTxHex.length / 2} bytes`);
     
-    return finalTxHex;
+    return { 
+      txHex: finalTxHex, 
+      inputCount: selectedUTXOs.length, 
+      outputCount, 
+      selectedUTXOs 
+    };
   } catch (error) {
     console.error('❌ Transaction building error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown transaction error';
@@ -738,16 +743,51 @@ serve(async (req) => {
     
     const amountSatoshis = Math.floor(amount * 100000000);
     
-    // Calculate dynamic fee
-    const estimatedInputCount = Math.min(5, utxos.length);
+    // Calculate initial dynamic fee with improved estimation
+    const estimatedInputCount = Math.min(
+      Math.ceil(utxos.length * 0.3), // ~30% of UTXOs as realistic estimate
+      10 // Max 10 for safety (prevent too high initial fee)
+    );
     const outputCount = 2;
-    const fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    console.log(`💸 Calculated dynamic fee: ${fee} satoshis`);
+    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
+    console.log(`💸 Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
+    
+    // Pre-select UTXOs to know actual input count
+    const totalNeeded = amountSatoshis + fee;
+    const { selected: selectedUTXOs, totalValue } = UTXOSelector.selectUTXOs(utxos, totalNeeded);
+    
+    // Recalculate fee based on ACTUAL selected UTXOs
+    const actualInputCount = selectedUTXOs.length;
+    const actualFee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
+    
+    if (actualFee > fee) {
+      console.log(`⚠️ Adjusting fee: ${fee} → ${actualFee} satoshis (${actualInputCount} actual inputs)`);
+      fee = actualFee;
+      
+      // Check if we still have enough balance after fee adjustment
+      const newTotalNeeded = amountSatoshis + fee;
+      if (totalValue < newTotalNeeded) {
+        throw new Error(
+          `Insufficient funds after fee adjustment. ` +
+          `Need: ${(newTotalNeeded / 100000000).toFixed(8)} LANA, ` +
+          `Have: ${(totalValue / 100000000).toFixed(8)} LANA`
+        );
+      }
+    } else {
+      console.log(`✅ Fee sufficient: ${fee} satoshis for ${actualInputCount} inputs`);
+    }
     
     const recipients = [{ address: recipientAddress, amount: amountSatoshis }];
     console.log(`💰 Sending ${amountSatoshis} satoshis (${(amountSatoshis / 100000000).toFixed(8)} LANA)`);
     
-    const signedTx = await buildSignedTx(utxos, privateKey, recipients, fee, senderAddress, servers);
+    const { txHex: signedTx, inputCount, outputCount: finalOutputCount } = await buildSignedTx(
+      utxos, 
+      privateKey, 
+      recipients, 
+      fee, 
+      senderAddress, 
+      servers
+    );
     console.log('✍️ Transaction signed successfully');
     
     console.log('🚀 Broadcasting transaction...');
@@ -766,7 +806,41 @@ serve(async (req) => {
       resultStr.includes('failed') ||
       resultStr.includes('Failed')
     ) {
-      throw new Error(`Transaction broadcast failed: ${resultStr}`);
+      // Enhanced error diagnostics
+      const txSize = signedTx.length / 2;
+      const feeRate = (fee / txSize).toFixed(2);
+      const diagnosticInfo = {
+        inputCount,
+        outputCount: finalOutputCount,
+        amount: amountSatoshis,
+        fee,
+        feeRate: parseFloat(feeRate),
+        txSize
+      };
+      
+      console.error('❌ Transaction rejected by network:', {
+        error: resultStr,
+        diagnostic: diagnosticInfo
+      });
+      
+      const errorMsg = [
+        `Transaction broadcast failed: ${resultStr}`,
+        `\n📊 Diagnostic Info:`,
+        `  • Inputs: ${diagnosticInfo.inputCount}`,
+        `  • Outputs: ${diagnosticInfo.outputCount}`,
+        `  • Amount: ${(diagnosticInfo.amount / 100000000).toFixed(8)} LANA`,
+        `  • Fee: ${(diagnosticInfo.fee / 100000000).toFixed(8)} LANA`,
+        `  • Fee rate: ${diagnosticInfo.feeRate} sat/byte`,
+        `  • TX size: ${diagnosticInfo.txSize} bytes`,
+        diagnosticInfo.feeRate < 1 
+          ? `\n⚠️ LOW FEE RATE! Network may reject transactions below 1 sat/byte.`
+          : '',
+        diagnosticInfo.inputCount > 10
+          ? `\n💡 Recommendation: Consolidate UTXOs by sending all funds to yourself first.`
+          : ''
+      ].filter(Boolean).join('\n');
+      
+      throw new Error(errorMsg);
     }
     
     const txHash = resultStr.trim();
