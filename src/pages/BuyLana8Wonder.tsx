@@ -1,16 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wallet, CreditCard, Building2, ArrowLeft } from 'lucide-react';
+import { Wallet, CreditCard, Building2, ArrowLeft, QrCode } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
 
 const BuyLana8Wonder = () => {
   const navigate = useNavigate();
   const [walletId, setWalletId] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerDivRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
+  const startScanning = async () => {
+    setIsScanning(true);
+    
+    // CRITICAL: 100ms delay to ensure DOM is ready
+    setTimeout(async () => {
+      try {
+        // 1. Enumerate cameras
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (!cameras || cameras.length === 0) {
+          toast.error("No camera found on this device");
+          setIsScanning(false);
+          return;
+        }
+
+        // 2. Select camera (priority: back camera)
+        let selectedCamera = cameras[0];
+        if (cameras.length > 1) {
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear')
+          );
+          if (backCamera) {
+            selectedCamera = backCamera;
+          }
+        }
+
+        // 3. Initialize scanner with unique ID
+        const scanner = new Html5Qrcode("qr-reader-buy");
+        scannerRef.current = scanner;
+
+        // 4. Start scanner with camera.id
+        await scanner.start(
+          selectedCamera.id,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            setWalletId(decodedText);
+            stopScanning();
+            toast.success("QR code scanned successfully!");
+          },
+          (errorMessage) => {
+            // Ignore scan errors during operation
+          }
+        );
+      } catch (error: any) {
+        console.error("Error starting QR scanner:", error);
+        setIsScanning(false);
+        
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
+        } else if (error.name === "NotFoundError") {
+          toast.error("No camera found on this device");
+        } else if (error.name === "NotReadableError") {
+          toast.error("Camera is already in use by another application");
+        } else {
+          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
+        }
+      }
+    }, 100);
+  };
+
+  const stopScanning = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+      }
+    }
+    setIsScanning(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,18 +151,51 @@ const BuyLana8Wonder = () => {
               {/* Wallet ID Input */}
               <div className="space-y-2">
                 <Label htmlFor="walletId">Lana Wallet ID</Label>
-                <Input
-                  id="walletId"
-                  type="text"
-                  placeholder="Enter your Lana Wallet ID..."
-                  value={walletId}
-                  onChange={(e) => setWalletId(e.target.value)}
-                  className="font-mono"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="walletId"
+                    type="text"
+                    placeholder="Enter your Lana Wallet ID..."
+                    value={walletId}
+                    onChange={(e) => setWalletId(e.target.value)}
+                    className="font-mono flex-1"
+                    disabled={isScanning}
+                  />
+                  {!isScanning && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={startScanning}
+                      title="Scan QR Code"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   This is where your Lana8Wonder will be assigned
                 </p>
               </div>
+
+              {/* QR Scanner */}
+              {isScanning && (
+                <div className="space-y-3">
+                  <div
+                    id="qr-reader-buy"
+                    ref={scannerDivRef}
+                    className="rounded-lg overflow-hidden border-2 border-primary"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={stopScanning}
+                  >
+                    Stop Scanning
+                  </Button>
+                </div>
+              )}
 
               {/* Payment Method Selection */}
               <div className="space-y-3">
