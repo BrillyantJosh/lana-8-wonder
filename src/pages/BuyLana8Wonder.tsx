@@ -70,21 +70,18 @@ const BuyLana8Wonder = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get session from sessionStorage (this app uses Nostr auth, not Supabase auth)
+        const sessionData = sessionStorage.getItem('lana_session');
         
-        if (!session) {
+        if (!sessionData) {
           setIsAdmin(false);
           return;
         }
 
-        // Get user's nostr_hex_id from profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('nostr_hex_id')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        const session = JSON.parse(sessionData);
+        const userNostrHexId = session.nostrHexId;
 
-        if (!profile) {
+        if (!userNostrHexId) {
           setIsAdmin(false);
           return;
         }
@@ -96,7 +93,12 @@ const BuyLana8Wonder = () => {
           .eq('setting_key', 'nostr_hex_id_buying_lanas')
           .maybeSingle();
 
-        setIsAdmin(profile.nostr_hex_id === settings?.setting_value);
+        const isUserAdmin = userNostrHexId === settings?.setting_value;
+        setIsAdmin(isUserAdmin);
+        
+        if (isUserAdmin) {
+          console.log('Admin access granted');
+        }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);

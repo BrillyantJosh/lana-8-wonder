@@ -35,21 +35,18 @@ const AdminBuyLana = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get session from sessionStorage (this app uses Nostr auth, not Supabase auth)
+        const sessionData = sessionStorage.getItem('lana_session');
         
-        if (!session) {
+        if (!sessionData) {
           setIsAdmin(false);
           return;
         }
 
-        // Get user's nostr_hex_id from profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('nostr_hex_id')
-          .eq('id', session.user.id)
-          .single();
+        const session = JSON.parse(sessionData);
+        const userNostrHexId = session.nostrHexId;
 
-        if (!profile) {
+        if (!userNostrHexId) {
           setIsAdmin(false);
           return;
         }
@@ -59,9 +56,9 @@ const AdminBuyLana = () => {
           .from('app_settings')
           .select('setting_value')
           .eq('setting_key', 'nostr_hex_id_buying_lanas')
-          .single();
+          .maybeSingle();
 
-        setIsAdmin(profile.nostr_hex_id === settings?.setting_value);
+        setIsAdmin(userNostrHexId === settings?.setting_value);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
