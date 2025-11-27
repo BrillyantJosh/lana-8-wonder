@@ -357,112 +357,116 @@ const BuyLana8Wonder = () => {
                 <Label>Payment Method *</Label>
                 
                 {/* Credit Card Option */}
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary ${
-                    selectedPayment === 'card'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border'
-                  } ${!buyerProfile?.payment_link ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => {
-                    if (buyerProfile?.payment_link) {
-                      setSelectedPayment('card');
-                      setReference(null);
-                    } else {
-                      toast.error('Credit card payment not available');
-                    }
-                  }}
-                >
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                <div className="space-y-3">
+                  <Card
+                    className={`cursor-pointer transition-all hover:border-primary ${
                       selectedPayment === 'card'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      <CreditCard className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">Pay with Credit Card</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Fast and secure online payment
-                      </p>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedPayment === 'card'
-                        ? 'border-primary'
-                        : 'border-muted-foreground'
-                    }`}>
-                      {selectedPayment === 'card' && (
-                        <div className="w-3 h-3 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Bank Transfer Option */}
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary ${
-                    selectedPayment === 'transfer'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border'
-                  }`}
-                  onClick={() => {
-                    setSelectedPayment('transfer');
-                    // Generate 7-digit reference
-                    const newReference = Math.floor(1000000 + Math.random() * 9000000).toString();
-                    setReference(newReference);
-                  }}
-                >
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      selectedPayment === 'transfer'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      <Building2 className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">Bank Transfer</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Direct transfer to our account
-                      </p>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedPayment === 'transfer'
-                        ? 'border-primary'
-                        : 'border-muted-foreground'
-                    }`}>
-                      {selectedPayment === 'transfer' && (
-                        <div className="w-3 h-3 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Show payment link for credit card */}
-                {selectedPayment === 'card' && buyerProfile?.payment_link && (
-                  <Card className="bg-muted/50">
-                    <CardContent className="pt-6">
-                      <div className="text-center space-y-3">
-                        <p className="text-sm font-semibold mb-2">Credit Card Payment Link</p>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Click the button below to proceed to the secure payment page
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border'
+                    } ${!buyerProfile?.payment_link ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => {
+                      if (buyerProfile?.payment_link) {
+                        setSelectedPayment('card');
+                        setReference(null);
+                      } else {
+                        toast.error('Credit card payment not available');
+                      }
+                    }}
+                  >
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        selectedPayment === 'card'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <CreditCard className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Pay with Credit Card</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Fast and secure online payment
                         </p>
-                        <Button 
-                          type="button"
-                          className="w-full"
-                          onClick={() => window.open(buyerProfile.payment_link, '_blank')}
-                        >
-                          Open Payment Page
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          After completing payment, return here and click "I have paid"
-                        </p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        selectedPayment === 'card'
+                          ? 'border-primary'
+                          : 'border-muted-foreground'
+                      }`}>
+                        {selectedPayment === 'card' && (
+                          <div className="w-3 h-3 rounded-full bg-primary" />
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                )}
 
-                {selectedPayment === 'transfer' && reference && buyerProfile && (
+                  {/* Show payment link for credit card - INSIDE credit card section */}
+                  {selectedPayment === 'card' && buyerProfile?.payment_link && (
+                    <Card className="bg-muted/50 border-primary/20">
+                      <CardContent className="pt-6">
+                        <div className="text-center space-y-3">
+                          <p className="text-sm font-semibold mb-2">Credit Card Payment Link</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Click the button below to proceed to the secure payment page
+                          </p>
+                          <Button 
+                            type="button"
+                            className="w-full"
+                            onClick={() => window.open(buyerProfile.payment_link, '_blank')}
+                          >
+                            Open Payment Page
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            After completing payment, return here and click "I have paid"
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Bank Transfer Option */}
+                <div className="space-y-3">
+                  <Card
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      selectedPayment === 'transfer'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border'
+                    }`}
+                    onClick={() => {
+                      setSelectedPayment('transfer');
+                      // Generate 7-digit reference
+                      const newReference = Math.floor(1000000 + Math.random() * 9000000).toString();
+                      setReference(newReference);
+                    }}
+                  >
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        selectedPayment === 'transfer'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Bank Transfer</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Direct transfer to our account
+                        </p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        selectedPayment === 'transfer'
+                          ? 'border-primary'
+                          : 'border-muted-foreground'
+                      }`}>
+                        {selectedPayment === 'transfer' && (
+                          <div className="w-3 h-3 rounded-full bg-primary" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Show bank transfer details - INSIDE bank transfer section */}
+                  {selectedPayment === 'transfer' && reference && buyerProfile && (
                   <Card className="bg-muted/50">
                     <CardContent className="pt-6 space-y-4">
                       <div className="text-center">
@@ -547,7 +551,8 @@ const BuyLana8Wonder = () => {
                       )}
                     </CardContent>
                   </Card>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Submit Button */}
