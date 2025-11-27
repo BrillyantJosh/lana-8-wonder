@@ -55,6 +55,18 @@ export interface LanaProfile {
   bankAddress?: string;
   bankSWIFT?: string;
   bankAccount?: string;
+  payment_link?: string;
+  payment_methods?: Array<{
+    id: string;
+    scope: string;
+    country: string;
+    scheme: string;
+    currency: string;
+    label?: string;
+    fields: any;
+    verified?: boolean;
+    primary?: boolean;
+  }>;
 }
 
 export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[]): Promise<LanaProfile | null> {
