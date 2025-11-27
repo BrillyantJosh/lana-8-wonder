@@ -4,14 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wallet, CreditCard, Building2, ArrowLeft, QrCode } from 'lucide-react';
+import { Wallet, CreditCard, Building2, ArrowLeft, QrCode, Loader2 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
+import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
+import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 
 const BuyLana8Wonder = () => {
   const navigate = useNavigate();
+  const { params } = useNostrLanaParams();
   const [walletId, setWalletId] = useState('');
   const [payee, setPayee] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
@@ -19,6 +22,8 @@ const BuyLana8Wonder = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +62,57 @@ const BuyLana8Wonder = () => {
                       payee.trim() !== '' && 
                       selectedPayment !== null && 
                       walletError === null;
+
+  // Fetch buyer profile from Nostr
+  useEffect(() => {
+    const fetchBuyerProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        
+        // Fetch nostr_hex_id from app_settings
+        const { data: settings, error } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'nostr_hex_id_buying_lanas')
+          .single();
+
+        if (error || !settings) {
+          console.error('Error fetching buyer hex ID:', error);
+          toast.error('Failed to load payment information');
+          return;
+        }
+
+        const buyerHexId = settings.setting_value;
+
+        // Wait for relays to be available
+        if (!params?.relays || params.relays.length === 0) {
+          console.log('Waiting for relays...');
+          return;
+        }
+
+        // Fetch KIND 0 profile
+        const profile = await fetchKind0Profile(buyerHexId, params.relays);
+        
+        if (!profile) {
+          toast.error('Payment profile not found');
+          return;
+        }
+
+        setBuyerProfile(profile);
+        console.log('Buyer profile loaded:', profile);
+        
+      } catch (error) {
+        console.error('Error fetching buyer profile:', error);
+        toast.error('Failed to load payment information');
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    if (params?.relays) {
+      fetchBuyerProfile();
+    }
+  }, [params?.relays]);
 
   useEffect(() => {
     return () => {
@@ -183,6 +239,11 @@ const BuyLana8Wonder = () => {
 
       toast.success('Payment recorded successfully!');
       navigate('/buy-lana-instructions');
+      // If credit card payment, open payment link in new tab
+      if (selectedPayment === 'card' && buyerProfile?.payment_link) {
+        window.open(buyerProfile.payment_link, '_blank');
+      }
+
     } catch (error) {
       console.error('Error saving payment:', error);
       toast.error('Failed to record payment. Please try again.');
@@ -301,10 +362,14 @@ const BuyLana8Wonder = () => {
                     selectedPayment === 'card'
                       ? 'border-primary bg-primary/5'
                       : 'border-border'
-                  }`}
+                  } ${!buyerProfile?.payment_link ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => {
-                    setSelectedPayment('card');
-                    setReference(null);
+                    if (buyerProfile?.payment_link) {
+                      setSelectedPayment('card');
+                      setReference(null);
+                    } else {
+                      toast.error('Credit card payment not available');
+                    }
                   }}
                 >
                   <CardContent className="flex items-center gap-4 p-4">
@@ -373,10 +438,30 @@ const BuyLana8Wonder = () => {
                   </CardContent>
                 </Card>
 
-                {/* Show reference number for bank transfer */}
-                {selectedPayment === 'transfer' && reference && (
+                {/* Show payment details */}
+                {selectedPayment === 'card' && buyerProfile?.payment_link && (
                   <Card className="bg-muted/50">
                     <CardContent className="pt-6">
+                      <div className="text-center space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Click "I have paid" to be redirected to the payment page
+                        </p>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => window.open(buyerProfile.payment_link, '_blank')}
+                        >
+                          Open Payment Page
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {selectedPayment === 'transfer' && reference && buyerProfile && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-6 space-y-4">
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">Payment Reference Number</p>
                         <p className="text-2xl font-bold font-mono tracking-wider">{reference}</p>
@@ -384,6 +469,79 @@ const BuyLana8Wonder = () => {
                           Please include this reference in your bank transfer
                         </p>
                       </div>
+
+                      {/* Bank transfer details from KIND 0 profile */}
+                      {buyerProfile.payment_methods && buyerProfile.payment_methods.length > 0 && (
+                        <div className="border-t border-border pt-4 space-y-3">
+                          <p className="text-sm font-semibold text-center">Bank Transfer Details</p>
+                          {buyerProfile.payment_methods
+                            .filter((pm: any) => pm.scope === 'collect' || pm.scope === 'both')
+                            .map((pm: any, idx: number) => (
+                              <div key={idx} className="bg-background rounded-lg p-3 space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-muted-foreground">Method:</span>
+                                  <span className="text-xs font-mono">{pm.label || pm.scheme}</span>
+                                </div>
+                                {pm.fields?.iban && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">IBAN:</span>
+                                    <span className="text-xs font-mono">{pm.fields.iban}</span>
+                                  </div>
+                                )}
+                                {pm.fields?.bic && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">BIC:</span>
+                                    <span className="text-xs font-mono">{pm.fields.bic}</span>
+                                  </div>
+                                )}
+                                {pm.fields?.account_number && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">Account:</span>
+                                    <span className="text-xs font-mono">{pm.fields.account_number}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-muted-foreground">Currency:</span>
+                                  <span className="text-xs font-mono">{pm.currency}</span>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Legacy bank fields fallback */}
+                      {(!buyerProfile.payment_methods || buyerProfile.payment_methods.length === 0) && 
+                       (buyerProfile.bankName || buyerProfile.bankAccount) && (
+                        <div className="border-t border-border pt-4 space-y-2">
+                          <p className="text-sm font-semibold text-center">Bank Transfer Details</p>
+                          <div className="bg-background rounded-lg p-3 space-y-2">
+                            {buyerProfile.bankName && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Bank:</span>
+                                <span className="text-xs">{buyerProfile.bankName}</span>
+                              </div>
+                            )}
+                            {buyerProfile.bankAccount && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Account:</span>
+                                <span className="text-xs font-mono">{buyerProfile.bankAccount}</span>
+                              </div>
+                            )}
+                            {buyerProfile.bankSWIFT && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">SWIFT:</span>
+                                <span className="text-xs font-mono">{buyerProfile.bankSWIFT}</span>
+                              </div>
+                            )}
+                            {buyerProfile.bankAddress && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Address:</span>
+                                <span className="text-xs">{buyerProfile.bankAddress}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -394,9 +552,21 @@ const BuyLana8Wonder = () => {
                 type="submit" 
                 className="w-full" 
                 size="lg" 
-                disabled={!isFormValid || isSubmitting}
+                disabled={!isFormValid || isSubmitting || isLoadingProfile}
               >
-                {isSubmitting ? 'Processing...' : 'I have paid'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : isLoadingProfile ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'I have paid'
+                )}
               </Button>
               
               {!isFormValid && (walletId || payee || selectedPayment) && (
