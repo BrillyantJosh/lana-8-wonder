@@ -79,7 +79,7 @@ const BuyLana8Wonder = () => {
         }
 
         const session = JSON.parse(sessionData);
-        const userNostrHexId = session.nostrHexId;
+        const userNostrHexId = session.nostrHexId as string | undefined;
 
         if (!userNostrHexId) {
           setIsAdmin(false);
@@ -93,12 +93,16 @@ const BuyLana8Wonder = () => {
           .eq('setting_key', 'nostr_hex_id_buying_lanas')
           .maybeSingle();
 
-        const isUserAdmin = userNostrHexId === settings?.setting_value;
+        const adminHex = settings?.setting_value as string | undefined;
+        const isUserAdmin = !!adminHex && userNostrHexId === adminHex;
+
+        console.log('BuyLana admin check', {
+          userNostrHexIdPreview: userNostrHexId.slice(0, 8),
+          adminHexPreview: adminHex?.slice(0, 8),
+          isUserAdmin,
+        });
+
         setIsAdmin(isUserAdmin);
-        
-        if (isUserAdmin) {
-          console.log('Admin access granted');
-        }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
