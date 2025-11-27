@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BuyLana8Wonder from "./pages/BuyLana8Wonder";
+import BuyLanaInstructions from "./pages/BuyLanaInstructions";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
 import AssignLana8Wonder from "./pages/AssignLana8Wonder";
 import PreviewLana8Wonder from "./pages/PreviewLana8Wonder";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />
+          <Route path="/buy-lana-instructions" element={<BuyLanaInstructions />} />
           <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
           <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
           <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />

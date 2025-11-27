@@ -7,12 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Wallet, CreditCard, Building2, ArrowLeft, QrCode } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const BuyLana8Wonder = () => {
   const navigate = useNavigate();
   const [walletId, setWalletId] = useState('');
+  const [payee, setPayee] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
+  const [reference, setReference] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -100,11 +104,16 @@ const BuyLana8Wonder = () => {
     setIsScanning(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!walletId.trim()) {
       toast.error('Please enter your Lana Wallet ID');
+      return;
+    }
+
+    if (!payee.trim()) {
+      toast.error('Please enter the payer name');
       return;
     }
 
@@ -113,8 +122,35 @@ const BuyLana8Wonder = () => {
       return;
     }
 
-    toast.success(`Payment method selected: ${selectedPayment === 'card' ? 'Credit Card' : 'Bank Transfer'}`);
-    // TODO: Implement payment processing
+    setIsSubmitting(true);
+
+    try {
+      // Fetch exchange rate to calculate LANA amount for 100 EUR
+      const exchangeResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=lanacoin&vs_currencies=eur');
+      const exchangeData = await exchangeResponse.json();
+      const lanaAmount = 100 / exchangeData.lanacoin.eur;
+
+      // Save to database
+      const { error } = await supabase
+        .from('buy_lana')
+        .insert({
+          lana_wallet_id: walletId,
+          lana_amount: lanaAmount,
+          payee: payee,
+          reference: reference,
+          payment_method: selectedPayment
+        });
+
+      if (error) throw error;
+
+      toast.success('Payment recorded successfully!');
+      navigate('/buy-lana-instructions');
+    } catch (error) {
+      console.error('Error saving payment:', error);
+      toast.error('Failed to record payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -178,6 +214,22 @@ const BuyLana8Wonder = () => {
                 </p>
               </div>
 
+              {/* Payee Input */}
+              <div className="space-y-2">
+                <Label htmlFor="payee">Payer Name</Label>
+                <Input
+                  id="payee"
+                  type="text"
+                  placeholder="Enter payer name..."
+                  value={payee}
+                  onChange={(e) => setPayee(e.target.value)}
+                  disabled={isScanning}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Who is making the payment?
+                </p>
+              </div>
+
               {/* QR Scanner */}
               {isScanning && (
                 <div className="space-y-3">
@@ -208,7 +260,10 @@ const BuyLana8Wonder = () => {
                       ? 'border-primary bg-primary/5'
                       : 'border-border'
                   }`}
-                  onClick={() => setSelectedPayment('card')}
+                  onClick={() => {
+                    setSelectedPayment('card');
+                    setReference(null);
+                  }}
                 >
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -243,7 +298,12 @@ const BuyLana8Wonder = () => {
                       ? 'border-primary bg-primary/5'
                       : 'border-border'
                   }`}
-                  onClick={() => setSelectedPayment('transfer')}
+                  onClick={() => {
+                    setSelectedPayment('transfer');
+                    // Generate 7-digit reference
+                    const newReference = Math.floor(1000000 + Math.random() * 9000000).toString();
+                    setReference(newReference);
+                  }}
                 >
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -270,11 +330,26 @@ const BuyLana8Wonder = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Show reference number for bank transfer */}
+                {selectedPayment === 'transfer' && reference && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-2">Payment Reference Number</p>
+                        <p className="text-2xl font-bold font-mono tracking-wider">{reference}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Please include this reference in your bank transfer
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Submit Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Continue to Payment
+              <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                {isSubmitting ? 'Processing...' : 'I have paid'}
               </Button>
             </form>
           </CardContent>
