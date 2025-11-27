@@ -17,6 +17,7 @@ const BuyLana8Wonder = () => {
   const { params } = useNostrLanaParams();
   const [walletId, setWalletId] = useState('');
   const [payee, setPayee] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
   const [reference, setReference] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -272,7 +273,8 @@ const BuyLana8Wonder = () => {
           lana_amount: lanaAmount,
           payee: payee,
           reference: reference,
-          payment_method: selectedPayment
+          payment_method: selectedPayment,
+          phone_number: phoneNumber || null
         });
 
       if (error) throw error;
@@ -370,6 +372,22 @@ const BuyLana8Wonder = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Who is making the payment?
+                </p>
+              </div>
+
+              {/* Phone Number Input */}
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  disabled={isScanning}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If provided, we'll notify you when LANA is transferred to your account
                 </p>
               </div>
 
