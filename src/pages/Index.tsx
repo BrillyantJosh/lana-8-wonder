@@ -1,4 +1,5 @@
 import TradingPlanCalculator from "@/components/TradingPlanCalculator";
+import { AvailableSlotsCard } from "@/components/AvailableSlotsCard";
 import lanaCoin from "@/assets/lana-coin.png";
 import einsteinImg from "@/assets/einstein.png";
 import { Sparkles, Wifi, Loader2 } from "lucide-react";
@@ -122,6 +123,11 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Available Slots Section */}
+      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <AvailableSlotsCard params={params} loading={loading} />
+      </section>
 
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
