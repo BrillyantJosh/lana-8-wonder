@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      buy_lana: {
+        Row: {
+          created_at: string
+          id: string
+          lana_amount: number
+          lana_wallet_id: string
+          payee: string
+          payment_method: string
+          reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lana_amount: number
+          lana_wallet_id: string
+          payee: string
+          payment_method: string
+          reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lana_amount?: number
+          lana_wallet_id?: string
+          payee?: string
+          payment_method?: string
+          reference?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
