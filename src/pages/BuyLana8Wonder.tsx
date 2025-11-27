@@ -254,7 +254,7 @@ const BuyLana8Wonder = () => {
       }
 
       if (existingWallet) {
-        toast.error('Ta denarnica je že bila uporabljena za rezervacijo. Ni mogoče dvakrat rezervirati ali kupiti na isto denarnico.');
+        toast.error('This wallet has already been used for a reservation. It is not possible to reserve or purchase twice with the same wallet.');
         setIsSubmitting(false);
         return;
       }
@@ -647,9 +647,9 @@ const BuyLana8Wonder = () => {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-lg mb-2">Imate vprašanja?</h4>
+                  <h4 className="font-semibold text-lg mb-2">Have Questions?</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    V kolikor imate kakršnokoli vprašanje, se lahko obrnete na:
+                    If you have any questions, please contact:
                   </p>
                   <div className="bg-background/60 backdrop-blur-sm rounded-lg p-4 border border-border">
                     <p className="font-medium text-foreground">
