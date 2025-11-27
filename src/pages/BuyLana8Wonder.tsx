@@ -438,22 +438,25 @@ const BuyLana8Wonder = () => {
                   </CardContent>
                 </Card>
 
-                {/* Show payment details */}
+                {/* Show payment link for credit card */}
                 {selectedPayment === 'card' && buyerProfile?.payment_link && (
                   <Card className="bg-muted/50">
                     <CardContent className="pt-6">
                       <div className="text-center space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Click "I have paid" to be redirected to the payment page
+                        <p className="text-sm font-semibold mb-2">Credit Card Payment Link</p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Click the button below to proceed to the secure payment page
                         </p>
                         <Button 
                           type="button"
-                          variant="outline"
                           className="w-full"
                           onClick={() => window.open(buyerProfile.payment_link, '_blank')}
                         >
                           Open Payment Page
                         </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          After completing payment, return here and click "I have paid"
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
