@@ -47,10 +47,12 @@ export type Database = {
           id: string
           lana_amount: number
           lana_wallet_id: string
+          paid_on_account: string | null
           payee: string
           payment_method: string
           phone_number: string | null
           reference: string | null
+          tx: string | null
           updated_at: string
         }
         Insert: {
@@ -58,10 +60,12 @@ export type Database = {
           id?: string
           lana_amount: number
           lana_wallet_id: string
+          paid_on_account?: string | null
           payee: string
           payment_method: string
           phone_number?: string | null
           reference?: string | null
+          tx?: string | null
           updated_at?: string
         }
         Update: {
@@ -69,10 +73,12 @@ export type Database = {
           id?: string
           lana_amount?: number
           lana_wallet_id?: string
+          paid_on_account?: string | null
           payee?: string
           payment_method?: string
           phone_number?: string | null
           reference?: string | null
+          tx?: string | null
           updated_at?: string
         }
         Relationships: []

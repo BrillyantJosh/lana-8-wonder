@@ -26,6 +26,7 @@ const BuyLana8Wonder = () => {
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [contactDetails, setContactDetails] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -64,6 +65,46 @@ const BuyLana8Wonder = () => {
                       payee.trim() !== '' && 
                       selectedPayment !== null && 
                       walletError === null;
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          setIsAdmin(false);
+          return;
+        }
+
+        // Get user's nostr_hex_id from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nostr_hex_id')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          setIsAdmin(false);
+          return;
+        }
+
+        // Get admin nostr_hex_id from app_settings
+        const { data: settings } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'nostr_hex_id_buying_lanas')
+          .maybeSingle();
+
+        setIsAdmin(profile.nostr_hex_id === settings?.setting_value);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
 
   // Fetch contact details from app_settings
   useEffect(() => {
@@ -298,7 +339,7 @@ const BuyLana8Wonder = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
@@ -307,6 +348,14 @@ const BuyLana8Wonder = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin-buy-lana')}
+            >
+              Admin Panel
+            </Button>
+          )}
         </div>
       </header>
 
