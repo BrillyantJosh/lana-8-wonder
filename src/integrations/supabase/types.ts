@@ -49,6 +49,7 @@ export type Database = {
           lana_wallet_id: string
           payee: string
           payment_method: string
+          phone_number: string | null
           reference: string | null
           updated_at: string
         }
@@ -59,6 +60,7 @@ export type Database = {
           lana_wallet_id: string
           payee: string
           payment_method: string
+          phone_number?: string | null
           reference?: string | null
           updated_at?: string
         }
@@ -69,6 +71,7 @@ export type Database = {
           lana_wallet_id?: string
           payee?: string
           payment_method?: string
+          phone_number?: string | null
           reference?: string | null
           updated_at?: string
         }
