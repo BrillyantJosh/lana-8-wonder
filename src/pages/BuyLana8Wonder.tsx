@@ -24,6 +24,7 @@ const BuyLana8Wonder = () => {
   const [walletError, setWalletError] = useState<string | null>(null);
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [contactDetails, setContactDetails] = useState<string>('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +63,27 @@ const BuyLana8Wonder = () => {
                       payee.trim() !== '' && 
                       selectedPayment !== null && 
                       walletError === null;
+
+  // Fetch contact details from app_settings
+  useEffect(() => {
+    const fetchContactDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'contact_details')
+          .single();
+
+        if (!error && data) {
+          setContactDetails(data.setting_value);
+        }
+      } catch (error) {
+        console.error('Error fetching contact details:', error);
+      }
+    };
+
+    fetchContactDetails();
+  }, []);
 
   // Fetch buyer profile from Nostr
   useEffect(() => {
@@ -219,6 +241,24 @@ const BuyLana8Wonder = () => {
     setIsSubmitting(true);
 
     try {
+      // Check if wallet ID already exists in buy_lana table
+      const { data: existingWallet, error: checkError } = await supabase
+        .from('buy_lana')
+        .select('lana_wallet_id')
+        .eq('lana_wallet_id', walletId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking wallet:', checkError);
+        throw checkError;
+      }
+
+      if (existingWallet) {
+        toast.error('Ta denarnica je že bila uporabljena za rezervacijo. Ni mogoče dvakrat rezervirati ali kupiti na isto denarnico.');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Fetch exchange rate to calculate LANA amount for 100 EUR
       const exchangeResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=lanacoin&vs_currencies=eur');
       const exchangeData = await exchangeResponse.json();
@@ -586,16 +626,41 @@ const BuyLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        {/* Info Card */}
-        <Card className="mt-6 bg-muted/50">
-          <CardContent className="pt-6">
-            <h4 className="font-semibold mb-2">💡 What is Lana8Wonder?</h4>
-            <p className="text-sm text-muted-foreground">
-              Lana8Wonder is your personal trading plan that costs exactly €100 (paid in LANA coins). 
-              Once purchased, you'll receive strategic trading signals and be part of an exclusive trading community.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Contact Information Card */}
+        {contactDetails && (
+          <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                  <svg 
+                    className="w-6 h-6 text-primary" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-2">Imate vprašanja?</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    V kolikor imate kakršnokoli vprašanje, se lahko obrnete na:
+                  </p>
+                  <div className="bg-background/60 backdrop-blur-sm rounded-lg p-4 border border-border">
+                    <p className="font-medium text-foreground">
+                      {contactDetails}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
