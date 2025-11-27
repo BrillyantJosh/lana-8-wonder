@@ -8,6 +8,7 @@ import { Wallet, CreditCard, Building2, ArrowLeft, QrCode } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { validateLanaAddress } from '@/lib/walletValidation';
 
 const BuyLana8Wonder = () => {
   const navigate = useNavigate();
@@ -17,8 +18,45 @@ const BuyLana8Wonder = () => {
   const [reference, setReference] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
+
+  // Validate wallet address
+  const validateWallet = async (address: string): Promise<boolean> => {
+    if (!address || address.trim() === '') {
+      setWalletError(null);
+      return false;
+    }
+
+    const result = await validateLanaAddress(address);
+    
+    if (!result.valid) {
+      setWalletError(result.error || 'Invalid wallet address');
+      return false;
+    }
+    
+    setWalletError(null);
+    return true;
+  };
+
+  // Validate wallet on change
+  useEffect(() => {
+    if (walletId.trim()) {
+      const timeoutId = setTimeout(() => {
+        validateWallet(walletId);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setWalletError(null);
+    }
+  }, [walletId]);
+
+  // Check if form is valid
+  const isFormValid = walletId.trim() !== '' && 
+                      payee.trim() !== '' && 
+                      selectedPayment !== null && 
+                      walletError === null;
 
   useEffect(() => {
     return () => {
@@ -186,7 +224,7 @@ const BuyLana8Wonder = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Wallet ID Input */}
               <div className="space-y-2">
-                <Label htmlFor="walletId">Lana Wallet ID</Label>
+                <Label htmlFor="walletId">Lana Wallet ID *</Label>
                 <div className="flex gap-2">
                   <Input
                     id="walletId"
@@ -194,7 +232,7 @@ const BuyLana8Wonder = () => {
                     placeholder="Enter your Lana Wallet ID..."
                     value={walletId}
                     onChange={(e) => setWalletId(e.target.value)}
-                    className="font-mono flex-1"
+                    className={`font-mono flex-1 ${walletError ? 'border-destructive' : ''}`}
                     disabled={isScanning}
                   />
                   {!isScanning && (
@@ -209,14 +247,18 @@ const BuyLana8Wonder = () => {
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  This is where your Lana8Wonder will be assigned
-                </p>
+                {walletError ? (
+                  <p className="text-xs text-destructive">{walletError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    This is where your Lana8Wonder will be assigned
+                  </p>
+                )}
               </div>
 
               {/* Payee Input */}
               <div className="space-y-2">
-                <Label htmlFor="payee">Payer Name</Label>
+                <Label htmlFor="payee">Payer Name *</Label>
                 <Input
                   id="payee"
                   type="text"
@@ -251,7 +293,7 @@ const BuyLana8Wonder = () => {
 
               {/* Payment Method Selection */}
               <div className="space-y-3">
-                <Label>Payment Method</Label>
+                <Label>Payment Method *</Label>
                 
                 {/* Credit Card Option */}
                 <Card
@@ -348,9 +390,20 @@ const BuyLana8Wonder = () => {
               </div>
 
               {/* Submit Button */}
-              <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                size="lg" 
+                disabled={!isFormValid || isSubmitting}
+              >
                 {isSubmitting ? 'Processing...' : 'I have paid'}
               </Button>
+              
+              {!isFormValid && (walletId || payee || selectedPayment) && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Please complete all required fields (*)
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>
