@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Ticket, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,23 +20,33 @@ export const AvailableSlotsCard = ({
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [fetchingBalance, setFetchingBalance] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [webpageUrl, setWebpageUrl] = useState<string | null>(null);
 
-  // Fetch donation_wallet_id from app_settings
+  // Fetch donation_wallet_id and webpage from app_settings
   useEffect(() => {
-    const fetchDonationWallet = async () => {
+    const fetchSettings = async () => {
       try {
-        const {
-          data,
-          error
-        } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'donation_wallet_id').maybeSingle();
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('setting_key, setting_value')
+          .in('setting_key', ['donation_wallet_id', 'webpage']);
+        
         if (error) throw error;
-        if (data) setDonationWalletId(data.setting_value);
+        
+        if (data) {
+          const donationWallet = data.find(s => s.setting_key === 'donation_wallet_id');
+          const webpage = data.find(s => s.setting_key === 'webpage');
+          
+          if (donationWallet) setDonationWalletId(donationWallet.setting_value);
+          if (webpage) setWebpageUrl(webpage.setting_value);
+        }
       } catch (err) {
-        console.error('Error fetching donation wallet:', err);
+        console.error('Error fetching settings:', err);
         setError('Unable to load wallet information');
       }
     };
-    fetchDonationWallet();
+    fetchSettings();
   }, []);
 
   // Fetch wallet balance when we have wallet ID and electrum servers
@@ -83,6 +94,24 @@ export const AvailableSlotsCard = ({
     if (!params?.exchangeRates?.EUR) return null;
     return Math.floor(100 / params.exchangeRates.EUR);
   }, [params?.exchangeRates?.EUR]);
+
+  const handleBuyClick = () => {
+    setShowDialog(true);
+  };
+
+  const handleHasWallet = () => {
+    setShowDialog(false);
+    navigate('/buy-lana8wonder');
+  };
+
+  const handleNoWallet = () => {
+    setShowDialog(false);
+    if (webpageUrl) {
+      const returnUrl = encodeURIComponent(`${webpageUrl}/buy-lana8wonder`);
+      const siteName = encodeURIComponent('Lana8Wonder');
+      window.open(`https://100million2everyone.com/?return_url=${returnUrl}&site_name=${siteName}`, '_blank');
+    }
+  };
   if (loading || fetchingBalance) {
     return <Card className="w-full bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-primary/20">
         <CardContent className="pt-6">
@@ -129,9 +158,28 @@ export const AvailableSlotsCard = ({
             Each slot requires ~{lanaEquivalent.toLocaleString()} LANA (€100 at current rate)
           </p>}
 
-        <Button onClick={() => navigate('/login')} disabled={availableSlots === 0} className="w-full text-lg py-6" size="lg">
+        <Button onClick={handleBuyClick} disabled={availableSlots === 0} className="w-full text-lg py-6" size="lg">
           {availableSlots === 0 ? 'No Slots Available' : '🚀 Buy Lana8Wonder'}
         </Button>
+
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Do you have a registered Lana Wallet?</DialogTitle>
+              <DialogDescription>
+                To purchase Lana8Wonder, you need a Lana wallet. If you don't have one yet, we'll help you create it.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleNoWallet} className="w-full sm:w-auto">
+                No, create wallet
+              </Button>
+              <Button onClick={handleHasWallet} className="w-full sm:w-auto">
+                Yes, I have a wallet
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>;
 };
