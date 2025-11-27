@@ -26,7 +26,6 @@ const BuyLana8Wonder = () => {
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [contactDetails, setContactDetails] = useState<string>('');
-  const [isAdmin, setIsAdmin] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -65,52 +64,6 @@ const BuyLana8Wonder = () => {
                       payee.trim() !== '' && 
                       selectedPayment !== null && 
                       walletError === null;
-
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        // Get session from sessionStorage (this app uses Nostr auth, not Supabase auth)
-        const sessionData = sessionStorage.getItem('lana_session');
-        
-        if (!sessionData) {
-          setIsAdmin(false);
-          return;
-        }
-
-        const session = JSON.parse(sessionData);
-        const userNostrHexId = session.nostrHexId as string | undefined;
-
-        if (!userNostrHexId) {
-          setIsAdmin(false);
-          return;
-        }
-
-        // Get admin nostr_hex_id from app_settings
-        const { data: settings } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'nostr_hex_id_buying_lanas')
-          .maybeSingle();
-
-        const adminHex = settings?.setting_value as string | undefined;
-        const isUserAdmin = !!adminHex && userNostrHexId === adminHex;
-
-        console.log('BuyLana admin check', {
-          userNostrHexIdPreview: userNostrHexId.slice(0, 8),
-          adminHexPreview: adminHex?.slice(0, 8),
-          isUserAdmin,
-        });
-
-        setIsAdmin(isUserAdmin);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, []);
 
   // Fetch contact details from app_settings
   useEffect(() => {
@@ -345,7 +298,7 @@ const BuyLana8Wonder = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
@@ -354,14 +307,6 @@ const BuyLana8Wonder = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin-buy-lana')}
-            >
-              Admin Panel
-            </Button>
-          )}
         </div>
       </header>
 

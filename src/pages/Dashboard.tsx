@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [greeting, setGreeting] = useState("");
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [balancesLoading, setBalancesLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -115,6 +116,42 @@ const Dashboard = () => {
     }
   }, [navigate, params]);
 
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const sessionData = sessionStorage.getItem('lana_session');
+        
+        if (!sessionData) {
+          setIsAdmin(false);
+          return;
+        }
+
+        const session = JSON.parse(sessionData);
+        const userNostrHexId = session.nostrHexId as string | undefined;
+
+        if (!userNostrHexId) {
+          setIsAdmin(false);
+          return;
+        }
+
+        const { data: settings } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'nostr_hex_id_buying_lanas')
+          .maybeSingle();
+
+        const adminHex = settings?.setting_value as string | undefined;
+        setIsAdmin(!!adminHex && userNostrHexId === adminHex);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
+
   const handleLogout = () => {
     sessionStorage.removeItem("lana_session");
     navigate("/login");
@@ -169,10 +206,25 @@ const Dashboard = () => {
             <h2 className="text-xl sm:text-2xl font-bold">Lana8Wonder Dashboard</h2>
             <p className="text-sm text-muted-foreground">Your Annuity Plan</p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {isAdmin && (
+              <Button 
+                variant="secondary" 
+                onClick={() => navigate('/admin-buy-lana')}
+                className="flex-1 sm:flex-initial"
+              >
+                Admin Panel
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={handleLogout} 
+              className="flex-1 sm:flex-initial"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 mb-8">
