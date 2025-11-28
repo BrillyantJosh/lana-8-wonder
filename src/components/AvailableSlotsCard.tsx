@@ -195,18 +195,18 @@ export const AvailableSlotsCard = ({
         </Button>
 
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent>
+          <DialogContent className="mx-2 sm:mx-0 max-w-[calc(100vw-1rem)] sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Do you have a registered Lana Wallet?</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Do you have a registered Lana Wallet?</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
                 To purchase Lana8Wonder, you need a Lana wallet. If you don't have one yet, we'll help you create it.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={handleNoWallet} className="w-full sm:w-auto">
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleNoWallet} className="w-full sm:w-auto text-sm sm:text-base">
                 No, create wallet
               </Button>
-              <Button onClick={handleHasWallet} className="w-full sm:w-auto">
+              <Button onClick={handleHasWallet} className="w-full sm:w-auto text-sm sm:text-base">
                 Yes, I have a wallet
               </Button>
             </DialogFooter>

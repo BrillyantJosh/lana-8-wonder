@@ -341,7 +341,7 @@ const BuyLana8Wonder = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Wallet ID Input */}
               <div className="space-y-2">
-                <Label htmlFor="walletId">Lana Wallet ID *</Label>
+                <Label htmlFor="walletId" className="text-sm sm:text-base">Lana Wallet ID *</Label>
                 <div className="flex gap-2">
                   <Input
                     id="walletId"
@@ -349,7 +349,7 @@ const BuyLana8Wonder = () => {
                     placeholder="Enter your Lana Wallet ID..."
                     value={walletId}
                     onChange={(e) => setWalletId(e.target.value)}
-                    className={`font-mono flex-1 ${walletError ? 'border-destructive' : ''}`}
+                    className={`font-mono text-xs sm:text-sm flex-1 ${walletError ? 'border-destructive' : ''}`}
                     disabled={isScanning}
                   />
                   {!isScanning && (
@@ -359,13 +359,14 @@ const BuyLana8Wonder = () => {
                       size="icon"
                       onClick={startScanning}
                       title="Scan QR Code"
+                      className="flex-shrink-0"
                     >
                       <QrCode className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
                 {walletError ? (
-                  <p className="text-xs text-destructive">{walletError}</p>
+                  <p className="text-xs text-destructive break-words">{walletError}</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     This is where your Lana8Wonder will be assigned
@@ -375,7 +376,7 @@ const BuyLana8Wonder = () => {
 
               {/* Payee Input */}
               <div className="space-y-2">
-                <Label htmlFor="payee">Payer Name *</Label>
+                <Label htmlFor="payee" className="text-sm sm:text-base">Payer Name *</Label>
                 <Input
                   id="payee"
                   type="text"
@@ -383,6 +384,7 @@ const BuyLana8Wonder = () => {
                   value={payee}
                   onChange={(e) => setPayee(e.target.value)}
                   disabled={isScanning}
+                  className="text-sm sm:text-base"
                 />
                 <p className="text-xs text-muted-foreground">
                   Who is making the payment?
@@ -391,7 +393,7 @@ const BuyLana8Wonder = () => {
 
               {/* Phone Number Input */}
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
+                <Label htmlFor="phoneNumber" className="text-sm sm:text-base">Phone Number (Optional)</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -399,6 +401,7 @@ const BuyLana8Wonder = () => {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   disabled={isScanning}
+                  className="text-sm sm:text-base"
                 />
                 <p className="text-xs text-muted-foreground">
                   If provided, we'll notify you when LANA is transferred to your account
@@ -426,10 +429,10 @@ const BuyLana8Wonder = () => {
 
               {/* Currency Selection */}
               <div className="space-y-3">
-                <Label>Select Currency *</Label>
+                <Label className="text-sm sm:text-base">Select Currency *</Label>
                 
                 {/* Currency buttons */}
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {params?.exchangeRates ? (
                     Object.keys(params.exchangeRates).map((currency) => (
                       <Button
@@ -437,16 +440,16 @@ const BuyLana8Wonder = () => {
                         type="button"
                         variant={selectedCurrency === currency ? 'default' : 'outline'}
                         onClick={() => setSelectedCurrency(currency as 'EUR' | 'USD' | 'GBP')}
-                        className="flex-1"
+                        className="w-full text-sm sm:text-base"
                         disabled={isScanning}
                       >
                         {currency}
                       </Button>
                     ))
                   ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="col-span-3 flex items-center justify-center gap-2 text-muted-foreground py-4">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading exchange rates...
+                      <span className="text-sm">Loading exchange rates...</span>
                     </div>
                   )}
                 </div>
@@ -454,12 +457,12 @@ const BuyLana8Wonder = () => {
                 {/* Calculation display */}
                 {params?.exchangeRates?.[selectedCurrency] && (
                   <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="text-center space-y-2">
-                        <p className="text-lg">
+                    <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
+                      <div className="text-center space-y-1 sm:space-y-2">
+                        <p className="text-base sm:text-lg">
                           <span className="font-bold">100 {selectedCurrency}</span>
                           {' = '}
-                          <span className="font-bold text-primary text-2xl">
+                          <span className="font-bold text-primary text-xl sm:text-2xl">
                             {calculatedLanaAmount.toLocaleString()} LANA
                           </span>
                         </p>
@@ -474,7 +477,7 @@ const BuyLana8Wonder = () => {
 
               {/* Payment Method Selection */}
               <div className="space-y-3">
-                <Label>Payment Method *</Label>
+                <Label className="text-sm sm:text-base">Payment Method *</Label>
                 
                 {/* Credit Card Option */}
                 <div className="space-y-3">
@@ -493,21 +496,21 @@ const BuyLana8Wonder = () => {
                       }
                     }}
                   >
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                         selectedPayment === 'card'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        <CreditCard className="w-6 h-6" />
+                        <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Pay with Credit Card</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base">Pay with Credit Card</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           Fast and secure online payment
                         </p>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         selectedPayment === 'card'
                           ? 'border-primary'
                           : 'border-muted-foreground'
@@ -522,15 +525,15 @@ const BuyLana8Wonder = () => {
                   {/* Show payment link for credit card - INSIDE credit card section */}
                   {selectedPayment === 'card' && buyerProfile?.payment_link && (
                     <Card className="bg-muted/50 border-primary/20">
-                      <CardContent className="pt-6">
+                      <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                         <div className="text-center space-y-3">
                           <p className="text-sm font-semibold mb-2">Credit Card Payment Link</p>
-                          <p className="text-sm text-muted-foreground mb-3">
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                             Click the button below to proceed to the secure payment page
                           </p>
                           <Button 
                             type="button"
-                            className="w-full"
+                            className="w-full text-sm sm:text-base"
                             onClick={() => window.open(buyerProfile.payment_link, '_blank')}
                           >
                             Open Payment Page
@@ -559,21 +562,21 @@ const BuyLana8Wonder = () => {
                       setReference(newReference);
                     }}
                   >
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                         selectedPayment === 'transfer'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        <Building2 className="w-6 h-6" />
+                        <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Bank Transfer</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base">Bank Transfer</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           Direct transfer to our account
                         </p>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         selectedPayment === 'transfer'
                           ? 'border-primary'
                           : 'border-muted-foreground'
@@ -678,22 +681,22 @@ const BuyLana8Wonder = () => {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full text-sm sm:text-base" 
                 size="lg" 
                 disabled={!isFormValid || isSubmitting || isLoadingProfile}
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    <span className="text-sm sm:text-base">Processing...</span>
                   </>
                 ) : isLoadingProfile ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
+                    <span className="text-sm sm:text-base">Loading...</span>
                   </>
                 ) : (
-                  'I have paid'
+                  <span className="text-sm sm:text-base">I have paid</span>
                 )}
               </Button>
               
@@ -708,12 +711,12 @@ const BuyLana8Wonder = () => {
 
         {/* Contact Information Card */}
         {contactDetails && (
-          <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+          <Card className="mt-4 sm:mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+            <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+              <div className="text-center space-y-3 sm:space-y-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                   <svg 
-                    className="w-6 h-6 text-primary" 
+                    className="w-5 h-5 sm:w-6 sm:h-6 text-primary" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -727,12 +730,12 @@ const BuyLana8Wonder = () => {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-lg mb-2">Have Questions?</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
+                  <h4 className="font-semibold text-base sm:text-lg mb-2">Have Questions?</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                     If you have any questions, please contact:
                   </p>
-                  <div className="bg-background/60 backdrop-blur-sm rounded-lg p-4 border border-border">
-                    <p className="font-medium text-foreground">
+                  <div className="bg-background/60 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-border">
+                    <p className="font-medium text-foreground text-sm sm:text-base break-words">
                       {contactDetails}
                     </p>
                   </div>
