@@ -448,35 +448,35 @@ const AssignLana8Wonder = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className="font-semibold">{sourceBalance?.toFixed(8) || "0.00000000"} LANA</p>
+                <p className="font-semibold">{sourceBalance?.toFixed(2) || "0.00"} LANA</p>
               </div>
               
               <div className="pt-4 border-t">
                 <p className="text-sm font-semibold mb-3">Transaction Breakdown</p>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
-                    <span className="font-mono">{minRequiredLana.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{minRequiredLana.toFixed(2)} LANA</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
-                    <span className="font-mono">{phiDonation.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{phiDonation.toFixed(2)} LANA</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Total to 8 Wallets:</span>
-                    <span className="font-mono">{totalFor8Wallets.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{totalFor8Wallets.toFixed(2)} LANA</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
-                    <span className="font-mono">{amountPerWallet.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{amountPerWallet.toFixed(2)} LANA</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t font-semibold">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 pt-2 border-t font-semibold">
                     <span>Total to Transfer:</span>
-                    <span className="font-mono">{totalTransferred.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{totalTransferred.toFixed(2)} LANA</span>
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-muted-foreground">
                     <span>Remaining in Wallet:</span>
-                    <span className="font-mono">{remainingBalance.toFixed(8)} LANA</span>
+                    <span className="font-mono text-right">{remainingBalance.toFixed(2)} LANA</span>
                   </div>
                 </div>
               </div>
@@ -486,7 +486,7 @@ const AssignLana8Wonder = () => {
 
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="space-y-1.5">
                 <CardTitle>Annuity Wallet Accounts (8 Required)</CardTitle>
                 <CardDescription>
@@ -496,18 +496,18 @@ const AssignLana8Wonder = () => {
               <Button 
                 onClick={() => setShowGenerateDialog(true)}
                 disabled={isGenerating}
-                size="lg"
-                className="ml-4"
+                size="default"
+                className="w-full sm:w-auto shrink-0"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Generating...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Wallets
+                    <Sparkles className="h-4 w-4" />
+                    <span className="ml-2">Generate Wallets</span>
                   </>
                 )}
               </Button>
