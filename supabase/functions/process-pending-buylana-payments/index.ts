@@ -152,12 +152,15 @@ function modInverse(a: bigint, m: bigint): bigint {
 }
 
 function privateKeyToPublicKey(privateKeyHex: string): Uint8Array {
-  const d = BigInt('0x' + privateKeyHex);
-  const point = Point.G.multiply(d);
-  const x = point.x!.toString(16).padStart(64, '0');
-  const y = point.y!.toString(16).padStart(64, '0');
-  const prefix = point.y! % 2n === 0n ? '02' : '03';
-  return hexToUint8Array(prefix + x);
+  const privateKeyBigInt = BigInt('0x' + privateKeyHex);
+  const publicKeyPoint = Point.G.multiply(privateKeyBigInt);
+  const x = publicKeyPoint.x!.toString(16).padStart(64, '0');
+  const y = publicKeyPoint.y!.toString(16).padStart(64, '0');
+  const result = new Uint8Array(65);
+  result[0] = 0x04; // Uncompressed prefix
+  result.set(hexToUint8Array(x), 1);
+  result.set(hexToUint8Array(y), 33);
+  return result;
 }
 
 async function publicKeyToAddress(publicKey: Uint8Array): Promise<string> {
