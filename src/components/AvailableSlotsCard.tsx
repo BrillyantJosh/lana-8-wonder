@@ -22,6 +22,7 @@ export const AvailableSlotsCard = ({
   const [error, setError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [webpageUrl, setWebpageUrl] = useState<string | null>(null);
+  const [reservedSlotsCount, setReservedSlotsCount] = useState<number | null>(null);
 
   // Fetch donation_wallet_id and webpage from app_settings
   useEffect(() => {
@@ -82,12 +83,43 @@ export const AvailableSlotsCard = ({
     fetchBalance();
   }, [donationWalletId, params?.electrum]);
 
-  // Calculate available slots
+  // Fetch reserved slots (unpaid reservations less than 62 hours old)
+  useEffect(() => {
+    const fetchReservedSlots = async () => {
+      try {
+        // Calculate 62 hours ago
+        const sixtyTwoHoursAgo = new Date();
+        sixtyTwoHoursAgo.setHours(sixtyTwoHoursAgo.getHours() - 62);
+        
+        const { count, error } = await supabase
+          .from('buy_lana')
+          .select('*', { count: 'exact', head: true })
+          .is('tx', null)
+          .gte('created_at', sixtyTwoHoursAgo.toISOString());
+        
+        if (error) throw error;
+        
+        setReservedSlotsCount(count || 0);
+      } catch (err) {
+        console.error('Error fetching reserved slots:', err);
+        setReservedSlotsCount(0); // Default to 0 on error
+      }
+    };
+    
+    fetchReservedSlots();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchReservedSlots, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate available slots (total slots minus reserved slots)
   const availableSlots = useMemo(() => {
-    if (walletBalance === null || !params?.exchangeRates?.EUR) return null;
+    if (walletBalance === null || !params?.exchangeRates?.EUR || reservedSlotsCount === null) return null;
     const amountForSigning = 100 / params.exchangeRates.EUR;
-    return Math.floor(walletBalance / amountForSigning);
-  }, [walletBalance, params?.exchangeRates?.EUR]);
+    const totalSlots = Math.floor(walletBalance / amountForSigning);
+    return Math.max(0, totalSlots - reservedSlotsCount);
+  }, [walletBalance, params?.exchangeRates?.EUR, reservedSlotsCount]);
 
   // Calculate LANA equivalent
   const lanaEquivalent = useMemo(() => {
@@ -112,7 +144,7 @@ export const AvailableSlotsCard = ({
       window.open(`https://100million2everyone.com/?return_url=${returnUrl}&site_name=${siteName}`, '_blank');
     }
   };
-  if (loading || fetchingBalance) {
+  if (loading || fetchingBalance || reservedSlotsCount === null) {
     return <Card className="w-full bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-primary/20">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
