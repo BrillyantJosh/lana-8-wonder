@@ -521,10 +521,10 @@ Deno.serve(async (req) => {
 
     console.log('📋 Recipients:', recipients);
 
-    // 6. Electrum configuration
-    const electrumHost = 'node1.lana.cash';
-    const electrumPort = 50002;
-    const electrumProtocol = 'ssl';
+    // 6. Electrum configuration (using same server as balance checker)
+    const electrumHost = 'electrum1.lanacoin.com';
+    const electrumPort = 5097;
+    const electrumProtocol = 'tcp';
     const feePerKB = 1000;
 
     // 7. Fetch UTXOs
