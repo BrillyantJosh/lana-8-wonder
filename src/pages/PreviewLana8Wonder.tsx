@@ -331,12 +331,13 @@ const PreviewLana8Wonder = () => {
           return;
         }
         
-        // Fetch wallets from database
+        // Fetch wallets from database ordered by position
         const { data: dbWallets, error: walletsError } = await supabase
           .from("wallets")
-          .select("wallet_address, wallet_type")
+          .select("wallet_address, wallet_type, position")
           .eq("profile_id", profile.id)
-          .eq("wallet_type", "annuity");
+          .eq("wallet_type", "annuity")
+          .order('position', { ascending: true });
         
         if (walletsError) throw walletsError;
         

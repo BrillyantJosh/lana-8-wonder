@@ -355,10 +355,11 @@ const AssignLana8Wonder = () => {
       }
       
       // Insert wallets (unique constraint prevents duplicates)
-      const walletsToInsert = wallets.map(w => ({
+      const walletsToInsert = wallets.map((w, index) => ({
         profile_id: profileId,
         wallet_address: w.address,
-        wallet_type: "annuity"
+        wallet_type: "annuity",
+        position: index + 1
       }));
       
       const { error: walletsInsertError } = await supabase

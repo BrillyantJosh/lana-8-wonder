@@ -126,6 +126,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          position: number | null
           profile_id: string
           updated_at: string
           wallet_address: string
@@ -134,6 +135,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          position?: number | null
           profile_id: string
           updated_at?: string
           wallet_address: string
@@ -142,6 +144,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          position?: number | null
           profile_id?: string
           updated_at?: string
           wallet_address?: string
