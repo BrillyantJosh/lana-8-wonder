@@ -241,69 +241,72 @@ const CreateLana8Wonder = () => {
                   </p>
                 </div>
               ) : (
-                <div className="border rounded-lg overflow-x-auto -mx-4 sm:mx-0">
-                  <Table className="min-w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Wallet Address</TableHead>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Type</TableHead>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Balance</TableHead>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Note</TableHead>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
-                        <TableHead className="font-semibold text-xs sm:text-sm whitespace-nowrap">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {allWallets.map((wallet, idx) => {
-                        const currentBalance = walletBalances[wallet.wallet_address] || 0;
-                        const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
-                        
-                        return (
-                          <TableRow key={idx}>
-                            <TableCell className="font-mono text-xs sm:text-sm">{wallet.wallet_address}</TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-4">
+                    {allWallets.map((wallet, idx) => {
+                      const currentBalance = walletBalances[wallet.wallet_address] || 0;
+                      const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
+                      
+                      return (
+                        <Card key={idx} className="overflow-hidden">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground mb-1">Wallet Address</p>
+                                <p className="font-mono text-xs break-all">{wallet.wallet_address}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap shrink-0">
                                 {wallet.wallet_type}
                               </span>
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
-                              {balancesLoading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : walletBalances[wallet.wallet_address] !== undefined ? (
-                                <span className="font-semibold">
-                                  {walletBalances[wallet.wallet_address].toFixed(8)}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs sm:text-sm">{wallet.note || "—"}</TableCell>
-                            <TableCell>
-                              {!balancesLoading && minimumRequired > 0 && (
-                                hasEnoughBalance ? (
-                                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
-                                    ✓ Sufficient
-                                  </Badge>
-                                ) : (
-                                  <div className="space-y-1">
-                                    <Badge variant="destructive" className="flex items-center gap-1 text-xs whitespace-nowrap">
-                                      <AlertCircle className="h-3 w-3" />
-                                      Insufficient
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Balance</p>
+                                <div className="text-sm font-semibold">
+                                  {balancesLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : walletBalances[wallet.wallet_address] !== undefined ? (
+                                    <span>{walletBalances[wallet.wallet_address].toFixed(8)}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Note</p>
+                                <p className="text-sm text-muted-foreground truncate">{wallet.note || "—"}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between gap-3 pt-2 border-t">
+                              <div>
+                                {!balancesLoading && minimumRequired > 0 && (
+                                  hasEnoughBalance ? (
+                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                                      ✓ Sufficient
                                     </Badge>
-                                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                      Min: {minimumRequired.toFixed(4)} LANA
-                                    </p>
-                                  </div>
-                                )
-                              )}
-                            </TableCell>
-                            <TableCell>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Insufficient
+                                      </Badge>
+                                      <p className="text-xs text-muted-foreground">
+                                        Min: {minimumRequired.toFixed(4)} LANA
+                                      </p>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                              
                               {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
                                 <Button 
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      // Check if user already has selected_wallet in profile
                                       const { data: existingProfile } = await supabase
                                         .from("profiles")
                                         .select("id, selected_wallet")
@@ -311,7 +314,6 @@ const CreateLana8Wonder = () => {
                                         .maybeSingle();
                                       
                                       if (existingProfile?.selected_wallet) {
-                                        // Check if there are existing wallets for this profile
                                         const { data: existingWallets, error: walletsError } = await supabase
                                           .from("wallets")
                                           .select("wallet_address")
@@ -323,14 +325,12 @@ const CreateLana8Wonder = () => {
                                         }
                                         
                                         if (existingWallets && existingWallets.length === 8) {
-                                          // User already has selected wallet and 8 wallets saved, go directly to preview
                                           toast.success("Found existing annuity plan, loading preview...");
                                           navigate("/preview-lana8wonder");
                                           return;
                                         }
                                       }
                                       
-                                      // No selected wallet or incomplete wallets, go to assign page
                                       navigate('/assign-lana8wonder', { 
                                         state: { 
                                           sourceWallet: wallet.wallet_address,
@@ -345,18 +345,132 @@ const CreateLana8Wonder = () => {
                                       toast.error("Failed to check existing wallets");
                                     }
                                   }}
-                                  className="text-xs whitespace-nowrap"
+                                  className="text-xs shrink-0"
                                 >
                                   Assign to L8W
                                 </Button>
                               )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="font-semibold">Wallet Address</TableHead>
+                          <TableHead className="font-semibold">Type</TableHead>
+                          <TableHead className="font-semibold">Balance</TableHead>
+                          <TableHead className="font-semibold">Note</TableHead>
+                          <TableHead className="font-semibold">Status</TableHead>
+                          <TableHead className="font-semibold">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allWallets.map((wallet, idx) => {
+                          const currentBalance = walletBalances[wallet.wallet_address] || 0;
+                          const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
+                          
+                          return (
+                            <TableRow key={idx}>
+                              <TableCell className="font-mono text-sm max-w-xs truncate">{wallet.wallet_address}</TableCell>
+                              <TableCell>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
+                                  {wallet.wallet_type}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {balancesLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : walletBalances[wallet.wallet_address] !== undefined ? (
+                                  <span className="font-semibold">
+                                    {walletBalances[wallet.wallet_address].toFixed(8)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{wallet.note || "—"}</TableCell>
+                              <TableCell>
+                                {!balancesLoading && minimumRequired > 0 && (
+                                  hasEnoughBalance ? (
+                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
+                                      ✓ Sufficient
+                                    </Badge>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit whitespace-nowrap">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Insufficient
+                                      </Badge>
+                                      <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                        Min: {minimumRequired.toFixed(4)} LANA
+                                      </p>
+                                    </div>
+                                  )
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
+                                  <Button 
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        const { data: existingProfile } = await supabase
+                                          .from("profiles")
+                                          .select("id, selected_wallet")
+                                          .eq("nostr_hex_id", session.nostrHexId)
+                                          .maybeSingle();
+                                        
+                                        if (existingProfile?.selected_wallet) {
+                                          const { data: existingWallets, error: walletsError } = await supabase
+                                            .from("wallets")
+                                            .select("wallet_address")
+                                            .eq("profile_id", existingProfile.id)
+                                            .eq("wallet_type", "annuity");
+                                          
+                                          if (walletsError) {
+                                            console.error("Error checking wallets:", walletsError);
+                                          }
+                                          
+                                          if (existingWallets && existingWallets.length === 8) {
+                                            toast.success("Found existing annuity plan, loading preview...");
+                                            navigate("/preview-lana8wonder");
+                                            return;
+                                          }
+                                        }
+                                        
+                                        navigate('/assign-lana8wonder', { 
+                                          state: { 
+                                            sourceWallet: wallet.wallet_address,
+                                            balance: currentBalance,
+                                            minRequiredLana: depositAmount,
+                                            planCurrency: planCurrency,
+                                            exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
+                                          } 
+                                        });
+                                      } catch (error) {
+                                        console.error("Error checking existing wallets:", error);
+                                        toast.error("Failed to check existing wallets");
+                                      }
+                                    }}
+                                    className="text-xs whitespace-nowrap"
+                                  >
+                                    Assign to L8W
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
