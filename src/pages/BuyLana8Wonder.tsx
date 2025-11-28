@@ -19,6 +19,7 @@ const BuyLana8Wonder = () => {
   const [payee, setPayee] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
   const [reference, setReference] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +29,11 @@ const BuyLana8Wonder = () => {
   const [contactDetails, setContactDetails] = useState<string>('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
+
+  // Calculate LANA amount based on selected currency
+  const calculatedLanaAmount = params?.exchangeRates?.[selectedCurrency] 
+    ? Math.floor(100 / params.exchangeRates[selectedCurrency])
+    : 0;
 
   // Validate wallet address
   const validateWallet = async (address: string): Promise<boolean> => {
@@ -63,7 +69,8 @@ const BuyLana8Wonder = () => {
   const isFormValid = walletId.trim() !== '' && 
                       payee.trim() !== '' && 
                       selectedPayment !== null && 
-                      walletError === null;
+                      walletError === null &&
+                      params?.exchangeRates?.[selectedCurrency];
 
   // Fetch contact details from app_settings
   useEffect(() => {
@@ -260,10 +267,15 @@ const BuyLana8Wonder = () => {
         return;
       }
 
-      // Fetch exchange rate to calculate LANA amount for 100 EUR
-      const exchangeResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=lanacoin&vs_currencies=eur');
-      const exchangeData = await exchangeResponse.json();
-      const lanaAmount = 100 / exchangeData.lanacoin.eur;
+      // Check if exchange rate is available
+      if (!params?.exchangeRates?.[selectedCurrency]) {
+        toast.error('Exchange rate not available. Please wait for data to load.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Calculate LANA amount from Nostr exchange rates
+      const lanaAmount = 100 / params.exchangeRates[selectedCurrency];
 
       // Save to database
       const { error } = await supabase
@@ -409,6 +421,54 @@ const BuyLana8Wonder = () => {
                   </Button>
                 </div>
               )}
+
+              {/* Currency Selection */}
+              <div className="space-y-3">
+                <Label>Select Currency *</Label>
+                
+                {/* Currency buttons */}
+                <div className="flex gap-2">
+                  {params?.exchangeRates ? (
+                    Object.keys(params.exchangeRates).map((currency) => (
+                      <Button
+                        key={currency}
+                        type="button"
+                        variant={selectedCurrency === currency ? 'default' : 'outline'}
+                        onClick={() => setSelectedCurrency(currency as 'EUR' | 'USD' | 'GBP')}
+                        className="flex-1"
+                        disabled={isScanning}
+                      >
+                        {currency}
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading exchange rates...
+                    </div>
+                  )}
+                </div>
+
+                {/* Calculation display */}
+                {params?.exchangeRates?.[selectedCurrency] && (
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="text-center space-y-2">
+                        <p className="text-lg">
+                          <span className="font-bold">100 {selectedCurrency}</span>
+                          {' = '}
+                          <span className="font-bold text-primary text-2xl">
+                            {calculatedLanaAmount.toLocaleString()} LANA
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Exchange rate: {params.exchangeRates[selectedCurrency]} {selectedCurrency} per LANA
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
 
               {/* Payment Method Selection */}
               <div className="space-y-3">
