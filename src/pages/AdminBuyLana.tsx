@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy } from 'lucide-react';
 
 interface BuyLanaRecord {
   id: string;
@@ -178,6 +178,17 @@ const AdminBuyLana = () => {
     }
   };
 
+  // Copy Wallet ID to clipboard
+  const handleCopyWalletId = async (walletId: string) => {
+    try {
+      await navigator.clipboard.writeText(walletId);
+      toast.success('Wallet ID copied to clipboard');
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast.error('Failed to copy Wallet ID');
+    }
+  };
+
   if (isAdmin === null || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -248,7 +259,17 @@ const AdminBuyLana = () => {
                             {new Date(record.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {record.lana_wallet_id.slice(0, 12)}...
+                            <div className="flex items-center gap-2">
+                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
@@ -305,7 +326,17 @@ const AdminBuyLana = () => {
 
                         <div>
                           <div className="text-sm text-muted-foreground">Wallet ID</div>
-                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-mono text-xs break-all flex-1">{record.lana_wallet_id}</div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
@@ -394,7 +425,17 @@ const AdminBuyLana = () => {
                               : '-'}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {record.lana_wallet_id.slice(0, 12)}...
+                            <div className="flex items-center gap-2">
+                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
@@ -468,7 +509,17 @@ const AdminBuyLana = () => {
 
                         <div>
                           <div className="text-sm text-muted-foreground">Wallet ID</div>
-                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-mono text-xs break-all flex-1">{record.lana_wallet_id}</div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
@@ -569,7 +620,17 @@ const AdminBuyLana = () => {
                               : '-'}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {record.lana_wallet_id.slice(0, 12)}...
+                            <div className="flex items-center gap-2">
+                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
@@ -619,7 +680,17 @@ const AdminBuyLana = () => {
 
                         <div>
                           <div className="text-sm text-muted-foreground">Wallet ID</div>
-                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-mono text-xs break-all flex-1">{record.lana_wallet_id}</div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => handleCopyWalletId(record.lana_wallet_id)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
