@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { ripemd160 } from 'https://esm.sh/hash.js@1.1.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,47 +63,6 @@ async function sha256(data: Uint8Array): Promise<Uint8Array> {
 
 async function sha256d(data: Uint8Array): Promise<Uint8Array> {
   return sha256(await sha256(data));
-}
-
-async function ripemd160(data: Uint8Array): Promise<Uint8Array> {
-  const wasmCode = new Uint8Array([
-    0, 97, 115, 109, 1, 0, 0, 0, 1, 12, 2, 96, 2, 127, 127, 0, 96, 1, 127, 1, 127, 3, 3, 2, 0, 1,
-    5, 3, 1, 0, 1, 7, 17, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 4, 104, 97, 115, 104, 0, 1, 10,
-    236, 2, 2, 19, 0, 65, 0, 65, 128, 128, 192, 133, 7, 54, 2, 0, 65, 4, 65, 239, 205, 171, 152, 7,
-    54, 2, 0, 65, 8, 65, 152, 222, 30, 54, 2, 0, 65, 12, 65, 199, 173, 229, 198, 3, 54, 2, 0, 65,
-    16, 65, 198, 161, 213, 196, 1, 54, 2, 0, 11, 212, 2, 1, 13, 127, 32, 0, 40, 2, 0, 33, 1, 32, 0,
-    40, 2, 4, 33, 2, 32, 0, 40, 2, 8, 33, 3, 32, 0, 40, 2, 12, 33, 4, 32, 0, 40, 2, 16, 33, 5, 65,
-    0, 33, 6, 3, 64, 32, 1, 32, 2, 32, 3, 115, 32, 4, 113, 32, 3, 115, 106, 32, 6, 65, 2, 116, 32,
-    0, 106, 40, 2, 20, 106, 106, 34, 7, 65, 11, 116, 32, 7, 65, 21, 118, 114, 33, 7, 32, 5, 32, 1,
-    106, 34, 8, 65, 10, 116, 32, 8, 65, 22, 118, 114, 33, 1, 32, 7, 32, 4, 106, 33, 5, 32, 3, 33,
-    4, 32, 2, 33, 3, 32, 1, 33, 2, 32, 6, 65, 1, 106, 34, 6, 65, 16, 71, 13, 0, 11, 65, 0, 33, 6,
-    3, 64, 32, 1, 32, 2, 32, 4, 114, 32, 3, 113, 32, 4, 32, 3, 113, 114, 106, 32, 6, 65, 2, 116,
-    32, 0, 106, 40, 2, 20, 106, 65, 159, 142, 208, 208, 0, 106, 34, 7, 65, 11, 116, 32, 7, 65, 21,
-    118, 114, 33, 7, 32, 5, 32, 1, 106, 34, 8, 65, 10, 116, 32, 8, 65, 22, 118, 114, 33, 1, 32, 7,
-    32, 4, 106, 33, 5, 32, 3, 33, 4, 32, 2, 33, 3, 32, 1, 33, 2, 32, 6, 65, 7, 106, 65, 15, 113,
-    34, 6, 65, 5, 71, 13, 0, 11, 65, 0, 33, 6, 3, 64, 32, 1, 32, 2, 32, 3, 114, 32, 4, 113, 32, 3,
-    32, 4, 113, 114, 106, 32, 6, 65, 2, 116, 32, 0, 106, 40, 2, 20, 106, 65, 242, 195, 198, 162, 1,
-    106, 34, 7, 65, 11, 116, 32, 7, 65, 21, 118, 114, 33, 7, 32, 5, 32, 1, 106, 34, 8, 65, 10, 116,
-    32, 8, 65, 22, 118, 114, 33, 1, 32, 7, 32, 4, 106, 33, 5, 32, 3, 33, 4, 32, 2, 33, 3, 32, 1,
-    33, 2, 32, 6, 65, 3, 106, 65, 15, 113, 34, 6, 65, 13, 71, 13, 0, 11, 32, 0, 32, 0, 40, 2, 0,
-    32, 1, 106, 54, 2, 0, 32, 0, 32, 0, 40, 2, 4, 32, 2, 106, 54, 2, 4, 32, 0, 32, 0, 40, 2, 8, 32,
-    3, 106, 54, 2, 8, 32, 0, 32, 0, 40, 2, 12, 32, 4, 106, 54, 2, 12, 32, 0, 32, 0, 40, 2, 16, 32,
-    5, 106, 54, 2, 16, 32, 0, 11,
-  ]);
-  const wasmModule = await WebAssembly.instantiate(wasmCode);
-  const instance = wasmModule.instance as any;
-  const mem = new Uint8Array(instance.exports.memory.buffer);
-  const dataLen = data.length;
-  const totalLen = dataLen + 1 + (64 - ((dataLen + 9) % 64));
-  mem.set(data, 20);
-  mem[20 + dataLen] = 0x80;
-  for (let i = 20 + dataLen + 1; i < 20 + totalLen - 8; i++) mem[i] = 0;
-  const bitLen = dataLen * 8;
-  for (let i = 0; i < 8; i++) mem[20 + totalLen - 8 + i] = (bitLen >>> (i * 8)) & 0xff;
-  for (let offset = 0; offset < totalLen; offset += 64) {
-    instance.exports.hash(0, 20 + offset);
-  }
-  return mem.slice(0, 20);
 }
 
 async function base58CheckDecode(s: string): Promise<Uint8Array> {
@@ -201,10 +161,13 @@ function privateKeyToPublicKey(privateKeyHex: string): Uint8Array {
 }
 
 async function publicKeyToAddress(publicKey: Uint8Array): Promise<string> {
-  const hash = await sha256(publicKey);
-  const ripemd = await ripemd160(hash);
-  const prefix = new Uint8Array([0x30]);
-  const payload = new Uint8Array([...prefix, ...ripemd]);
+  const sha256HashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(publicKey));
+  const sha256Hash = new Uint8Array(sha256HashBuffer);
+  const hash160Array = ripemd160().update(Array.from(sha256Hash)).digest();
+  const hash160 = new Uint8Array(hash160Array);
+  const payload = new Uint8Array(21);
+  payload[0] = 0x30;  // LanaCoin prefix
+  payload.set(hash160, 1);
   return await base58CheckEncode(payload);
 }
 
