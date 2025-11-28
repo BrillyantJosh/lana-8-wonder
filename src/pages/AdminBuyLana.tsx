@@ -218,7 +218,8 @@ const AdminBuyLana = () => {
 
             {/* Pending Tab */}
             <TabsContent value="pending">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -278,11 +279,88 @@ const AdminBuyLana = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {pendingRecords.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No pending records
+                  </div>
+                ) : (
+                  pendingRecords.map((record) => (
+                    <Card key={record.id} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Date</div>
+                            <div className="font-medium">
+                              {new Date(record.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">Payment</div>
+                            <div className="font-medium capitalize">{record.payment_method}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Wallet ID</div>
+                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Payee</div>
+                            <div className="font-medium">{record.payee}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="font-medium">{record.phone_number || '-'}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <div className="text-xs text-muted-foreground">LANA</div>
+                            <div className="font-semibold text-sm">
+                              {record.lana_amount.toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Amount</div>
+                            <div className="font-semibold text-sm">{record.payment_amount || '-'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Currency</div>
+                            <div className="font-semibold text-sm">{record.currency || '-'}</div>
+                          </div>
+                        </div>
+
+                        <Button
+                          className="w-full"
+                          onClick={() => handleMarkAsPaid(record.id)}
+                          disabled={processingIds.has(record.id)}
+                        >
+                          {processingIds.has(record.id) ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            'Mark as Paid'
+                          )}
+                        </Button>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
 
             {/* Pending for TX Tab */}
             <TabsContent value="pending-tx">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -360,11 +438,104 @@ const AdminBuyLana = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {pendingTxRecords.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No records pending for transaction ID
+                  </div>
+                ) : (
+                  pendingTxRecords.map((record) => (
+                    <Card key={record.id} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Created</div>
+                            <div className="font-medium">
+                              {new Date(record.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">Paid On</div>
+                            <div className="font-medium">
+                              {record.paid_on_account
+                                ? new Date(record.paid_on_account).toLocaleDateString()
+                                : '-'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Wallet ID</div>
+                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Payee</div>
+                            <div className="font-medium">{record.payee}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="font-medium">{record.phone_number || '-'}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <div className="text-xs text-muted-foreground">LANA</div>
+                            <div className="font-semibold text-sm">
+                              {record.lana_amount.toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Amount</div>
+                            <div className="font-semibold text-sm">{record.payment_amount || '-'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Currency</div>
+                            <div className="font-semibold text-sm">{record.currency || '-'}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-2">Transaction ID</div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter TX ID"
+                              value={txInputs[record.id] || ''}
+                              onChange={(e) =>
+                                setTxInputs((prev) => ({
+                                  ...prev,
+                                  [record.id]: e.target.value,
+                                }))
+                              }
+                              disabled={processingIds.has(record.id)}
+                            />
+                            <Button
+                              onClick={() => handleSaveTx(record.id)}
+                              disabled={processingIds.has(record.id)}
+                            >
+                              {processingIds.has(record.id) ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                'Save'
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
 
             {/* Paid Tab */}
             <TabsContent value="paid">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -417,6 +588,78 @@ const AdminBuyLana = () => {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {paidRecords.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No paid records
+                  </div>
+                ) : (
+                  paidRecords.map((record) => (
+                    <Card key={record.id} className="p-4 border-green-500/20">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Created</div>
+                            <div className="font-medium">
+                              {new Date(record.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">Paid On</div>
+                            <div className="font-medium">
+                              {record.paid_on_account
+                                ? new Date(record.paid_on_account).toLocaleDateString()
+                                : '-'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground">Wallet ID</div>
+                          <div className="font-mono text-xs break-all">{record.lana_wallet_id}</div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Payee</div>
+                            <div className="font-medium">{record.payee}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="font-medium">{record.phone_number || '-'}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <div className="text-xs text-muted-foreground">LANA</div>
+                            <div className="font-semibold text-sm">
+                              {record.lana_amount.toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Amount</div>
+                            <div className="font-semibold text-sm">{record.payment_amount || '-'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Currency</div>
+                            <div className="font-semibold text-sm">{record.currency || '-'}</div>
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-green-500/10 rounded-lg">
+                          <div className="text-sm text-muted-foreground">Transaction ID</div>
+                          <div className="font-mono text-xs break-all mt-1">
+                            {record.tx || '-'}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>
