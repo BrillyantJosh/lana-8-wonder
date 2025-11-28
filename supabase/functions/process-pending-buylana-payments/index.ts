@@ -233,29 +233,74 @@ class UTXOSelector {
 }
 
 // ===== Electrum Communication =====
-function connectElectrum(
-  host: string,
-  port: number,
-  protocol: string
-): Promise<Deno.TlsConn | Deno.TcpConn> {
-  if (protocol === 'ssl') {
-    return Deno.connectTls({ hostname: host, port });
-  } else {
-    return Deno.connect({ hostname: host, port });
+async function connectElectrum(servers: any[], maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (const server of servers) {
+      try {
+        console.log(`🔌 Connecting to ${server.host}:${server.port} (attempt ${attempt + 1})`);
+        const conn = await Deno.connect({ hostname: server.host, port: server.port });
+        console.log(`✅ Connected to ${server.host}:${server.port}`);
+        return conn;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+        console.error(`❌ Failed to connect to ${server.host}:${server.port}:`, errorMessage);
+      }
+    }
+    if (attempt < maxRetries - 1) {
+      console.log(`⏳ Waiting 1 second before retry...`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
+  throw new Error('Failed to connect to any Electrum server');
 }
 
-async function electrumCall(conn: Deno.TlsConn | Deno.TcpConn, method: string, params: any[]) {
-  const request = JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }) + '\n';
-  await conn.write(new TextEncoder().encode(request));
-  const buf = new Uint8Array(1024 * 1024);
-  const n = await conn.read(buf);
-  if (!n) throw new Error('No response from Electrum');
-  const response = new TextDecoder().decode(buf.slice(0, n));
-  const lines = response.trim().split('\n');
-  const json = JSON.parse(lines[lines.length - 1]);
-  if (json.error) throw new Error(`Electrum error: ${JSON.stringify(json.error)}`);
-  return json.result;
+async function electrumCall(method: string, params: any[], servers: any[], timeout = 30000) {
+  let conn = null;
+  try {
+    conn = await connectElectrum(servers);
+    const request = { id: Date.now(), method, params };
+    const requestData = JSON.stringify(request) + '\n';
+    console.log(`📤 Electrum ${method}:`, params);
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Electrum call timeout after ${timeout}ms`)), timeout);
+    });
+    
+    const callPromise = (async () => {
+      await conn.write(new TextEncoder().encode(requestData));
+      let responseText = '';
+      const buffer = new Uint8Array(8192);
+      
+      while (true) {
+        const bytesRead = await conn.read(buffer);
+        if (!bytesRead) break;
+        const chunk = new TextDecoder().decode(buffer.slice(0, bytesRead));
+        responseText += chunk;
+        if (responseText.includes('\n')) break;
+      }
+      
+      if (!responseText) throw new Error('No response from Electrum server');
+      responseText = responseText.trim();
+      console.log(`📥 Electrum response (${responseText.length} bytes):`, responseText.substring(0, 500));
+      
+      const response = JSON.parse(responseText);
+      if (response.error) throw new Error(`Electrum error: ${JSON.stringify(response.error)}`);
+      return response.result;
+    })();
+    
+    return await Promise.race([callPromise, timeoutPromise]);
+  } catch (error) {
+    console.error(`❌ Electrum call error for ${method}:`, error);
+    throw error;
+  } finally {
+    if (conn) {
+      try {
+        conn.close();
+      } catch (e) {
+        console.warn('Warning: Failed to close connection:', e);
+      }
+    }
+  }
 }
 
 function parseScriptPubkeyFromRawTx(rawTxHex: string, vout: number): string {
@@ -288,9 +333,7 @@ async function buildSignedTx(
   privateKeyWIF: string,
   utxos: UTXO[],
   feePerKB: number,
-  electrumHost: string,
-  electrumPort: number,
-  electrumProtocol: string
+  servers: any[]
 ): Promise<string> {
   const privateKeyBytes = await base58CheckDecode(privateKeyWIF);
   const privateKeyHex = uint8ArrayToHex(privateKeyBytes);
@@ -324,17 +367,11 @@ async function buildSignedTx(
   }
 
   // Fetch scriptPubKeys for all UTXOs
-  const conn = await connectElectrum(electrumHost, electrumPort, electrumProtocol);
   const scriptPubKeys: string[] = [];
-  
-  try {
-    for (const utxo of utxos) {
-      const rawTx = await electrumCall(conn, 'blockchain.transaction.get', [utxo.txid]);
-      const scriptPubKey = parseScriptPubkeyFromRawTx(rawTx, utxo.vout);
-      scriptPubKeys.push(scriptPubKey);
-    }
-  } finally {
-    conn.close();
+  for (const utxo of utxos) {
+    const rawTx = await electrumCall('blockchain.transaction.get', [utxo.txid], servers);
+    const scriptPubKey = parseScriptPubkeyFromRawTx(rawTx, utxo.vout);
+    scriptPubKeys.push(scriptPubKey);
   }
 
   // Build transaction hex
@@ -521,31 +558,21 @@ Deno.serve(async (req) => {
 
     console.log('📋 Recipients:', recipients);
 
-    // 6. Electrum configuration (using same server as balance checker)
-    const electrumHost = 'electrum1.lanacoin.com';
-    const electrumPort = 5097;
-    const electrumProtocol = 'tcp';
+    // 6. Electrum configuration (using same servers as working function)
+    const servers = [
+      { host: "electrum1.lanacoin.com", port: 5097 },
+      { host: "electrum2.lanacoin.com", port: 5097 }
+    ];
     const feePerKB = 1000;
 
-    // 7. Fetch UTXOs
+    // 7. Fetch UTXOs using blockchain.address.listunspent (supported method)
     console.log('💰 Fetching UTXOs for sender address...');
-    const conn1 = await connectElectrum(electrumHost, electrumPort, electrumProtocol);
-    let utxos: UTXO[];
-    
-    try {
-      const scriptHash = uint8ArrayToHex(
-        (await sha256(hexToUint8Array('76a914' + uint8ArrayToHex(await base58CheckDecode(senderAddress)) + '88ac')))
-          .reverse()
-      );
-      const utxoList = await electrumCall(conn1, 'blockchain.scripthash.listunspent', [scriptHash]);
-      utxos = utxoList.map((u: any) => ({
-        txid: u.tx_hash,
-        vout: u.tx_pos,
-        value: u.value,
-      }));
-    } finally {
-      conn1.close();
-    }
+    const utxoList = await electrumCall('blockchain.address.listunspent', [senderAddress], servers);
+    const utxos: UTXO[] = utxoList.map((u: any) => ({
+      txid: u.tx_hash,
+      vout: u.tx_pos,
+      value: u.value,
+    }));
 
     console.log(`✅ Found ${utxos.length} UTXOs`);
 
@@ -579,23 +606,14 @@ Deno.serve(async (req) => {
       privateKeyWIF,
       selectedUtxos,
       feePerKB,
-      electrumHost,
-      electrumPort,
-      electrumProtocol
+      servers
     );
 
     console.log('✅ Transaction signed');
 
     // 11. Broadcast transaction
     console.log('📡 Broadcasting transaction...');
-    const conn2 = await connectElectrum(electrumHost, electrumPort, electrumProtocol);
-    let txid: string;
-    
-    try {
-      txid = await electrumCall(conn2, 'blockchain.transaction.broadcast', [signedTxHex]);
-    } finally {
-      conn2.close();
-    }
+    const txid = await electrumCall('blockchain.transaction.broadcast', [signedTxHex], servers);
 
     console.log(`✅ Transaction broadcasted! TXID: ${txid}`);
 
