@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Loader2, QrCode, CheckCircle2, XCircle, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,7 @@ const AssignLana8Wonder = () => {
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [walletsGenerated, setWalletsGenerated] = useState(false);
 
   const sourceWallet = location.state?.sourceWallet;
   const sourceBalance = location.state?.balance;
@@ -285,6 +287,7 @@ const AssignLana8Wonder = () => {
         userName
       });
       
+      setWalletsGenerated(true);
       toast.success("Wallets generated successfully! PDF has been downloaded.");
     } catch (error) {
       console.error("Error generating wallets:", error);
@@ -575,6 +578,14 @@ const AssignLana8Wonder = () => {
             ))}
           </CardContent>
         </Card>
+
+        {walletsGenerated && (
+          <Alert variant="destructive" className="mt-6">
+            <AlertDescription className="text-sm">
+              <strong>Warning:</strong> The PDF document will be deleted after you press Create Plan. If you lose the data from the PDF file, the wallets are lost forever.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="mt-6 flex justify-end gap-4">
           <Button variant="outline" onClick={() => navigate("/create-lana8wonder")}>
