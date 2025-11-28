@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
 import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const Login = () => {
   const { t, i18n } = useTranslation();
@@ -188,6 +189,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2 px-4 sm:px-6">
           <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
