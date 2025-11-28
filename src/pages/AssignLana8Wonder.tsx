@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, QrCode, CheckCircle2, XCircle, X } from "lucide-react";
+import { ArrowLeft, Loader2, QrCode, CheckCircle2, XCircle, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { Html5Qrcode } from "html5-qrcode";
 import { getCurrencySymbol } from "@/lib/utils";
 import { validateLanaAddress } from "@/lib/walletValidation";
+import { generate8Wallets } from "@/lib/walletGenerator";
+import { generateWalletsPDF } from "@/lib/pdfGenerator";
+import { GenerateWalletsDialog } from "@/components/GenerateWalletsDialog";
 
 interface WalletValidation {
   address: string;
@@ -37,6 +40,8 @@ const AssignLana8Wonder = () => {
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const sourceWallet = location.state?.sourceWallet;
   const sourceBalance = location.state?.balance;
@@ -241,6 +246,55 @@ const AssignLana8Wonder = () => {
     setIsScanning(false);
   };
 
+  const handleGenerateWallets = async () => {
+    setIsGenerating(true);
+    try {
+      // Generate 8 wallets
+      const generatedWallets = await generate8Wallets();
+      
+      // Update wallet addresses in the form
+      const newWallets = generatedWallets.map(w => ({
+        address: w.address,
+        balance: 0,
+        isValid: true,
+        isChecking: false,
+      }));
+      setWallets(newWallets);
+      
+      // Get user name from Nostr profile
+      const sessionData = sessionStorage.getItem("lana_session");
+      let userName = "Anonymous User";
+      
+      if (sessionData) {
+        try {
+          const session = JSON.parse(sessionData);
+          const nostrProfile = session.nostrProfile;
+          if (nostrProfile?.name) {
+            userName = nostrProfile.name;
+          } else if (nostrProfile?.display_name) {
+            userName = nostrProfile.display_name;
+          }
+        } catch (error) {
+          console.error("Error parsing session:", error);
+        }
+      }
+      
+      // Generate PDF
+      await generateWalletsPDF({
+        wallets: generatedWallets,
+        userName
+      });
+      
+      toast.success("Wallets generated successfully! PDF has been downloaded.");
+    } catch (error) {
+      console.error("Error generating wallets:", error);
+      toast.error("Failed to generate wallets. Please try again.");
+    } finally {
+      setIsGenerating(false);
+      setShowGenerateDialog(false);
+    }
+  };
+
   const handleCreatePlan = async () => {
     if (!allWalletsValid) return;
     
@@ -432,10 +486,32 @@ const AssignLana8Wonder = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Annuity Wallet Accounts (8 Required)</CardTitle>
-            <CardDescription>
-              All wallets must be empty (balance = 0) or new/unregistered
-            </CardDescription>
+            <div className="flex items-start justify-between">
+              <div className="space-y-1.5">
+                <CardTitle>Annuity Wallet Accounts (8 Required)</CardTitle>
+                <CardDescription>
+                  All wallets must be empty (balance = 0) or new/unregistered
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={() => setShowGenerateDialog(true)}
+                disabled={isGenerating}
+                size="lg"
+                className="ml-4"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Wallets
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {wallets.map((wallet, index) => (
@@ -512,6 +588,12 @@ const AssignLana8Wonder = () => {
             Create Plan
           </Button>
         </div>
+
+        <GenerateWalletsDialog
+          open={showGenerateDialog}
+          onOpenChange={setShowGenerateDialog}
+          onConfirm={handleGenerateWallets}
+        />
       </div>
     </div>
   );
