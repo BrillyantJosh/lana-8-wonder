@@ -365,8 +365,7 @@ const AssignLana8Wonder = () => {
       const { error: walletsInsertError } = await supabase
         .from("wallets")
         .upsert(walletsToInsert, { 
-          onConflict: "profile_id,wallet_address",
-          ignoreDuplicates: true 
+          onConflict: "profile_id,wallet_address"
         });
       
       if (walletsInsertError) {
