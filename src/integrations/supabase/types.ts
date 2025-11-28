@@ -44,11 +44,13 @@ export type Database = {
       buy_lana: {
         Row: {
           created_at: string
+          currency: string | null
           id: string
           lana_amount: number
           lana_wallet_id: string
           paid_on_account: string | null
           payee: string
+          payment_amount: number | null
           payment_method: string
           phone_number: string | null
           reference: string | null
@@ -57,11 +59,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string | null
           id?: string
           lana_amount: number
           lana_wallet_id: string
           paid_on_account?: string | null
           payee: string
+          payment_amount?: number | null
           payment_method: string
           phone_number?: string | null
           reference?: string | null
@@ -70,11 +74,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string | null
           id?: string
           lana_amount?: number
           lana_wallet_id?: string
           paid_on_account?: string | null
           payee?: string
+          payment_amount?: number | null
           payment_method?: string
           phone_number?: string | null
           reference?: string | null

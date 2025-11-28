@@ -48,6 +48,24 @@ const BuyLana8Wonder = () => {
       setWalletError(result.error || 'Invalid wallet address');
       return false;
     }
+
+    // Check if wallet already exists in database
+    const { data: existingWallet, error: dbError } = await supabase
+      .from('buy_lana')
+      .select('id')
+      .eq('lana_wallet_id', address)
+      .maybeSingle();
+
+    if (dbError) {
+      console.error('Error checking wallet:', dbError);
+      setWalletError('Error validating wallet. Please try again.');
+      return false;
+    }
+
+    if (existingWallet) {
+      setWalletError('This wallet address has already been used for a purchase');
+      return false;
+    }
     
     setWalletError(null);
     return true;
@@ -249,24 +267,6 @@ const BuyLana8Wonder = () => {
     setIsSubmitting(true);
 
     try {
-      // Check if wallet ID already exists in buy_lana table
-      const { data: existingWallet, error: checkError } = await supabase
-        .from('buy_lana')
-        .select('lana_wallet_id')
-        .eq('lana_wallet_id', walletId)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking wallet:', checkError);
-        throw checkError;
-      }
-
-      if (existingWallet) {
-        toast.error('This wallet has already been used for a reservation. It is not possible to reserve or purchase twice with the same wallet.');
-        setIsSubmitting(false);
-        return;
-      }
-
       // Check if exchange rate is available
       if (!params?.exchangeRates?.[selectedCurrency]) {
         toast.error('Exchange rate not available. Please wait for data to load.');
@@ -286,7 +286,9 @@ const BuyLana8Wonder = () => {
           payee: payee,
           reference: reference,
           payment_method: selectedPayment,
-          phone_number: phoneNumber || null
+          phone_number: phoneNumber || null,
+          currency: selectedCurrency,
+          payment_amount: 100
         });
 
       if (error) throw error;
