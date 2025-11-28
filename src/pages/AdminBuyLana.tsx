@@ -19,6 +19,8 @@ interface BuyLanaRecord {
   phone_number: string | null;
   paid_on_account: string | null;
   tx: string | null;
+  currency: string | null;
+  payment_amount: number | null;
 }
 
 const AdminBuyLana = () => {
@@ -223,7 +225,9 @@ const AdminBuyLana = () => {
                       <TableHead>Date</TableHead>
                       <TableHead>Wallet ID</TableHead>
                       <TableHead>Payee</TableHead>
-                      <TableHead>Amount</TableHead>
+                      <TableHead>LANA Amount</TableHead>
+                      <TableHead>Payment Amount</TableHead>
+                      <TableHead>Currency</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Action</TableHead>
@@ -232,7 +236,7 @@ const AdminBuyLana = () => {
                   <TableBody>
                     {pendingRecords.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground">
                           No pending records
                         </TableCell>
                       </TableRow>
@@ -247,6 +251,12 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
+                          <TableCell className="font-semibold">
+                            {record.payment_amount || '-'}
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {record.currency || '-'}
+                          </TableCell>
                           <TableCell className="capitalize">{record.payment_method}</TableCell>
                           <TableCell>{record.phone_number || '-'}</TableCell>
                           <TableCell>
@@ -280,7 +290,9 @@ const AdminBuyLana = () => {
                       <TableHead>Paid On</TableHead>
                       <TableHead>Wallet ID</TableHead>
                       <TableHead>Payee</TableHead>
-                      <TableHead>Amount</TableHead>
+                      <TableHead>LANA Amount</TableHead>
+                      <TableHead>Payment Amount</TableHead>
+                      <TableHead>Currency</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Transaction ID</TableHead>
                     </TableRow>
@@ -288,7 +300,7 @@ const AdminBuyLana = () => {
                   <TableBody>
                     {pendingTxRecords.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground">
                           No records pending for transaction ID
                         </TableCell>
                       </TableRow>
@@ -308,6 +320,12 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
+                          <TableCell className="font-semibold">
+                            {record.payment_amount || '-'}
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {record.currency || '-'}
+                          </TableCell>
                           <TableCell>{record.phone_number || '-'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -354,7 +372,9 @@ const AdminBuyLana = () => {
                       <TableHead>Paid On</TableHead>
                       <TableHead>Wallet ID</TableHead>
                       <TableHead>Payee</TableHead>
-                      <TableHead>Amount</TableHead>
+                      <TableHead>LANA Amount</TableHead>
+                      <TableHead>Payment Amount</TableHead>
+                      <TableHead>Currency</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Transaction ID</TableHead>
                     </TableRow>
@@ -362,7 +382,7 @@ const AdminBuyLana = () => {
                   <TableBody>
                     {paidRecords.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground">
                           No paid records
                         </TableCell>
                       </TableRow>
@@ -382,6 +402,12 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
                           <TableCell>{record.lana_amount.toLocaleString()} LANA</TableCell>
+                          <TableCell className="font-semibold">
+                            {record.payment_amount || '-'}
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {record.currency || '-'}
+                          </TableCell>
                           <TableCell>{record.phone_number || '-'}</TableCell>
                           <TableCell className="font-mono text-xs">
                             {record.tx || '-'}
