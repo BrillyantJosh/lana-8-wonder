@@ -10,6 +10,7 @@ import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 // Helper function to format numbers with thousands separator
 const formatNumber = (value: number, decimals: number = 4): string => {
@@ -206,7 +207,8 @@ const Dashboard = () => {
             <h2 className="text-xl sm:text-2xl font-bold">Lana8Wonder Dashboard</h2>
             <p className="text-sm text-muted-foreground">Your Annuity Plan</p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto items-center">
+            <LanguageSelector />
             {isAdmin && (
               <Button 
                 variant="secondary" 

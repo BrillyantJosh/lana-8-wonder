@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { getCurrencySymbol } from "@/lib/utils";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const Index = () => {
   const { params, loading, error } = useNostrLanaParams();
@@ -71,9 +72,12 @@ const Index = () => {
             </Dialog>
           </div>
           
-          <Button variant="default" size="sm" asChild className="flex-shrink-0 text-xs sm:text-sm">
-            <Link to="/login">Log in</Link>
-          </Button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <LanguageSelector />
+            <Button variant="default" size="sm" asChild className="text-xs sm:text-sm">
+              <Link to="/login">Log in</Link>
+            </Button>
+          </div>
         </div>
       </nav>
 
