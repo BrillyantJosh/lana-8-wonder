@@ -67,6 +67,7 @@ export interface LanaProfile {
     verified?: boolean;
     primary?: boolean;
   }>;
+  tags?: string[][];  // Add tags array from event
 }
 
 export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[]): Promise<LanaProfile | null> {
@@ -102,6 +103,7 @@ export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[])
     
     try {
       const profile: LanaProfile = JSON.parse(latestEvent.content);
+      profile.tags = latestEvent.tags;  // Include event tags in profile
       console.log("Found profile:", profile);
       return profile;
     } catch (error) {

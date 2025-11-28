@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ interface WalletValidation {
 }
 
 const AssignLana8Wonder = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { params } = useNostrLanaParams();
@@ -425,20 +427,20 @@ const AssignLana8Wonder = () => {
         <div className="mb-6">
           <Button variant="ghost" onClick={() => navigate("/create-lana8wonder")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('common.back')}
           </Button>
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Assign Wallets to Lana 8 Wonder</h2>
+          <h2 className="text-2xl font-bold mb-2">{t('assignLana8Wonder.title')}</h2>
           <p className="text-muted-foreground">
-            Enter or scan 8 empty wallet addresses for your annuity plan
+            {t('assignLana8Wonder.description')}
           </p>
         </div>
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Source Wallet</CardTitle>
+            <CardTitle>{t('sendLana.sourceWallet')}</CardTitle>
             <CardDescription>
               This wallet will fund the Lana 8 Wonder plan
             </CardDescription>
@@ -446,16 +448,16 @@ const AssignLana8Wonder = () => {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Wallet Address</p>
+                <p className="text-sm text-muted-foreground">{t('assignLana8Wonder.address')}</p>
                 <p className="font-mono text-sm break-all">{sourceWallet}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Available Balance</p>
+                <p className="text-sm text-muted-foreground">{t('sendLana.availableBalance')}</p>
                 <p className="font-semibold">{sourceBalance?.toFixed(2) || "0.00"} LANA</p>
               </div>
               
               <div className="pt-4 border-t">
-                <p className="text-sm font-semibold mb-3">Transaction Breakdown</p>
+                <p className="text-sm font-semibold mb-3">{t('assignLana8Wonder.transactionBreakdown')}</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
@@ -491,7 +493,7 @@ const AssignLana8Wonder = () => {
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="space-y-1.5">
-                <CardTitle>Annuity Wallet Accounts (8 Required)</CardTitle>
+                <CardTitle>{t('assignLana8Wonder.walletAssignment')}</CardTitle>
                 <CardDescription>
                   All wallets must be empty (balance = 0) or new/unregistered
                 </CardDescription>
@@ -505,12 +507,12 @@ const AssignLana8Wonder = () => {
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Generating...</span>
+                    <span className="ml-2">{t('common.loading')}</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    <span className="ml-2">Generate Wallets</span>
+                    <span className="ml-2">{t('assignLana8Wonder.generateWallets')}</span>
                   </>
                 )}
               </Button>
@@ -520,7 +522,7 @@ const AssignLana8Wonder = () => {
             {wallets.map((wallet, index) => (
               <div key={index} className="space-y-2">
                 <Label htmlFor={`wallet-${index}`}>
-                  Wallet {index + 1}
+                  {t('assignLana8Wonder.walletLabel')} {index + 1}
                 </Label>
                 <div className="flex gap-2">
                   <div className="flex-1 space-y-2">
@@ -557,13 +559,13 @@ const AssignLana8Wonder = () => {
                           <>
                             <CheckCircle2 className="h-4 w-4 text-green-600" />
                             <Badge variant="default" className="bg-green-600">
-                              Valid - Empty Wallet
+                              {t('assignLana8Wonder.valid')}
                             </Badge>
                           </>
                         ) : (
                           <>
                             <XCircle className="h-4 w-4 text-destructive" />
-                            <Badge variant="destructive">Invalid</Badge>
+                            <Badge variant="destructive">{t('assignLana8Wonder.invalid')}</Badge>
                           </>
                         )}
                       </div>
@@ -582,21 +584,21 @@ const AssignLana8Wonder = () => {
         {walletsGenerated && (
           <Alert variant="destructive" className="mt-6">
             <AlertDescription className="text-sm">
-              <strong>Warning:</strong> The PDF document will be deleted after you press Create Plan. If you lose the data from the PDF file, the wallets are lost forever.
+              <strong>{t('assignLana8Wonder.warningTitle')}:</strong> {t('assignLana8Wonder.warningMessage')}
             </AlertDescription>
           </Alert>
         )}
 
         <div className="mt-6 flex justify-end gap-4">
           <Button variant="outline" onClick={() => navigate("/create-lana8wonder")}>
-            Cancel
+            {t('assignLana8Wonder.cancel')}
           </Button>
           <Button
             disabled={!allWalletsValid}
             onClick={handleCreatePlan}
             className={allWalletsValid ? "bg-primary hover:bg-primary/90" : ""}
           >
-            Create Plan
+            {t('assignLana8Wonder.createPlan')}
           </Button>
         </div>
 

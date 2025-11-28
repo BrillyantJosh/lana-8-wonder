@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 
 const Login = () => {
+  const { t, i18n } = useTranslation();
   const [wif, setWif] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -136,11 +138,24 @@ const Login = () => {
       const profile = await fetchKind0Profile(ids.nostrHexId, params.relays);
       
       if (!profile) {
-        toast.error("No profile found. Please create a profile first and wait 24 hours before logging in.");
+        toast.error(t('login.profileNotFound'));
         return;
       }
 
-      toast.success("Profile found!");
+      toast.success(t('login.loginSuccess'));
+
+      // Extract language from KIND 0 profile tags
+      const langTag = profile.tags?.find((tag: string[]) => tag[0] === 'lang');
+      const userLanguage = langTag ? langTag[1] : 'en';
+      
+      // Map BCP-47 codes to supported languages (en, sl, de, it)
+      const baseLang = userLanguage.split('-')[0]; // Extract base language (e.g., 'en' from 'en-US')
+      const supportedLanguages = ['en', 'sl', 'de', 'it'];
+      const finalLanguage = supportedLanguages.includes(baseLang) ? baseLang : 'en';
+      
+      // Store language preference and change i18n language
+      sessionStorage.setItem('userLanguage', finalLanguage);
+      i18n.changeLanguage(finalLanguage);
 
       // Store session with profile data
       const lanaSession = {
@@ -178,19 +193,19 @@ const Login = () => {
           <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
             <KeyRound className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
           </div>
-          <CardTitle className="text-xl sm:text-2xl">LANA Login</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl">{t('login.title')}</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
-            Enter your LANA WIF key or scan QR code
+            {t('login.wifPlaceholder')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="wif" className="text-sm">WIF Key</Label>
+              <Label htmlFor="wif" className="text-sm">{t('login.wifLabel')}</Label>
               <Input
                 id="wif"
                 type="password"
-                placeholder="Enter your WIF key..."
+                placeholder={t('login.wifPlaceholder')}
                 value={wif}
                 onChange={(e) => setWif(e.target.value)}
                 disabled={isScanning}
@@ -210,17 +225,17 @@ const Login = () => {
                   onClick={startScanning}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
-                  Scan QR Code
+                  {t('login.scanQR')}
                 </Button>
 
                 <Button type="submit" className="w-full text-sm" disabled={!wif.trim() || isProcessing}>
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
+                      {t('login.processing')}
                     </>
                   ) : (
-                    "Log In"
+                    t('login.loginButton')
                   )}
                 </Button>
               </div>
@@ -237,7 +252,7 @@ const Login = () => {
                   className="w-full text-sm"
                   onClick={stopScanning}
                 >
-                  Stop Scanning
+                  {t('login.stopScanning')}
                 </Button>
               </div>
             )}
