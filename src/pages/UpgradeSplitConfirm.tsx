@@ -485,8 +485,7 @@ const UpgradeSplitConfirm = () => {
   };
 
   const handleConfirmUpgrade = () => {
-    // TODO: Next step - process upgrade
-    navigate("/dashboard");
+    navigate("/upgrade-split-execute");
   };
 
   // Get current system split from Nostr params
@@ -972,12 +971,18 @@ const UpgradeSplitConfirm = () => {
             <Button 
               onClick={handleConfirmUpgrade} 
               size="lg"
-              className="bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-lg px-12 py-6"
+              disabled={youNeedToPay > 0}
+              className="bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-lg px-12 py-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <TrendingUp className="mr-2 h-5 w-5" />
               Confirm Upgrade to Split {splitSelection.splitNumber}
             </Button>
           </div>
+          {youNeedToPay > 0 && (
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              You need to have sufficient funds to proceed with the upgrade
+            </p>
+          )}
         </div>
       </div>
     </div>
