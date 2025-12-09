@@ -10,6 +10,13 @@ import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Search, User, CheckCircle, XCircle } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 
+interface AllowedUser {
+  nostrHexId: string;
+  name?: string;
+  displayName?: string;
+  picture?: string;
+}
+
 interface NostrProfile {
   nostrHexId: string;
   name?: string;
@@ -28,6 +35,8 @@ const AdminAllowanceUpgrade = () => {
   const [searchResults, setSearchResults] = useState<NostrProfile[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<Set<string>>(new Set());
+  const [allowedUsersList, setAllowedUsersList] = useState<AllowedUser[]>([]);
+  const [loadingAllowed, setLoadingAllowed] = useState(false);
   const { params, loading: paramsLoading } = useNostrLanaParams();
 
   // Check if user is admin
@@ -68,25 +77,72 @@ const AdminAllowanceUpgrade = () => {
     checkAdminStatus();
   }, []);
 
-  // Fetch allowed users from database
+  // Fetch allowed users from database and their Nostr profiles
   const fetchAllowedUsers = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('nostr_hex_id')
-      .eq('allowed_upgrade', true);
-    
-    if (data) {
-      setAllowedUsers(new Set(data.map(p => p.nostr_hex_id)));
+    setLoadingAllowed(true);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('nostr_hex_id')
+        .eq('allowed_upgrade', true);
+      
+      if (data) {
+        setAllowedUsers(new Set(data.map(p => p.nostr_hex_id)));
+        
+        // Fetch Nostr profiles for allowed users
+        if (params?.relays && params.relays.length > 0 && data.length > 0) {
+          const pool = new SimplePool();
+          const hexIds = data.map(p => p.nostr_hex_id);
+          
+          try {
+            const filter: Filter = {
+              kinds: [0],
+              authors: hexIds
+            };
+            
+            const events = await pool.querySync(params.relays, filter);
+            
+            const usersList: AllowedUser[] = hexIds.map(hexId => {
+              const event = events.find(e => e.pubkey === hexId);
+              if (event) {
+                try {
+                  const content = JSON.parse(event.content);
+                  return {
+                    nostrHexId: hexId,
+                    name: content.name,
+                    displayName: content.display_name,
+                    picture: content.picture
+                  };
+                } catch {
+                  return { nostrHexId: hexId };
+                }
+              }
+              return { nostrHexId: hexId };
+            });
+            
+            setAllowedUsersList(usersList);
+            pool.close(params.relays);
+          } catch (error) {
+            console.error('Error fetching Nostr profiles:', error);
+            // Still set the list with just hex IDs
+            setAllowedUsersList(hexIds.map(hexId => ({ nostrHexId: hexId })));
+          }
+        } else {
+          setAllowedUsersList(data.map(p => ({ nostrHexId: p.nostr_hex_id })));
+        }
+      }
+    } finally {
+      setLoadingAllowed(false);
     }
   };
 
   useEffect(() => {
-    if (isAdmin === true) {
+    if (isAdmin === true && params?.relays) {
       fetchAllowedUsers();
     } else if (isAdmin === false) {
       navigate('/');
     }
-  }, [isAdmin, navigate]);
+  }, [isAdmin, navigate, params?.relays]);
 
   // Search for users on Nostr relays
   const handleSearch = async () => {
@@ -208,6 +264,22 @@ const AdminAllowanceUpgrade = () => {
         return newSet;
       });
 
+      // Update allowed users list
+      if (currentlyAllowed) {
+        setAllowedUsersList(prev => prev.filter(u => u.nostrHexId !== nostrHexId));
+      } else {
+        // Find profile from search results to add to list
+        const profile = searchResults.find(p => p.nostrHexId === nostrHexId);
+        if (profile) {
+          setAllowedUsersList(prev => [...prev, {
+            nostrHexId: profile.nostrHexId,
+            name: profile.name,
+            displayName: profile.display_name,
+            picture: profile.picture
+          }]);
+        }
+      }
+
       toast.success(currentlyAllowed ? 'Upgrade permission removed' : 'Upgrade permission granted');
     } catch (error) {
       console.error('Error updating allowance:', error);
@@ -242,6 +314,84 @@ const AdminAllowanceUpgrade = () => {
           </div>
           <AdminMenu />
         </div>
+
+        {/* Allowed Users Section */}
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Users with Upgrade Permission</h2>
+              <span className="text-sm text-muted-foreground">
+                {allowedUsersList.length} user(s)
+              </span>
+            </div>
+            
+            {loadingAllowed ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : allowedUsersList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No users have upgrade permission yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {allowedUsersList.map((user) => {
+                  const isProcessing = processingId === user.nostrHexId;
+
+                  return (
+                    <div
+                      key={user.nostrHexId}
+                      className="flex items-center gap-3 p-3 border rounded-lg bg-card"
+                    >
+                      {/* Avatar */}
+                      <div className="shrink-0">
+                        {user.picture ? (
+                          <img
+                            src={user.picture}
+                            alt={user.name || 'User'}
+                            className="w-10 h-10 rounded-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                            <User className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* User Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">
+                          {user.displayName || user.name || 'Unknown'}
+                        </div>
+                        <div className="text-xs font-mono text-muted-foreground truncate">
+                          {user.nostrHexId.slice(0, 12)}...{user.nostrHexId.slice(-8)}
+                        </div>
+                      </div>
+
+                      {/* Remove Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleAllowance(user.nostrHexId, true)}
+                        disabled={isProcessing}
+                        className="shrink-0"
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Remove'
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Search Section */}
         <Card className="p-6">
