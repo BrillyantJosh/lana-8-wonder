@@ -485,6 +485,11 @@ const UpgradeSplitConfirm = () => {
   };
 
   const handleConfirmUpgrade = () => {
+    // Store the fee and expired splits info for the execute page
+    sessionStorage.setItem("upgrade_expired_lana", JSON.stringify({
+      totalExpiredLana: expiredLanaInfo.expiredLana,
+      expiredSplits: expiredLanaInfo.expiredSplits
+    }));
     navigate("/upgrade-split-execute");
   };
 

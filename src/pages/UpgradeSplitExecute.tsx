@@ -357,25 +357,31 @@ const UpgradeSplitExecute = () => {
     });
   };
 
-  // Calculate expired LANA info (fee)
-  const expiredLanaInfo = useMemo(() => {
-    let expiredLana = 0;
-    const expiredSplits: number[] = [];
+  // Calculate expired LANA per account
+  const expiredLanaPerAccount = useMemo(() => {
+    const perAccount: Record<number, number> = {};
     
     accounts.forEach(account => {
+      let accountExpiredLana = 0;
       account.levels.forEach(level => {
         if (level.splitNumber <= currentSystemSplit) {
-          expiredLana += level.lanasOnSale;
-          if (!expiredSplits.includes(level.splitNumber)) {
-            expiredSplits.push(level.splitNumber);
-          }
+          accountExpiredLana += level.lanasOnSale;
         }
       });
+      perAccount[account.number] = accountExpiredLana;
     });
     
-    expiredSplits.sort((a, b) => a - b);
-    return { expiredLana, expiredSplits };
+    return perAccount;
   }, [accounts, currentSystemSplit]);
+
+  // Get stored fee from confirm page
+  const storedExpiredLanaInfo = useMemo(() => {
+    const stored = sessionStorage.getItem("upgrade_expired_lana");
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return null;
+  }, []);
 
   // Calculate what needs to be added to each wallet
   const walletDistribution = useMemo(() => {
@@ -385,8 +391,11 @@ const UpgradeSplitExecute = () => {
     const lanasPerAccount = totalLanas / 8;
 
     return existingPlan.accounts.map((planAccount, index) => {
+      const accountNumber = index + 1;
       const currentBalance = planWalletBalances[planAccount.wallet] || 0;
-      const requiredBalance = lanasPerAccount;
+      const expiredForThisAccount = expiredLanaPerAccount[accountNumber] || 0;
+      // Required balance is the initial allocation minus what's already been "sold" in expired splits
+      const requiredBalance = lanasPerAccount - expiredForThisAccount;
       const toAdd = Math.max(0, requiredBalance - currentBalance);
 
       return {
@@ -397,12 +406,13 @@ const UpgradeSplitExecute = () => {
         toAdd
       };
     });
-  }, [existingPlan, splitSelection, planWalletBalances, accounts]);
+  }, [existingPlan, splitSelection, planWalletBalances, accounts, expiredLanaPerAccount]);
 
   if (!session || !splitSelection) return null;
 
   const totalLanas = 88 / splitSelection.price;
-  const fee = expiredLanaInfo.expiredLana;
+  // Use the fee from the confirm page (stored in sessionStorage)
+  const fee = storedExpiredLanaInfo?.totalExpiredLana || 0;
 
   return (
     <div className="min-h-screen bg-background p-4">
