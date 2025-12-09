@@ -91,6 +91,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allowed_upgrade: boolean
           created_at: string
           id: string
           nostr_hex_id: string
@@ -101,6 +102,7 @@ export type Database = {
           wallet_registered: boolean | null
         }
         Insert: {
+          allowed_upgrade?: boolean
           created_at?: string
           id?: string
           nostr_hex_id: string
@@ -111,6 +113,7 @@ export type Database = {
           wallet_registered?: boolean | null
         }
         Update: {
+          allowed_upgrade?: boolean
           created_at?: string
           id?: string
           nostr_hex_id?: string
