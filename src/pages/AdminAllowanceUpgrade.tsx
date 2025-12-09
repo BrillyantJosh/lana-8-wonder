@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SimplePool, Filter, Event } from 'nostr-tools';
+import { SimplePool, Filter } from 'nostr-tools';
 import { supabase } from '@/integrations/supabase/client';
+import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Search, User, CheckCircle, XCircle } from 'lucide-react';
+import { AdminMenu } from '@/components/AdminMenu';
 
 interface NostrProfile {
   nostrHexId: string;
@@ -26,18 +28,7 @@ const AdminAllowanceUpgrade = () => {
   const [searchResults, setSearchResults] = useState<NostrProfile[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [allowedUsers, setAllowedUsers] = useState<Set<string>>(new Set());
-  const [relays, setRelays] = useState<string[]>([]);
-
-  // Get relays from session
-  useEffect(() => {
-    const sessionData = sessionStorage.getItem('lana_session');
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      if (session.relays && Array.isArray(session.relays)) {
-        setRelays(session.relays);
-      }
-    }
-  }, []);
+  const { params, loading: paramsLoading } = useNostrLanaParams();
 
   // Check if user is admin
   useEffect(() => {
@@ -104,8 +95,8 @@ const AdminAllowanceUpgrade = () => {
       return;
     }
 
-    if (relays.length === 0) {
-      toast.error('No relays available from session');
+    if (!params?.relays || params.relays.length === 0) {
+      toast.error('No relays available from system parameters');
       return;
     }
 
@@ -113,15 +104,16 @@ const AdminAllowanceUpgrade = () => {
     setSearchResults([]);
 
     const pool = new SimplePool();
+    const relayUrls = params.relays;
 
     try {
       // Search for KIND 0 profiles
       const filter: Filter = {
         kinds: [0],
-        limit: 50
+        limit: 100
       };
 
-      const events = await pool.querySync(relays, filter);
+      const events = await pool.querySync(relayUrls, filter);
       
       // Filter results based on search query
       const results: NostrProfile[] = [];
@@ -169,7 +161,7 @@ const AdminAllowanceUpgrade = () => {
       toast.error('Failed to search Nostr relays');
     } finally {
       setSearching(false);
-      pool.close(relays);
+      pool.close(relayUrls);
     }
   };
 
@@ -225,7 +217,7 @@ const AdminAllowanceUpgrade = () => {
     }
   };
 
-  if (isAdmin === null || loading) {
+  if (isAdmin === null || loading || paramsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -237,15 +229,18 @@ const AdminAllowanceUpgrade = () => {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold">Allowance to Upgrade</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold">Allowance to Upgrade</h1>
+          </div>
+          <AdminMenu />
         </div>
 
         {/* Search Section */}
@@ -266,7 +261,7 @@ const AdminAllowanceUpgrade = () => {
               />
               <Button 
                 onClick={handleSearch} 
-                disabled={searching}
+                disabled={searching || !params?.relays}
               >
                 {searching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -279,10 +274,10 @@ const AdminAllowanceUpgrade = () => {
               </Button>
             </div>
 
-            {relays.length > 0 && (
+            {params?.relays && params.relays.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Connected to {relays.length} relay(s): {relays.slice(0, 2).join(', ')}
-                {relays.length > 2 && ` +${relays.length - 2} more`}
+                Connected to {params.relays.length} relay(s): {params.relays.slice(0, 2).join(', ')}
+                {params.relays.length > 2 && ` +${params.relays.length - 2} more`}
               </p>
             )}
           </div>
