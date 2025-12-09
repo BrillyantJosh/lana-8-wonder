@@ -7,6 +7,8 @@ import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchKind88888, Lana8WonderPlan } from "@/lib/nostrClient";
+import { toast } from "sonner";
 
 interface TradingLevel {
   level: number;
@@ -201,6 +203,9 @@ const UpgradeSplitConfirm = () => {
   const [passiveAccountSplits, setPassiveAccountSplits] = useState<Set<number>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [existingPlan, setExistingPlan] = useState<Lana8WonderPlan | null>(null);
+  const [planWalletBalances, setPlanWalletBalances] = useState<Record<string, number>>({});
+  const [planBalancesLoading, setPlanBalancesLoading] = useState(false);
   const { params } = useNostrLanaParams();
 
   const selectedCurrency: 'EUR' | 'USD' | 'GBP' = 'EUR';
@@ -251,6 +256,55 @@ const UpgradeSplitConfirm = () => {
 
     if (session && params?.electrum) {
       loadWalletBalance();
+    }
+  }, [session, params]);
+
+  // Fetch existing plan and its wallet balances
+  useEffect(() => {
+    const loadExistingPlanAndBalances = async () => {
+      if (!session?.nostrHexId || !params?.relays || params.relays.length === 0) return;
+      
+      try {
+        // Fetch the existing plan from Nostr
+        const plan = await fetchKind88888(session.nostrHexId, params.relays);
+        
+        if (plan) {
+          setExistingPlan(plan);
+          
+          // Now fetch balances for all wallets in the plan
+          if (params?.electrum && params.electrum.length > 0) {
+            setPlanBalancesLoading(true);
+            
+            const walletAddresses = plan.accounts.map(acc => acc.wallet);
+            
+            const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+              body: { 
+                wallet_addresses: walletAddresses,
+                electrum_servers: params.electrum
+              },
+            });
+
+            if (error) throw error;
+
+            if (data?.success && data?.wallets) {
+              const balances: Record<string, number> = {};
+              data.wallets.forEach((w: { wallet_id: string; balance: number }) => {
+                balances[w.wallet_id] = w.balance || 0;
+              });
+              setPlanWalletBalances(balances);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading existing plan:", error);
+        toast.error("Failed to load existing plan wallets");
+      } finally {
+        setPlanBalancesLoading(false);
+      }
+    };
+
+    if (session && params?.relays) {
+      loadExistingPlanAndBalances();
     }
   }, [session, params]);
 
@@ -499,6 +553,88 @@ const UpgradeSplitConfirm = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Existing Plan Wallets Card */}
+          {existingPlan && (
+            <Card className="border-secondary/30 bg-gradient-to-r from-secondary/5 to-secondary/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-secondary" />
+                  Your Current Lana8Wonder Wallets
+                </CardTitle>
+                <CardDescription>
+                  All 8 account wallets from your existing plan ({existingPlan.currency})
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {planBalancesLoading ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    <span>Loading wallet balances...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {existingPlan.accounts.map((account) => {
+                      const balance = planWalletBalances[account.wallet];
+                      const hasBalance = balance !== undefined;
+                      const totalValue = hasBalance && splitSelection ? balance * splitSelection.price : 0;
+                      
+                      return (
+                        <div 
+                          key={account.account_id} 
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-background/50 rounded-lg border border-border/50 gap-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary font-bold">
+                              {account.account_id}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm">Account {account.account_id}</p>
+                              <p className="font-mono text-xs text-muted-foreground break-all">{account.wallet}</p>
+                            </div>
+                          </div>
+                          <div className="text-right sm:text-right pl-13 sm:pl-0">
+                            {hasBalance ? (
+                              <>
+                                <p className="font-bold text-lg text-foreground">
+                                  {formatNumber(balance)} <span className="text-sm text-muted-foreground">LANA</span>
+                                </p>
+                                {splitSelection && (
+                                  <p className="text-sm text-muted-foreground">
+                                    ≈ {currencySymbol}{formatNumber(totalValue)}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-muted-foreground text-sm">No balance data</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Total Summary */}
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-muted-foreground">Total in Plan Wallets:</span>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-secondary">
+                            {formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0))} 
+                            <span className="text-sm text-muted-foreground ml-1">LANA</span>
+                          </p>
+                          {splitSelection && (
+                            <p className="text-sm text-muted-foreground">
+                              ≈ {currencySymbol}{formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0) * splitSelection.price)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Header Card */}
           <Card className="p-8 shadow-mystical bg-card border-border">
