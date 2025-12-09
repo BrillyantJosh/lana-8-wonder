@@ -50,50 +50,8 @@ interface SplitSelection {
   price: number;
 }
 
-const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
-  const symbol = getCurrencySymbol(currency);
-  return [{
-    name: "Initial Recovery",
-    type: "linear" as const,
-    color: "from-orange-400 to-orange-600",
-    description: `Recover your initial ${symbol}88 investment`
-  }, {
-    name: "Growth Acceleration",
-    type: "linear" as const,
-    color: "from-orange-500 to-orange-700",
-    description: "Double your returns with strategic growth"
-  }, {
-    name: "Breakthrough Point",
-    type: "compound" as const,
-    color: "from-green-400 to-green-600",
-    description: `${symbol}50,000+ compound growth strategy`
-  }, {
-    name: "Expansion Phase",
-    type: "compound" as const,
-    color: "from-green-500 to-green-700",
-    description: `${symbol}500,000+ wealth multiplication`
-  }, {
-    name: "Wealth Creation",
-    type: "compound" as const,
-    color: "from-green-600 to-green-800",
-    description: `${symbol}2,670,000+ substantial returns`
-  }, {
-    name: "Passive Income",
-    type: "passive" as const,
-    color: "from-purple-400 to-purple-600",
-    description: ""
-  }, {
-    name: "Legacy Portfolio",
-    type: "passive" as const,
-    color: "from-purple-500 to-purple-700",
-    description: ""
-  }, {
-    name: "Ultimate Freedom",
-    type: "passive" as const,
-    color: "from-purple-600 to-purple-800",
-    description: ""
-  }];
-};
+// NOTE: getAccountConfigs, calculateSplit, and level generation functions removed
+// Accounts now come directly from sessionStorage (calculated on confirm page)
 
 function formatNumber(value: number): string {
   if (value >= 100) {
@@ -103,93 +61,6 @@ function formatNumber(value: number): string {
   } else {
     return value.toLocaleString(undefined, { maximumFractionDigits: 5 });
   }
-}
-
-function calculateSplit(price: number): { splitNumber: number; splitPrice: number } {
-  const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
-  const splitNumber = Math.log2(splitPrice / 0.001) + 1;
-  return { splitNumber, splitPrice };
-}
-
-function generateLinearLevels(lanas: number, startPrice: number): TradingLevel[] {
-  const levels: TradingLevel[] = [];
-  const lanasPerLevel = lanas / 10;
-  let remaining = lanas;
-  for (let i = 1; i <= 10; i++) {
-    const triggerPrice = startPrice * i;
-    const lanasOnSale = lanasPerLevel;
-    const cashOut = triggerPrice * lanasOnSale;
-    remaining -= lanasPerLevel;
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-    levels.push({
-      level: i,
-      triggerPrice: triggerPrice.toFixed(5),
-      splitNumber,
-      splitPrice: splitPrice.toFixed(3),
-      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
-      cashOut: cashOut.toFixed(2),
-      remaining: parseFloat(remaining.toFixed(2))
-    });
-  }
-  return levels;
-}
-
-function generateCompoundLevels(lanas: number, startPrice: number): TradingLevel[] {
-  const levels: TradingLevel[] = [];
-  const sellPercentages = [0, 0.25, 0.20, 0.15, 0.12, 0.09, 0.07, 0.05, 0.04, 0.03];
-  let remaining = lanas;
-  for (let i = 1; i <= 10; i++) {
-    const triggerPrice = startPrice * i;
-    const lanasOnSale = lanas * sellPercentages[i - 1];
-    const cashOut = triggerPrice * lanasOnSale;
-    remaining -= lanasOnSale;
-    const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-    levels.push({
-      level: i,
-      triggerPrice: triggerPrice.toFixed(5),
-      splitNumber,
-      splitPrice: splitPrice.toFixed(3),
-      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
-      cashOut: cashOut.toFixed(2),
-      remaining: parseFloat(remaining.toFixed(2))
-    });
-  }
-  return levels;
-}
-
-function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetValue: number): TradingLevel[] {
-  const levels: TradingLevel[] = [];
-  let remaining = lanas;
-  const startSplit = calculateSplit(startPrice);
-  let currentSplitNumber = startSplit.splitNumber;
-  let currentSplitPrice = startSplit.splitPrice;
-  let levelCount = 0;
-  const maxLevels = 37;
-
-  while (remaining > 0 && levelCount < maxLevels) {
-    levelCount++;
-    const portfolioValue = remaining * currentSplitPrice;
-    const sellPercentage = Math.min(targetValue / portfolioValue, 1);
-    const lanasOnSale = remaining * sellPercentage;
-    const cashOut = lanasOnSale * currentSplitPrice;
-    remaining -= lanasOnSale;
-
-    levels.push({
-      level: levelCount,
-      triggerPrice: currentSplitPrice.toFixed(5),
-      splitNumber: currentSplitNumber,
-      splitPrice: currentSplitPrice.toFixed(3),
-      lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
-      cashOut: parseFloat(cashOut.toFixed(2)).toString(),
-      remaining: parseFloat(remaining.toFixed(2))
-    });
-
-    if (remaining <= 0 || sellPercentage >= 1) break;
-    
-    currentSplitNumber++;
-    currentSplitPrice = currentSplitPrice * 2;
-  }
-  return levels;
 }
 
 const UpgradeSplitExecute = () => {
@@ -304,62 +175,16 @@ const UpgradeSplitExecute = () => {
     }
   }, [session, params]);
 
-  // Calculate accounts for the new plan
+  // Load accounts from sessionStorage (same data as confirm page)
   useEffect(() => {
-    if (splitSelection) {
-      calculatePlan(splitSelection.price);
+    const storedAccounts = sessionStorage.getItem("upgrade_accounts");
+    if (storedAccounts) {
+      setAccounts(JSON.parse(storedAccounts));
+    } else {
+      // If no stored accounts, go back to confirm page
+      navigate("/upgrade-split-confirm");
     }
-  }, [splitSelection]);
-
-  const calculatePlan = (entryPrice: number) => {
-    const totalLanas = 88 / entryPrice;
-    const lanasPerAccount = totalLanas / 8;
-    const accountConfigs = getAccountConfigs(selectedCurrency);
-
-    const passiveTargets = [
-      44000,
-      440000,
-      4400000
-    ];
-
-    const calculatedAccounts: Account[] = accountConfigs.map((config, index) => {
-      const accountNumber = index + 1;
-      let levels: TradingLevel[];
-      let totalCashOut = 0;
-      let portfolioValue: number | undefined;
-
-      if (config.type === "linear") {
-        levels = generateLinearLevels(lanasPerAccount, entryPrice);
-        totalCashOut = levels.reduce((sum, l) => sum + parseFloat(l.cashOut), 0);
-      } else if (config.type === "compound") {
-        levels = generateCompoundLevels(lanasPerAccount, entryPrice);
-        totalCashOut = levels.reduce((sum, l) => sum + parseFloat(l.cashOut), 0);
-      } else {
-        const passiveIndex = accountNumber - 6;
-        const targetValue = passiveTargets[passiveIndex];
-        levels = generatePassiveLevelsBySplit(lanasPerAccount, entryPrice, targetValue);
-        totalCashOut = levels.reduce((sum, l) => sum + parseFloat(l.cashOut), 0);
-        
-        if (levels.length > 0) {
-          const lastLevel = levels[levels.length - 1];
-          portfolioValue = lastLevel.remaining * parseFloat(lastLevel.splitPrice);
-        }
-      }
-
-      return {
-        number: accountNumber,
-        name: config.name,
-        type: config.type,
-        color: config.color,
-        description: config.description,
-        levels,
-        totalCashOut,
-        portfolioValue
-      };
-    });
-
-    setAccounts(calculatedAccounts);
-  };
+  }, [navigate]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("lana_session");
@@ -614,6 +439,7 @@ const UpgradeSplitExecute = () => {
       // Clear session data
       sessionStorage.removeItem("upgrade_split_selection");
       sessionStorage.removeItem("upgrade_expired_lana");
+      sessionStorage.removeItem("upgrade_accounts");
 
     } catch (error) {
       console.error("❌ Execution error:", error);
