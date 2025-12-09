@@ -503,6 +503,10 @@ const UpgradeSplitConfirm = () => {
       expiredSplits: expiredLanaInfo.expiredSplits,
       expiredPerAccount: expiredPerAccount
     }));
+    
+    // Store the complete accounts array so execute page uses identical data
+    sessionStorage.setItem("upgrade_accounts", JSON.stringify(accounts));
+    
     navigate("/upgrade-split-execute");
   };
 
