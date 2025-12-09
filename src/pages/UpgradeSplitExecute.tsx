@@ -357,31 +357,17 @@ const UpgradeSplitExecute = () => {
     });
   };
 
-  // Calculate expired LANA per account
-  const expiredLanaPerAccount = useMemo(() => {
-    const perAccount: Record<number, number> = {};
-    
-    accounts.forEach(account => {
-      let accountExpiredLana = 0;
-      account.levels.forEach(level => {
-        if (level.splitNumber <= currentSystemSplit) {
-          accountExpiredLana += level.lanasOnSale;
-        }
-      });
-      perAccount[account.number] = accountExpiredLana;
-    });
-    
-    return perAccount;
-  }, [accounts, currentSystemSplit]);
-
-  // Get stored fee from confirm page
+  // Get stored expired LANA info from confirm page (don't recalculate!)
   const storedExpiredLanaInfo = useMemo(() => {
     const stored = sessionStorage.getItem("upgrade_expired_lana");
     if (stored) {
       return JSON.parse(stored);
     }
-    return null;
+    return { totalExpiredLana: 0, expiredSplits: [], expiredPerAccount: {} };
   }, []);
+
+  // Use the per-account expired LANA values from confirm page
+  const expiredLanaPerAccount: Record<number, number> = storedExpiredLanaInfo.expiredPerAccount || {};
 
   // Calculate what needs to be added to each wallet
   const walletDistribution = useMemo(() => {
