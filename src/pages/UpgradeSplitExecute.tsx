@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2, ArrowRight, Send, QrCode, KeyRound } from "lucide-react";
+import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2, ArrowRight, Send, QrCode, KeyRound, CheckCircle2, XCircle } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -13,6 +13,16 @@ import { fetchKind88888, Lana8WonderPlan } from "@/lib/nostrClient";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TradingLevel {
   level: number;
@@ -196,6 +206,9 @@ const UpgradeSplitExecute = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [keyValidationStatus, setKeyValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [executionResult, setExecutionResult] = useState<{ success: boolean; txid?: string; error?: string } | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const { params } = useNostrLanaParams();
 
@@ -500,6 +513,120 @@ const UpgradeSplitExecute = () => {
       };
     });
   }, [existingPlan, splitSelection, planWalletBalances, accounts, expiredLanaPerAccount]);
+
+  // Calculate total amount to transfer
+  const totalToTransfer = useMemo(() => {
+    const walletAmount = walletDistribution.reduce((sum, w) => sum + w.toAdd, 0);
+    const feeAmount = storedExpiredLanaInfo?.totalExpiredLana || 0;
+    return walletAmount + feeAmount;
+  }, [walletDistribution, storedExpiredLanaInfo]);
+
+  // Execute upgrade: send LANA and publish new KIND 88888
+  const handleExecuteUpgrade = async () => {
+    if (!session?.walletId || !existingPlan || !params?.relays || !params?.electrum) {
+      toast.error("Missing required data for transaction");
+      return;
+    }
+
+    setIsExecuting(true);
+    setShowConfirmDialog(false);
+    setExecutionResult(null);
+
+    try {
+      // Build recipients list (8 wallets + fee wallet)
+      const recipients: Array<{ address: string; amount: number }> = [];
+      
+      // Add wallet distribution outputs
+      for (const wallet of walletDistribution) {
+        if (wallet.toAdd > 0) {
+          recipients.push({
+            address: wallet.wallet,
+            amount: wallet.toAdd
+          });
+        }
+      }
+      
+      // Add fee output to donation wallet
+      const feeAmount = storedExpiredLanaInfo?.totalExpiredLana || 0;
+      if (feeAmount > 0 && donationWalletId) {
+        recipients.push({
+          address: donationWalletId,
+          amount: feeAmount
+        });
+      }
+
+      console.log("📤 Sending LANA transaction with recipients:", recipients);
+      console.log("📤 Total recipients:", recipients.length);
+      console.log("📤 Total LANA:", recipients.reduce((sum, r) => sum + r.amount, 0));
+
+      // Step 1: Send LANA transaction
+      const { data: txData, error: txError } = await supabase.functions.invoke('send-lana-multi-output', {
+        body: {
+          sender_address: session.walletId,
+          recipients: recipients,
+          private_key: privateKey,
+          electrum_servers: params.electrum.map(e => ({ host: e.host, port: parseInt(e.port) }))
+        }
+      });
+
+      if (txError) {
+        throw new Error(`Transaction error: ${txError.message}`);
+      }
+
+      if (!txData?.success || !txData?.txid) {
+        throw new Error(txData?.error || "Transaction failed - no txid returned");
+      }
+
+      console.log("✅ Transaction successful:", txData.txid);
+      toast.success(`Transaction sent: ${txData.txid.substring(0, 16)}...`);
+
+      // Step 2: Publish new KIND 88888 to Nostr
+      console.log("📤 Publishing new KIND 88888 to Nostr...");
+      
+      // Get wallets from existing plan
+      const planWallets = existingPlan.accounts.map(acc => acc.wallet);
+      
+      const { data: planData, error: planError } = await supabase.functions.invoke('publish-lana8wonder-plan', {
+        body: {
+          subject_hex: session.nostrHexId,
+          wallets: planWallets,
+          amount_per_wallet: (88 / splitSelection.price) / 8,
+          currency: selectedCurrency,
+          exchange_rate: splitSelection.price,
+          start_price: splitSelection.price * 1.08, // +8% adjustment as per existing logic
+          relays: params.relays
+        }
+      });
+
+      if (planError) {
+        console.error("⚠️ Plan publishing error:", planError);
+        toast.warning("Transaction sent but plan publishing failed. Please try publishing manually.");
+      } else if (planData?.success) {
+        console.log("✅ KIND 88888 published:", planData.event_id);
+        toast.success("Annuity plan updated on Nostr!");
+      }
+
+      setExecutionResult({
+        success: true,
+        txid: txData.txid
+      });
+
+      // Clear session data
+      sessionStorage.removeItem("upgrade_split_selection");
+      sessionStorage.removeItem("upgrade_expired_lana");
+
+    } catch (error) {
+      console.error("❌ Execution error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(errorMessage);
+      setExecutionResult({
+        success: false,
+        error: errorMessage
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   if (!session || !splitSelection) return null;
 
@@ -830,17 +957,67 @@ const UpgradeSplitExecute = () => {
                 </div>
               </div>
 
+              {/* Execution Result */}
+              {executionResult && (
+                <div className={`p-4 rounded-lg border ${
+                  executionResult.success 
+                    ? 'bg-green-500/10 border-green-500/30' 
+                    : 'bg-red-500/10 border-red-500/30'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {executionResult.success ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                    <span className={`font-semibold ${
+                      executionResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {executionResult.success ? 'Upgrade Completed Successfully!' : 'Upgrade Failed'}
+                    </span>
+                  </div>
+                  {executionResult.success && executionResult.txid && (
+                    <div className="space-y-2 text-sm">
+                      <p className="text-muted-foreground">Transaction ID:</p>
+                      <p className="font-mono text-xs break-all text-foreground">{executionResult.txid}</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => navigate("/dashboard")}
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </div>
+                  )}
+                  {!executionResult.success && executionResult.error && (
+                    <p className="text-sm text-red-600 dark:text-red-400">{executionResult.error}</p>
+                  )}
+                </div>
+              )}
+
               {/* Execute Button */}
               <div className="pt-4">
                 <Button 
                   size="lg"
                   className="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-lg py-6"
-                  disabled={keyValidationStatus !== 'valid' || isValidatingKey}
+                  disabled={keyValidationStatus !== 'valid' || isValidatingKey || isExecuting || executionResult?.success}
+                  onClick={() => setShowConfirmDialog(true)}
                 >
-                  {isValidatingKey ? (
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Executing Transaction...
+                    </>
+                  ) : isValidatingKey ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Validating...
+                    </>
+                  ) : executionResult?.success ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Upgrade Complete
                     </>
                   ) : (
                     <>
@@ -854,6 +1031,46 @@ const UpgradeSplitExecute = () => {
           </Card>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Upgrade Execution</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>You are about to execute the following transaction:</p>
+              <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total LANA:</span>
+                  <span className="font-bold text-foreground">{formatNumber(totalToTransfer)} LANA</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Outputs:</span>
+                  <span className="font-medium text-foreground">
+                    {walletDistribution.filter(w => w.toAdd > 0).length + (fee > 0 ? 1 : 0)} wallets
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-muted-foreground">From:</span>
+                  <span className="font-mono text-xs break-all text-foreground">{session?.walletId}</span>
+                </div>
+              </div>
+              <p className="text-amber-600 dark:text-amber-400 font-medium">
+                This action cannot be undone. The transaction will be broadcast to the LANA network.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleExecuteUpgrade}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Confirm & Execute
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
