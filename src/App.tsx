@@ -18,6 +18,7 @@ import SendLanaConfirm from "./pages/SendLanaConfirm";
 import SendLanaResult from "./pages/SendLanaResult";
 import SendLana8WonderTransfer from "./pages/SendLana8WonderTransfer";
 import UpgradeSplit from "./pages/UpgradeSplit";
+import UpgradeSplitConfirm from "./pages/UpgradeSplitConfirm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/send-lana-result" element={<SendLanaResult />} />
           <Route path="/send-lana8wonder-transfer" element={<SendLana8WonderTransfer />} />
           <Route path="/upgrade-split" element={<UpgradeSplit />} />
+          <Route path="/upgrade-split-confirm" element={<UpgradeSplitConfirm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
