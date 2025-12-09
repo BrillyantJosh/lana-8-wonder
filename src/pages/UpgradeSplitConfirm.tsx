@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins } from "lucide-react";
+import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2 } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TradingLevel {
   level: number;
@@ -197,6 +199,9 @@ const UpgradeSplitConfirm = () => {
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [portfolioProjection, setPortfolioProjection] = useState<ProjectionData[]>([]);
   const [passiveAccountSplits, setPassiveAccountSplits] = useState<Set<number>>(new Set());
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const { params } = useNostrLanaParams();
 
   const selectedCurrency: 'EUR' | 'USD' | 'GBP' = 'EUR';
   const currencySymbol = getCurrencySymbol(selectedCurrency);
@@ -207,7 +212,8 @@ const UpgradeSplitConfirm = () => {
       navigate("/login");
       return;
     }
-    setSession(JSON.parse(sessionData));
+    const parsedSession = JSON.parse(sessionData);
+    setSession(parsedSession);
 
     const selectionData = sessionStorage.getItem("upgrade_split_selection");
     if (!selectionData) {
@@ -216,6 +222,37 @@ const UpgradeSplitConfirm = () => {
     }
     setSplitSelection(JSON.parse(selectionData));
   }, [navigate]);
+
+  // Load wallet balance
+  useEffect(() => {
+    const loadWalletBalance = async () => {
+      if (!session?.walletId || !params?.electrum || params.electrum.length === 0) return;
+      
+      setBalanceLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+          body: { 
+            wallet_addresses: [session.walletId],
+            electrum_servers: params.electrum
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.success && data?.wallets?.length > 0) {
+          setWalletBalance(data.wallets[0].balance || 0);
+        }
+      } catch (error) {
+        console.error("Error loading wallet balance:", error);
+      } finally {
+        setBalanceLoading(false);
+      }
+    };
+
+    if (session && params?.electrum) {
+      loadWalletBalance();
+    }
+  }, [session, params]);
 
   useEffect(() => {
     if (splitSelection) {
@@ -417,6 +454,52 @@ const UpgradeSplitConfirm = () => {
         </div>
 
         <div className="space-y-8">
+          {/* Main Wallet Balance Card */}
+          <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                Your Main Wallet
+              </CardTitle>
+              <CardDescription>
+                This is your primary wallet derived from your login key
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Wallet Address</p>
+                  <p className="font-mono text-sm break-all bg-muted/50 p-3 rounded-lg">{session.walletId}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Current Balance</p>
+                    {balanceLoading ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Loading balance...</span>
+                      </div>
+                    ) : walletBalance !== null ? (
+                      <p className="text-3xl font-bold text-primary">
+                        {formatNumber(walletBalance)} <span className="text-lg text-muted-foreground">LANA</span>
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground">Unable to load balance</p>
+                    )}
+                  </div>
+                  {walletBalance !== null && splitSelection && (
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground mb-1">Value at Split {splitSelection.splitNumber}</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {currencySymbol}{formatNumber(walletBalance * splitSelection.price)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Header Card */}
           <Card className="p-8 shadow-mystical bg-card border-border">
             <div className="space-y-6">
