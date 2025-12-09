@@ -485,10 +485,23 @@ const UpgradeSplitConfirm = () => {
   };
 
   const handleConfirmUpgrade = () => {
-    // Store the fee and expired splits info for the execute page
+    // Calculate per-account expired LANA
+    const expiredPerAccount: Record<number, number> = {};
+    accounts.forEach(account => {
+      let accountExpiredLana = 0;
+      account.levels.forEach(level => {
+        if (level.splitNumber <= currentSystemSplit) {
+          accountExpiredLana += level.lanasOnSale;
+        }
+      });
+      expiredPerAccount[account.number] = accountExpiredLana;
+    });
+
+    // Store the fee, expired splits info and per-account breakdown for the execute page
     sessionStorage.setItem("upgrade_expired_lana", JSON.stringify({
       totalExpiredLana: expiredLanaInfo.expiredLana,
-      expiredSplits: expiredLanaInfo.expiredSplits
+      expiredSplits: expiredLanaInfo.expiredSplits,
+      expiredPerAccount: expiredPerAccount
     }));
     navigate("/upgrade-split-execute");
   };
