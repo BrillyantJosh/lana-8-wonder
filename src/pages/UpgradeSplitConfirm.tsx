@@ -492,14 +492,15 @@ const UpgradeSplitConfirm = () => {
   // Get current system split from Nostr params
   const currentSystemSplit = parseInt(params?.split || "5");
 
-  // Calculate expired LANA from splits that are past (>= currentSystemSplit means already executed)
+  // Calculate expired LANA from splits that are PAST (from 1 to currentSystemSplit - 1)
   const expiredLanaInfo = useMemo(() => {
     let expiredLana = 0;
     let expiredSplits: number[] = [];
     
     accounts.forEach(account => {
       account.levels.forEach(level => {
-        if (level.splitNumber >= currentSystemSplit) {
+        // Expired splits are those BEFORE the current system split (already executed)
+        if (level.splitNumber < currentSystemSplit) {
           expiredLana += level.lanasOnSale;
           if (!expiredSplits.includes(level.splitNumber)) {
             expiredSplits.push(level.splitNumber);
@@ -518,7 +519,9 @@ const UpgradeSplitConfirm = () => {
   const totalCurrentLana = (walletBalance || 0) + 
     Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0);
   const requiredLanaForNewSplit = totalLanas;
-  const lanaDeficit = requiredLanaForNewSplit - totalCurrentLana + expiredLanaInfo.expiredLana;
+  const fee = expiredLanaInfo.expiredLana;
+  const reserve = 1;
+  const youNeedToPay = requiredLanaForNewSplit - totalCurrentLana + fee + reserve;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -688,55 +691,44 @@ const UpgradeSplitConfirm = () => {
                 </div>
               </div>
 
-              {/* After Upgrade */}
+              {/* Required LANA */}
               <div className="bg-background/50 rounded-lg p-4 border border-border/50">
-                <h4 className="font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  After Upgrade (Required for Split {splitSelection.splitNumber})
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Required LANA:</span>
-                    <span className="font-bold text-lg text-foreground">
-                      {formatNumber(requiredLanaForNewSplit)} LANA
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    (88 {currencySymbol} / {splitSelection.price.toFixed(4)} = {formatNumber(requiredLanaForNewSplit)} LANA)
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Required LANA:</span>
+                  <span className="font-bold text-lg text-foreground">
+                    {formatNumber(requiredLanaForNewSplit)} LANA
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  (88 {currencySymbol} / {splitSelection.price.toFixed(4)} = {formatNumber(requiredLanaForNewSplit)} LANA)
                 </div>
               </div>
 
-              {/* Provision from Expired Splits */}
+              {/* Fee from Expired Splits */}
               {expiredLanaInfo.expiredSplits.length > 0 && (
                 <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
-                  <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Provision (From Expired Splits)
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">LANA from expired splits:</span>
-                      <span className="font-bold text-lg text-amber-600 dark:text-amber-400">
-                        {formatNumber(expiredLanaInfo.expiredLana)} LANA
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      (Splits {expiredLanaInfo.expiredSplits.join(", ")} are already past - system is at Split {currentSystemSplit})
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Fee (Expired Splits):</span>
+                    <span className="font-bold text-lg text-amber-600 dark:text-amber-400">
+                      {formatNumber(fee)} LANA
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    (Splits {expiredLanaInfo.expiredSplits.join(", ")} already past - system at Split {currentSystemSplit})
                   </div>
                 </div>
               )}
 
-              {/* Net Difference */}
-              <div className={`rounded-lg p-4 border ${lanaDeficit > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+              {/* You Need to PAY */}
+              <div className={`rounded-lg p-4 border ${youNeedToPay > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold text-foreground">
-                    {lanaDeficit > 0 ? 'You need to add:' : 'Surplus:'}
+                  <span className="font-semibold text-foreground">You need to PAY:</span>
+                  <span className={`font-bold text-xl ${youNeedToPay > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {youNeedToPay > 0 ? '+' : ''}{formatNumber(Math.abs(youNeedToPay))} LANA
                   </span>
-                  <span className={`font-bold text-xl ${lanaDeficit > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                    {lanaDeficit > 0 ? '+' : ''}{formatNumber(Math.abs(lanaDeficit))} LANA
-                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ({formatNumber(requiredLanaForNewSplit)} - {formatNumber(totalCurrentLana)} + {formatNumber(fee)} + {reserve} LANA reserve)
                 </div>
               </div>
             </CardContent>
@@ -830,7 +822,7 @@ const UpgradeSplitConfirm = () => {
                             {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level, index, array) => {
                               const isNewSplitGroup = account.number < 6 && index > 0 && level.splitNumber !== array[index - 1].splitNumber;
                               const splitGroupClass = account.number < 6 && isNewSplitGroup ? 'border-t-2 border-primary/40' : '';
-                              const isExpiredSplit = level.splitNumber >= currentSystemSplit;
+                              const isExpiredSplit = level.splitNumber < currentSystemSplit;
                               
                               return (
                                 <tr 
