@@ -521,7 +521,7 @@ const UpgradeSplitConfirm = () => {
   const requiredLanaForNewSplit = totalLanas;
   const fee = expiredLanaInfo.expiredLana;
   const reserve = 1;
-  const youNeedToPay = requiredLanaForNewSplit - totalCurrentLana + fee + reserve;
+  const youNeedToPay = requiredLanaForNewSplit - totalCurrentLana + reserve;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -735,7 +735,7 @@ const UpgradeSplitConfirm = () => {
                 </div>
                 {youNeedToPay > 0 && (
                   <div className="text-xs text-muted-foreground mt-1">
-                    ({formatNumber(requiredLanaForNewSplit)} - {formatNumber(totalCurrentLana)} + {formatNumber(fee)} + {reserve} LANA reserve)
+                    ({formatNumber(requiredLanaForNewSplit)} - {formatNumber(totalCurrentLana)} + {reserve} LANA reserve)
                   </div>
                 )}
               </div>
