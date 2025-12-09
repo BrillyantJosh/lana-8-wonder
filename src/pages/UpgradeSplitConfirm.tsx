@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -489,9 +489,36 @@ const UpgradeSplitConfirm = () => {
     navigate("/dashboard");
   };
 
+  // Get current system split from Nostr params
+  const currentSystemSplit = parseInt(params?.split || "5");
+
+  // Calculate expired LANA from splits that are past (>= currentSystemSplit means already executed)
+  const expiredLanaInfo = useMemo(() => {
+    let expiredLana = 0;
+    let expiredSplits: number[] = [];
+    
+    accounts.forEach(account => {
+      account.levels.forEach(level => {
+        if (level.splitNumber >= currentSystemSplit) {
+          expiredLana += level.lanasOnSale;
+          if (!expiredSplits.includes(level.splitNumber)) {
+            expiredSplits.push(level.splitNumber);
+          }
+        }
+      });
+    });
+    
+    expiredSplits.sort((a, b) => a - b);
+    return { expiredLana, expiredSplits };
+  }, [accounts, currentSystemSplit]);
+
   if (!session || !splitSelection) return null;
 
   const totalLanas = 88 / splitSelection.price;
+  const totalCurrentLana = (walletBalance || 0) + 
+    Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0);
+  const requiredLanaForNewSplit = totalLanas;
+  const lanaDeficit = requiredLanaForNewSplit - totalCurrentLana + expiredLanaInfo.expiredLana;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -621,6 +648,100 @@ const UpgradeSplitConfirm = () => {
             </Card>
           )}
 
+          {/* Upgrade Summary Box */}
+          <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-orange-500/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-amber-500" />
+                Upgrade Summary
+              </CardTitle>
+              <CardDescription>
+                Breakdown of your upgrade from Split {currentSystemSplit} to Split {splitSelection.splitNumber}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current State */}
+              <div className="bg-background/50 rounded-lg p-4 border border-border/50">
+                <h4 className="font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                  <Wallet className="h-4 w-4" />
+                  Current State (What you have now)
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Main Wallet:</span>
+                    <span className="font-medium text-foreground">
+                      {walletBalance !== null ? formatNumber(walletBalance) : "..."} LANA
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Plan Wallets (8 accounts):</span>
+                    <span className="font-medium text-foreground">
+                      {formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0))} LANA
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-border/50">
+                    <span className="font-semibold text-foreground">TOTAL:</span>
+                    <span className="font-bold text-lg text-primary">
+                      {formatNumber(totalCurrentLana)} LANA
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* After Upgrade */}
+              <div className="bg-background/50 rounded-lg p-4 border border-border/50">
+                <h4 className="font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                  <ArrowRight className="h-4 w-4" />
+                  After Upgrade (Required for Split {splitSelection.splitNumber})
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Required LANA:</span>
+                    <span className="font-bold text-lg text-foreground">
+                      {formatNumber(requiredLanaForNewSplit)} LANA
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    (88 {currencySymbol} / {splitSelection.price.toFixed(4)} = {formatNumber(requiredLanaForNewSplit)} LANA)
+                  </div>
+                </div>
+              </div>
+
+              {/* Provision from Expired Splits */}
+              {expiredLanaInfo.expiredSplits.length > 0 && (
+                <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
+                  <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Provision (From Expired Splits)
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">LANA from expired splits:</span>
+                      <span className="font-bold text-lg text-amber-600 dark:text-amber-400">
+                        {formatNumber(expiredLanaInfo.expiredLana)} LANA
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      (Splits {expiredLanaInfo.expiredSplits.join(", ")} are already past - system is at Split {currentSystemSplit})
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Net Difference */}
+              <div className={`rounded-lg p-4 border ${lanaDeficit > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-foreground">
+                    {lanaDeficit > 0 ? 'You need to add:' : 'Surplus:'}
+                  </span>
+                  <span className={`font-bold text-xl ${lanaDeficit > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {lanaDeficit > 0 ? '+' : ''}{formatNumber(Math.abs(lanaDeficit))} LANA
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Header Card */}
           <Card className="p-8 shadow-mystical bg-card border-border">
             <div className="space-y-6">
@@ -709,17 +830,43 @@ const UpgradeSplitConfirm = () => {
                             {(account.number >= 6 && account.number <= 8 ? account.levels : account.levels.slice(0, 10)).map((level, index, array) => {
                               const isNewSplitGroup = account.number < 6 && index > 0 && level.splitNumber !== array[index - 1].splitNumber;
                               const splitGroupClass = account.number < 6 && isNewSplitGroup ? 'border-t-2 border-primary/40' : '';
+                              const isExpiredSplit = level.splitNumber >= currentSystemSplit;
                               
                               return (
-                                <tr key={level.level} className={`hover:bg-muted/50 transition-colors ${splitGroupClass}`}>
-                                  <td className="py-3 px-4 font-medium text-foreground">{level.level}</td>
-                                  <td className="text-right py-3 px-4 text-muted-foreground">{currencySymbol}{formatNumber(parseFloat(level.triggerPrice))}</td>
-                                  <td className="text-right py-3 px-4 text-primary font-medium">{level.splitNumber}</td>
-                                  <td className="text-right py-3 px-4 text-muted-foreground">{formatNumber(level.lanasOnSale)}</td>
-                                  <td className={`text-right py-3 px-4 font-semibold ${parseFloat(level.cashOut) === 0 ? 'text-muted-foreground italic' : 'text-secondary'}`}>
+                                <tr 
+                                  key={level.level} 
+                                  className={`hover:bg-muted/50 transition-colors ${splitGroupClass} ${
+                                    isExpiredSplit ? 'bg-amber-100/50 dark:bg-amber-900/20' : ''
+                                  }`}
+                                >
+                                  <td className="py-3 px-4 font-medium text-foreground">
+                                    {isExpiredSplit && (
+                                      <span className="text-amber-600 dark:text-amber-400 mr-1">⚠️</span>
+                                    )}
+                                    {level.level}
+                                  </td>
+                                  <td className={`text-right py-3 px-4 ${isExpiredSplit ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                                    {currencySymbol}{formatNumber(parseFloat(level.triggerPrice))}
+                                  </td>
+                                  <td className={`text-right py-3 px-4 font-medium ${isExpiredSplit ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
+                                    {level.splitNumber}
+                                    {isExpiredSplit && <span className="ml-1 text-xs">(past)</span>}
+                                  </td>
+                                  <td className={`text-right py-3 px-4 ${isExpiredSplit ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                                    {formatNumber(level.lanasOnSale)}
+                                  </td>
+                                  <td className={`text-right py-3 px-4 font-semibold ${
+                                    parseFloat(level.cashOut) === 0 
+                                      ? 'text-muted-foreground italic' 
+                                      : isExpiredSplit 
+                                        ? 'text-amber-600 dark:text-amber-400' 
+                                        : 'text-secondary'
+                                  }`}>
                                     {parseFloat(level.cashOut) === 0 ? '-' : `${currencySymbol}${formatNumber(parseFloat(level.cashOut))}`}
                                   </td>
-                                  <td className="text-right py-3 px-4 text-muted-foreground">{formatNumber(level.remaining)}</td>
+                                  <td className={`text-right py-3 px-4 ${isExpiredSplit ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                                    {formatNumber(level.remaining)}
+                                  </td>
                                 </tr>
                               );
                             })}
