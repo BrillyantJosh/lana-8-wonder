@@ -3,14 +3,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Ticket, AlertCircle } from 'lucide-react';
+import { Ticket, AlertCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LanaSystemParams } from '@/hooks/useNostrLanaParams';
+import { WaitingListDialog } from './WaitingListDialog';
+
 interface AvailableSlotsCardProps {
   params: LanaSystemParams | null;
   loading: boolean;
 }
+
 export const AvailableSlotsCard = ({
   params,
   loading
@@ -21,6 +24,7 @@ export const AvailableSlotsCard = ({
   const [fetchingBalance, setFetchingBalance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [showWaitingListDialog, setShowWaitingListDialog] = useState(false);
   const [webpageUrl, setWebpageUrl] = useState<string | null>(null);
   const [reservedSlotsCount, setReservedSlotsCount] = useState<number | null>(null);
 
@@ -190,10 +194,30 @@ export const AvailableSlotsCard = ({
             Each slot requires ~{lanaEquivalent.toLocaleString()} LANA (€100 at current rate)
           </p>}
 
-        <Button onClick={handleBuyClick} disabled={availableSlots === 0} className="w-full text-lg py-6" size="lg">
-          {availableSlots === 0 ? 'No Slots Available' : '🚀 Buy Lana8Wonder'}
-        </Button>
+        {availableSlots === 0 ? (
+          <div className="space-y-3">
+            <div className="bg-muted/50 rounded-lg p-4 text-center">
+              <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No slots are currently available. Join our waiting list and we'll notify you when a slot becomes available.
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowWaitingListDialog(true)} 
+              variant="outline"
+              className="w-full text-lg py-6" 
+              size="lg"
+            >
+              📋 Join Waiting List
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={handleBuyClick} className="w-full text-lg py-6" size="lg">
+            🚀 Buy Lana8Wonder
+          </Button>
+        )}
 
+        {/* Dialog for users with available slots */}
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="mx-2 sm:mx-0 max-w-[calc(100vw-1rem)] sm:max-w-lg">
             <DialogHeader>
@@ -212,6 +236,13 @@ export const AvailableSlotsCard = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Waiting List Dialog */}
+        <WaitingListDialog 
+          open={showWaitingListDialog} 
+          onOpenChange={setShowWaitingListDialog}
+          relays={params?.relays || []}
+        />
       </CardContent>
     </Card>;
 };
