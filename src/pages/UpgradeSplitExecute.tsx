@@ -1,14 +1,18 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2, ArrowRight, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, Loader2, ArrowRight, Send, QrCode, KeyRound } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKind88888, Lana8WonderPlan } from "@/lib/nostrClient";
 import { toast } from "sonner";
+import { Html5Qrcode } from "html5-qrcode";
+import { verifyWifMatchesWallet } from "@/lib/wifValidation";
 
 interface TradingLevel {
   level: number;
@@ -188,6 +192,11 @@ const UpgradeSplitExecute = () => {
   const [planWalletBalances, setPlanWalletBalances] = useState<Record<string, number>>({});
   const [planBalancesLoading, setPlanBalancesLoading] = useState(false);
   const [donationWalletId, setDonationWalletId] = useState<string | null>(null);
+  const [privateKey, setPrivateKey] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
+  const [keyValidationStatus, setKeyValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const { params } = useNostrLanaParams();
 
   const selectedCurrency: 'EUR' | 'USD' | 'GBP' = 'EUR';
@@ -357,6 +366,104 @@ const UpgradeSplitExecute = () => {
     });
   };
 
+  // Private key QR scanning
+  const startScanning = async () => {
+    setIsScanning(true);
+    
+    setTimeout(async () => {
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (!cameras || cameras.length === 0) {
+          toast.error("No camera found on this device");
+          setIsScanning(false);
+          return;
+        }
+
+        let selectedCamera = cameras[0];
+        if (cameras.length > 1) {
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear')
+          );
+          if (backCamera) {
+            selectedCamera = backCamera;
+          }
+        }
+
+        const scanner = new Html5Qrcode("qr-reader-execute");
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          selectedCamera.id,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            setPrivateKey(decodedText);
+            stopScanning();
+            toast.success("QR code scanned successfully!");
+            validatePrivateKey(decodedText);
+          },
+          () => {}
+        );
+      } catch (error: any) {
+        console.error("Error starting QR scanner:", error);
+        setIsScanning(false);
+        
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          toast.error("Camera permission denied");
+        } else {
+          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
+        }
+      }
+    }, 100);
+  };
+
+  const stopScanning = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+      }
+    }
+    setIsScanning(false);
+  };
+
+  // Validate private key matches source wallet
+  const validatePrivateKey = async (key: string) => {
+    if (!key.trim() || !session?.walletId) return;
+    
+    setIsValidatingKey(true);
+    setKeyValidationStatus('idle');
+    
+    try {
+      const result = await verifyWifMatchesWallet(key, session.walletId);
+      
+      if (result.matches) {
+        setKeyValidationStatus('valid');
+        toast.success("Private key verified!");
+      } else {
+        setKeyValidationStatus('invalid');
+        toast.error("Private key doesn't match source wallet");
+      }
+    } catch (error) {
+      setKeyValidationStatus('invalid');
+      toast.error("Invalid private key format");
+    } finally {
+      setIsValidatingKey(false);
+    }
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
   // Get stored expired LANA info from confirm page (don't recalculate!)
   const storedExpiredLanaInfo = useMemo(() => {
     const stored = sessionStorage.getItem("upgrade_expired_lana");
@@ -516,18 +623,10 @@ const UpgradeSplitExecute = () => {
                 Your personalized 8-account trading strategy at Split {splitSelection.splitNumber} price of {splitSelection.price.toFixed(4)} {currencySymbol}/LANA.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
                   <p className="text-sm text-muted-foreground mb-2">Selected Split</p>
                   <p className="text-3xl font-bold text-primary">Split {splitSelection.splitNumber}</p>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Entry Price</p>
-                  <p className="text-3xl font-bold text-foreground">{currencySymbol}{splitSelection.price.toFixed(4)}</p>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Initial Investment</p>
-                  <p className="text-3xl font-bold text-foreground">{currencySymbol}88</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
                   <p className="text-sm text-muted-foreground mb-2">Total Lanas</p>
@@ -636,16 +735,123 @@ const UpgradeSplitExecute = () => {
             </div>
           )}
 
-          {/* Execute Button */}
-          <div className="flex justify-center">
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-lg px-12 py-6"
-            >
-              <TrendingUp className="mr-2 h-5 w-5" />
-              Execute Upgrade
-            </Button>
-          </div>
+          {/* Total Amount & Source Wallet */}
+          <Card className="border-green-500/30 bg-gradient-to-r from-green-500/5 to-green-500/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-green-500" />
+                Transaction Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Totals */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-background/50 rounded-lg border border-border/50">
+                  <p className="text-sm text-muted-foreground mb-1">Total LANA to Transfer</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {formatNumber(walletDistribution.reduce((sum, w) => sum + w.toAdd, 0) + fee)} LANA
+                  </p>
+                </div>
+                <div className="p-4 bg-background/50 rounded-lg border border-border/50">
+                  <p className="text-sm text-muted-foreground mb-1">From Source Wallet</p>
+                  <p className="font-mono text-xs text-foreground break-all">
+                    {session?.walletId}
+                  </p>
+                </div>
+              </div>
+
+              {/* Private Key Input */}
+              <div className="space-y-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-primary" />
+                  <Label className="text-base font-semibold">Private Key (WIF)</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Enter the private key of your source wallet to authorize the transaction
+                </p>
+                
+                <div className="space-y-3">
+                  <Input
+                    type="password"
+                    placeholder="Enter WIF private key..."
+                    value={privateKey}
+                    onChange={(e) => {
+                      setPrivateKey(e.target.value);
+                      setKeyValidationStatus('idle');
+                    }}
+                    onBlur={() => privateKey && validatePrivateKey(privateKey)}
+                    disabled={isScanning}
+                    className={`font-mono text-sm ${
+                      keyValidationStatus === 'valid' ? 'border-green-500 focus-visible:ring-green-500' :
+                      keyValidationStatus === 'invalid' ? 'border-red-500 focus-visible:ring-red-500' : ''
+                    }`}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                  
+                  {keyValidationStatus === 'valid' && (
+                    <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                      ✓ Private key verified - matches source wallet
+                    </p>
+                  )}
+                  {keyValidationStatus === 'invalid' && (
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                      ✗ Private key doesn't match source wallet
+                    </p>
+                  )}
+
+                  {!isScanning ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={startScanning}
+                    >
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Scan QR Code
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div
+                        id="qr-reader-execute"
+                        className="rounded-lg overflow-hidden border-2 border-primary"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="w-full"
+                        onClick={stopScanning}
+                      >
+                        Stop Scanning
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Execute Button */}
+              <div className="pt-4">
+                <Button 
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-lg py-6"
+                  disabled={keyValidationStatus !== 'valid' || isValidatingKey}
+                >
+                  {isValidatingKey ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="mr-2 h-5 w-5" />
+                      Execute Upgrade
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
