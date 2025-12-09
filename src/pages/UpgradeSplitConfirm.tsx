@@ -577,7 +577,6 @@ const UpgradeSplitConfirm = () => {
                     {existingPlan.accounts.map((account) => {
                       const balance = planWalletBalances[account.wallet];
                       const hasBalance = balance !== undefined;
-                      const totalValue = hasBalance && splitSelection ? balance * splitSelection.price : 0;
                       
                       return (
                         <div 
@@ -595,16 +594,9 @@ const UpgradeSplitConfirm = () => {
                           </div>
                           <div className="text-right sm:text-right pl-13 sm:pl-0">
                             {hasBalance ? (
-                              <>
-                                <p className="font-bold text-lg text-foreground">
-                                  {formatNumber(balance)} <span className="text-sm text-muted-foreground">LANA</span>
-                                </p>
-                                {splitSelection && (
-                                  <p className="text-sm text-muted-foreground">
-                                    ≈ {currencySymbol}{formatNumber(totalValue)}
-                                  </p>
-                                )}
-                              </>
+                              <p className="font-bold text-lg text-foreground">
+                                {formatNumber(balance)} <span className="text-sm text-muted-foreground">LANA</span>
+                              </p>
                             ) : (
                               <p className="text-muted-foreground text-sm">No balance data</p>
                             )}
@@ -617,17 +609,10 @@ const UpgradeSplitConfirm = () => {
                     <div className="mt-4 pt-4 border-t border-border">
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-muted-foreground">Total in Plan Wallets:</span>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-secondary">
-                            {formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0))} 
-                            <span className="text-sm text-muted-foreground ml-1">LANA</span>
-                          </p>
-                          {splitSelection && (
-                            <p className="text-sm text-muted-foreground">
-                              ≈ {currencySymbol}{formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0) * splitSelection.price)}
-                            </p>
-                          )}
-                        </div>
+                        <p className="text-2xl font-bold text-secondary">
+                          {formatNumber(Object.values(planWalletBalances).reduce((sum, b) => sum + b, 0))} 
+                          <span className="text-sm text-muted-foreground ml-1">LANA</span>
+                        </p>
                       </div>
                     </div>
                   </div>
