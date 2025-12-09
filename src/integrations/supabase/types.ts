@@ -125,6 +125,54 @@ export type Database = {
         }
         Relationships: []
       }
+      waiting_list: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string
+          first_name: string | null
+          has_wallet: boolean
+          id: string
+          last_name: string | null
+          nostr_hex_id: string | null
+          notified_at: string | null
+          phone_number: string
+          status: string
+          updated_at: string
+          wallet_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email: string
+          first_name?: string | null
+          has_wallet?: boolean
+          id?: string
+          last_name?: string | null
+          nostr_hex_id?: string | null
+          notified_at?: string | null
+          phone_number: string
+          status?: string
+          updated_at?: string
+          wallet_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          has_wallet?: boolean
+          id?: string
+          last_name?: string | null
+          nostr_hex_id?: string | null
+          notified_at?: string | null
+          phone_number?: string
+          status?: string
+          updated_at?: string
+          wallet_id?: string | null
+        }
+        Relationships: []
+      }
       wallets: {
         Row: {
           created_at: string
