@@ -54,14 +54,14 @@ const AdminBuyLana = () => {
           return;
         }
 
-        // Get admin nostr_hex_id from app_settings
-        const { data: settings } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'nostr_hex_id_buying_lanas')
+        // Check if user is in admin_users table
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('nostr_hex_id', userNostrHexId)
           .maybeSingle();
 
-        setIsAdmin(userNostrHexId === settings?.setting_value);
+        setIsAdmin(!!adminUser);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
