@@ -140,14 +140,13 @@ const Dashboard = () => {
         }
 
         // Check admin status
-        const { data: settings } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'nostr_hex_id_buying_lanas')
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('nostr_hex_id', userNostrHexId)
           .maybeSingle();
 
-        const adminHex = settings?.setting_value as string | undefined;
-        setIsAdmin(!!adminHex && userNostrHexId === adminHex);
+        setIsAdmin(!!adminUser);
 
         // Check upgrade allowance
         const { data: profile } = await supabase
