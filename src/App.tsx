@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import BuyLana8Wonder from "./pages/BuyLana8Wonder";
 import AdminBuyLana from "./pages/AdminBuyLana";
 import AdminAllowanceUpgrade from "./pages/AdminAllowanceUpgrade";
+import AdminWaitingList from "./pages/AdminWaitingList";
 import BuyLanaInstructions from "./pages/BuyLanaInstructions";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
 import AssignLana8Wonder from "./pages/AssignLana8Wonder";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />
           <Route path="/admin-buy-lana" element={<AdminBuyLana />} />
           <Route path="/admin-allowance-upgrade" element={<AdminAllowanceUpgrade />} />
+          <Route path="/admin-waiting-list" element={<AdminWaitingList />} />
           <Route path="/buy-lana-instructions" element={<BuyLanaInstructions />} />
           <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
           <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
