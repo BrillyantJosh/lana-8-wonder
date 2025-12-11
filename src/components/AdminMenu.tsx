@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, ChevronDown, CreditCard, UserCheck } from 'lucide-react';
+import { Settings, ChevronDown, CreditCard, UserCheck, Users } from 'lucide-react';
 
 interface AdminMenuProps {
   className?: string;
@@ -71,6 +71,10 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         <DropdownMenuItem onClick={() => navigate('/admin-allowance-upgrade')}>
           <UserCheck className="h-4 w-4 mr-2" />
           Allowance to Upgrade
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/admin-waiting-list')}>
+          <Users className="h-4 w-4 mr-2" />
+          Waiting List
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
