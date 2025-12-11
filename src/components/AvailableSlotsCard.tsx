@@ -204,8 +204,7 @@ export const AvailableSlotsCard = ({
             </div>
             <Button 
               onClick={() => setShowWaitingListDialog(true)} 
-              variant="outline"
-              className="w-full text-lg py-6" 
+              className="w-full text-lg py-6 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg" 
               size="lg"
             >
               📋 Join Waiting List
