@@ -5,23 +5,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { QrCode, KeyRound, Loader2 } from "lucide-react";
+import { QrCode, KeyRound, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
 import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { validateWifAndGetAddress } from "@/lib/wifValidation";
 
 const Login = () => {
   const { t, i18n } = useTranslation();
   const [wif, setWif] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [wifValidation, setWifValidation] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const navigate = useNavigate();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
   const { params } = useNostrLanaParams();
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Real-time WIF validation with debounce
+  useEffect(() => {
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+
+    const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    
+    if (!normalizedWif) {
+      setWifValidation(null);
+      setIsValidating(false);
+      return;
+    }
+
+    setIsValidating(true);
+
+    validationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await validateWifAndGetAddress(normalizedWif);
+        setWifValidation({ valid: result.valid, error: result.error });
+      } catch (error) {
+        setWifValidation({ valid: false, error: "Invalid LanaWIF format" });
+      } finally {
+        setIsValidating(false);
+      }
+    }, 300);
+
+    return () => {
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+    };
+  }, [wif]);
 
   useEffect(() => {
     return () => {
@@ -206,18 +244,42 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
               <Label htmlFor="wif" className="text-sm">{t('login.wifLabel')}</Label>
-              <Input
-                id="wif"
-                type="password"
-                placeholder={t('login.wifPlaceholder')}
-                value={wif}
-                onChange={(e) => setWif(e.target.value)}
-                disabled={isScanning}
-                className="font-mono text-xs sm:text-sm"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck="false"
-              />
+              <div className="relative">
+                <Input
+                  id="wif"
+                  type="password"
+                  placeholder={t('login.wifPlaceholder')}
+                  value={wif}
+                  onChange={(e) => setWif(e.target.value)}
+                  disabled={isScanning}
+                  className={`font-mono text-xs sm:text-sm pr-10 ${
+                    wifValidation !== null 
+                      ? wifValidation.valid 
+                        ? 'border-green-500 focus-visible:ring-green-500' 
+                        : 'border-destructive focus-visible:ring-destructive' 
+                      : ''
+                  }`}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
+                />
+                {wif.trim() && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {isValidating ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : wifValidation?.valid ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : wifValidation !== null ? (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              {wifValidation !== null && !wifValidation.valid && !isValidating && (
+                <p className="text-xs text-destructive mt-1">
+                  {t('login.invalidWif', 'Invalid LanaWIF format')}
+                </p>
+              )}
             </div>
 
             {!isScanning ? (
@@ -232,7 +294,7 @@ const Login = () => {
                   {t('login.scanQR')}
                 </Button>
 
-                <Button type="submit" className="w-full text-sm" disabled={!wif.trim() || isProcessing}>
+                <Button type="submit" className="w-full text-sm" disabled={!wif.trim() || isProcessing || !wifValidation?.valid}>
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
