@@ -9,6 +9,11 @@ const corsHeaders = {
 // Base58 alphabet
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
+// Normalize WIF key by removing invisible characters (spaces, zero-width chars, BOM, newlines)
+function normalizeWif(wif: string): string {
+  return wif.replace(/[\s\u200B-\u200D\uFEFF\r\n]/g, '').trim();
+}
+
 function base58Encode(bytes: Uint8Array): string {
   if (bytes.length === 0) return '';
   let x = BigInt('0x' + uint8ArrayToHex(bytes));
@@ -473,7 +478,9 @@ async function buildSignedTx(
     console.log(`💰 Total input value from ${selectedUTXOs.length} UTXOs: ${totalValue} satoshis (${(totalValue / 100000000).toFixed(8)} LANA)`);
     console.log(`💸 Transaction breakdown: Amount=${totalAmount}, Fee=${fee}, Change=${totalValue - totalAmount - fee}`);
     
-    const privateKeyBytes = base58CheckDecode(privateKeyWIF);
+    const normalizedPrivateKey = normalizeWif(privateKeyWIF);
+    console.log(`🔑 Private key normalized: length=${normalizedPrivateKey.length}, first=${normalizedPrivateKey[0]}, last=${normalizedPrivateKey[normalizedPrivateKey.length-1]}`);
+    const privateKeyBytes = base58CheckDecode(normalizedPrivateKey);
     const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
     console.log('🔑 Private key decoded successfully');
     
@@ -708,7 +715,9 @@ serve(async (req) => {
     
     // Validate private key matches sender address
     try {
-      const privateKeyBytes = base58CheckDecode(private_key);
+      const normalizedPrivateKey = normalizeWif(private_key);
+      console.log(`🔑 Validating private key: length=${normalizedPrivateKey.length}, first=${normalizedPrivateKey[0]}, last=${normalizedPrivateKey[normalizedPrivateKey.length-1]}`);
+      const privateKeyBytes = base58CheckDecode(normalizedPrivateKey);
       const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
       const generatedPubKey = privateKeyToPublicKey(privateKeyHex);
       const expectedAddress = await publicKeyToAddress(generatedPubKey);
