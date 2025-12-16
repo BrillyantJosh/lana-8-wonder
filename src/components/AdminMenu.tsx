@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, ChevronDown, CreditCard, UserCheck, Users } from 'lucide-react';
+import { Settings, ChevronDown, CreditCard, UserCheck, Users, Eye } from 'lucide-react';
 
 interface AdminMenuProps {
   className?: string;
@@ -75,6 +75,10 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         <DropdownMenuItem onClick={() => navigate('/admin-waiting-list')}>
           <Users className="h-4 w-4 mr-2" />
           Waiting List
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/admin-slots-visibility')}>
+          <Eye className="h-4 w-4 mr-2" />
+          Slots Visibility
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
