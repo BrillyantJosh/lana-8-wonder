@@ -27,6 +27,7 @@ export const AvailableSlotsCard = ({
   const [showWaitingListDialog, setShowWaitingListDialog] = useState(false);
   const [webpageUrl, setWebpageUrl] = useState<string | null>(null);
   const [reservedSlotsCount, setReservedSlotsCount] = useState<number | null>(null);
+  const [showSlotsOnLandingPage, setShowSlotsOnLandingPage] = useState<boolean | null>(null);
 
   // Fetch donation_wallet_id and webpage from app_settings
   useEffect(() => {
@@ -35,16 +36,18 @@ export const AvailableSlotsCard = ({
         const { data, error } = await supabase
           .from('app_settings')
           .select('setting_key, setting_value')
-          .in('setting_key', ['donation_wallet_id', 'webpage']);
+          .in('setting_key', ['donation_wallet_id', 'webpage', 'show_lots_on_landing_page']);
         
         if (error) throw error;
         
         if (data) {
           const donationWallet = data.find(s => s.setting_key === 'donation_wallet_id');
           const webpage = data.find(s => s.setting_key === 'webpage');
+          const showSlotsSetting = data.find(s => s.setting_key === 'show_lots_on_landing_page');
           
           if (donationWallet) setDonationWalletId(donationWallet.setting_value);
           if (webpage) setWebpageUrl(webpage.setting_value);
+          setShowSlotsOnLandingPage(showSlotsSetting?.setting_value?.toLowerCase() !== 'no');
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
@@ -118,7 +121,9 @@ export const AvailableSlotsCard = ({
   }, []);
 
   // Calculate available slots (total slots minus reserved slots)
+  // If showSlotsOnLandingPage is false, always return 0
   const availableSlots = useMemo(() => {
+    if (showSlotsOnLandingPage === false) return 0;
     if (walletBalance === null || !params?.exchangeRates?.EUR || reservedSlotsCount === null) return null;
     const amountForSigning = 100 / params.exchangeRates.EUR;
     const totalSlots = Math.floor(walletBalance / amountForSigning);
@@ -148,7 +153,7 @@ export const AvailableSlotsCard = ({
       window.open(`https://100million2everyone.com/?return_url=${returnUrl}&site_name=${siteName}`, '_blank');
     }
   };
-  if (loading || fetchingBalance || reservedSlotsCount === null) {
+  if (loading || fetchingBalance || reservedSlotsCount === null || showSlotsOnLandingPage === null) {
     return <Card className="w-full bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-primary/20">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
