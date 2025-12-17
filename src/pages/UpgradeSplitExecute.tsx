@@ -426,9 +426,37 @@ const UpgradeSplitExecute = () => {
       if (planError) {
         console.error("⚠️ Plan publishing error:", planError);
         toast.warning("Transaction sent but plan publishing failed. Please try publishing manually.");
-      } else if (planData?.success) {
-        console.log("✅ KIND 88888 published:", planData.event_id);
-        toast.success("Annuity plan updated on Nostr!");
+      } else if (planData?.success && planData?.publish_results) {
+        const publishResults = planData.publish_results;
+        const successCount = publishResults.filter((r: { success: boolean }) => r.success).length;
+        const totalRelays = publishResults.length;
+        
+        console.log("📊 KIND 88888 publish results:", {
+          event_id: planData.event_id,
+          successCount,
+          totalRelays,
+          details: publishResults
+        });
+        
+        if (successCount === 0) {
+          // This shouldn't happen as backend throws, but just in case
+          toast.error("Failed to publish plan to any relay. Please try again.");
+        } else if (successCount < totalRelays) {
+          // Partial success - warn user
+          toast.warning(
+            `Plan published to ${successCount}/${totalRelays} relays. Some relays did not accept the event.`,
+            { duration: 6000 }
+          );
+        } else {
+          // Full success
+          toast.success(
+            `Annuity plan published to all ${totalRelays} relays!`,
+            { duration: 5000 }
+          );
+        }
+      } else if (planData && !planData.success) {
+        console.error("⚠️ Plan publishing returned failure:", planData);
+        toast.warning("Transaction sent but plan publishing failed. Check relay connectivity.");
       }
 
       setExecutionResult({
