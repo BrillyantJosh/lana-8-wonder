@@ -307,7 +307,8 @@ const PreviewLana8Wonder = () => {
   useEffect(() => {
     const loadPlanDataFromDB = async () => {
       // If we already have data from location.state, skip
-      if (sourceWallet && wallets && planCurrency && exchangeRate) return;
+      // FIXED: Check that wallets array has exactly 8 items, not just truthy
+      if (sourceWallet && wallets && wallets.length === 8 && planCurrency && exchangeRate) return;
       
       // Wait for nostrHexId and params to be available
       if (!nostrHexId || !params) return;
@@ -664,6 +665,18 @@ const PreviewLana8Wonder = () => {
       const subjectHex = session.nostrHexId || session.nostr_hex_id;
       
       const walletAddresses = effectiveWallets.map((w: any) => w.address);
+      
+      // ✅ VALIDATION: Ensure exactly 8 non-empty wallet addresses before publishing
+      if (!walletAddresses || walletAddresses.length !== 8) {
+        throw new Error(`Cannot publish: expected 8 wallets, got ${walletAddresses.length}. Please go back and set up your plan again.`);
+      }
+      
+      const emptyAddresses = walletAddresses.filter((a: string) => !a || a.trim() === '');
+      if (emptyAddresses.length > 0) {
+        throw new Error(`Cannot publish: ${emptyAddresses.length} wallet addresses are invalid. Please check your wallets.`);
+      }
+      
+      console.log('✅ Validated 8 wallet addresses before publish');
       
       const relays = params?.relays || [
         'wss://relay.lanavault.space',

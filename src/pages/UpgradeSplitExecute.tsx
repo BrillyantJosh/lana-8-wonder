@@ -411,6 +411,18 @@ const UpgradeSplitExecute = () => {
       // Get wallets from existing plan
       const planWallets = existingPlan.accounts.map(acc => acc.wallet);
       
+      // ✅ VALIDATION: Ensure exactly 8 non-empty wallet addresses
+      if (!planWallets || planWallets.length !== 8) {
+        throw new Error(`Cannot publish: invalid plan with ${planWallets.length} wallets`);
+      }
+      
+      const emptyWallets = planWallets.filter((w: string) => !w || w.trim() === '');
+      if (emptyWallets.length > 0) {
+        throw new Error(`Cannot publish: ${emptyWallets.length} wallet addresses are empty`);
+      }
+      
+      console.log('✅ Validated 8 wallet addresses before publish');
+      
       const { data: planData, error: planError } = await supabase.functions.invoke('publish-lana8wonder-plan', {
         body: {
           subject_hex: session.nostrHexId,
