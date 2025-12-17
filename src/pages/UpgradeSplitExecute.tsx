@@ -140,25 +140,30 @@ const UpgradeSplitExecute = () => {
           setExistingPlan(plan);
           
           if (params?.electrum && params.electrum.length > 0) {
-            setPlanBalancesLoading(true);
-            
             const walletAddresses = plan.accounts.map(acc => acc.wallet);
             
-            const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
-              body: { 
-                wallet_addresses: walletAddresses,
-                electrum_servers: params.electrum
-              },
-            });
-
-            if (error) throw error;
-
-            if (data?.success && data?.wallets) {
-              const balances: Record<string, number> = {};
-              data.wallets.forEach((w: { wallet_id: string; balance: number }) => {
-                balances[w.wallet_id] = w.balance || 0;
+            // Guard: Don't call edge function with empty array
+            if (walletAddresses.length === 0) {
+              console.log('No wallets to check balances for');
+            } else {
+              setPlanBalancesLoading(true);
+              
+              const { data, error } = await supabase.functions.invoke('check-wallet-balance', {
+                body: { 
+                  wallet_addresses: walletAddresses,
+                  electrum_servers: params.electrum
+                },
               });
-              setPlanWalletBalances(balances);
+
+              if (error) throw error;
+
+              if (data?.success && data?.wallets) {
+                const balances: Record<string, number> = {};
+                data.wallets.forEach((w: { wallet_id: string; balance: number }) => {
+                  balances[w.wallet_id] = w.balance || 0;
+                });
+                setPlanWalletBalances(balances);
+              }
             }
           }
         }
