@@ -691,21 +691,39 @@ const PreviewLana8Wonder = () => {
       
       if (error) throw error;
       
-      if (data.success) {
-        const successCount = data.publish_results.filter((r: any) => r.success).length;
-        toast.success(
-          `✅ Plan published to ${successCount}/${data.publish_results.length} relays`,
-          { duration: 5000 }
-        );
+      if (data.success && data.publish_results) {
+        const publishResults = data.publish_results;
+        const successCount = publishResults.filter((r: { success: boolean }) => r.success).length;
+        const totalRelays = publishResults.length;
         
-        console.log('✅ Plan published:', {
+        console.log('📊 Plan publish results:', {
           event_id: data.event_id,
+          successCount,
+          totalRelays,
           accounts: data.plan.accounts,
           total_levels: data.plan.total_levels,
-          publish_results: data.publish_results
+          publish_results: publishResults
         });
         
-        // Update published_plan in database
+        // Verify at least one relay accepted
+        if (successCount === 0) {
+          throw new Error('Failed to publish plan to any relay. Please check your connection and try again.');
+        }
+        
+        // Show appropriate message based on relay success
+        if (successCount < totalRelays) {
+          toast.warning(
+            `Plan published to ${successCount}/${totalRelays} relays. Some relays did not accept the event.`,
+            { duration: 6000 }
+          );
+        } else {
+          toast.success(
+            `✅ Plan published to all ${totalRelays} relays!`,
+            { duration: 5000 }
+          );
+        }
+        
+        // Update published_plan in database only if at least one relay accepted
         await supabase
           .from('profiles')
           .update({ published_plan: true })
@@ -717,7 +735,7 @@ const PreviewLana8Wonder = () => {
           navigate("/dashboard");
         }, 2000);
       } else {
-        throw new Error('Failed to publish plan');
+        throw new Error('Failed to publish plan - no relay confirmations received');
       }
       
     } catch (error) {
