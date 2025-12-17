@@ -75,12 +75,6 @@ const CreateLana8Wonder = () => {
     };
 
     const loadWalletBalances = async (wallets: string[]) => {
-      // Guard: Don't call edge function with empty array
-      if (!wallets || wallets.length === 0) {
-        console.log('No wallets to check balances for');
-        return;
-      }
-      
       setBalancesLoading(true);
       try {
         console.log('Sending to edge function:', {

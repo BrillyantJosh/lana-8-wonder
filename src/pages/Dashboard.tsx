@@ -77,16 +77,10 @@ const Dashboard = () => {
     };
 
     const loadWalletBalances = async (planData: Lana8WonderPlan) => {
-      const wallets = planData.accounts.map(acc => acc.wallet);
-      
-      // Guard: Don't call edge function with empty array
-      if (!wallets || wallets.length === 0) {
-        console.log('No wallets to check balances for');
-        return;
-      }
-      
       setBalancesLoading(true);
       try {
+        const wallets = planData.accounts.map(acc => acc.wallet);
+        
         console.log('Sending to edge function:', {
           wallet_addresses: wallets,
           electrum_servers: params?.electrum,
