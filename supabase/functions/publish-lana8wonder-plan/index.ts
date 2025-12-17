@@ -254,6 +254,25 @@ serve(async (req) => {
       relays
     } = await req.json();
 
+    console.log('📝 Received publish request:', {
+      subject_hex,
+      wallets_count: wallets?.length,
+      wallets,
+      currency,
+      start_price
+    });
+
+    // ✅ VALIDATION: Ensure exactly 8 non-empty wallet addresses
+    if (!wallets || !Array.isArray(wallets) || wallets.length !== 8) {
+      throw new Error(`Invalid wallets: expected exactly 8 wallet addresses, got ${wallets?.length || 0}`);
+    }
+
+    const emptyWallets = wallets.filter((w: string) => !w || w.trim() === '');
+    if (emptyWallets.length > 0) {
+      throw new Error(`Invalid wallets: ${emptyWallets.length} wallet addresses are empty`);
+    }
+
+    console.log('✅ Validated 8 wallet addresses');
     console.log('📝 Creating Lana8Wonder plan for subject:', subject_hex);
 
     // 1. Get main publisher private key from database
