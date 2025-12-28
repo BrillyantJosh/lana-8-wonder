@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,48 +31,48 @@ interface Account {
   totalCashOut: number;
 }
 
-const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
+const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP', t: (key: string, options?: any) => string) => {
   const symbol = getCurrencySymbol(currency);
   return [{
-    name: "Initial Recovery",
+    name: t('walletAccounts.account1Name'),
     type: "linear" as const,
     color: "from-orange-400 to-orange-600",
-    description: `Recover your initial ${symbol}88 investment`
+    description: t('walletAccounts.account1Description', { currency: symbol })
   }, {
-    name: "Growth Acceleration",
+    name: t('walletAccounts.account2Name'),
     type: "linear" as const,
     color: "from-orange-500 to-orange-700",
-    description: "Double your returns with strategic growth"
+    description: t('walletAccounts.account2Description')
   }, {
-    name: "Breakthrough Point",
+    name: t('walletAccounts.account3Name'),
     type: "compound" as const,
     color: "from-green-400 to-green-600",
-    description: `${symbol}50,000+ compound growth strategy`
+    description: t('walletAccounts.account3Description', { currency: symbol })
   }, {
-    name: "Expansion Phase",
+    name: t('walletAccounts.account4Name'),
     type: "compound" as const,
     color: "from-green-500 to-green-700",
-    description: `${symbol}500,000+ wealth multiplication`
+    description: t('walletAccounts.account4Description', { currency: symbol })
   }, {
-    name: "Wealth Creation",
+    name: t('walletAccounts.account5Name'),
     type: "compound" as const,
     color: "from-green-600 to-green-800",
-    description: `${symbol}2,670,000+ substantial returns`
+    description: t('walletAccounts.account5Description', { currency: symbol })
   }, {
-    name: "Passive Income",
+    name: t('walletAccounts.account6Name'),
     type: "passive" as const,
     color: "from-purple-400 to-purple-600",
-    description: ""
+    description: t('walletAccounts.account6Description')
   }, {
-    name: "Legacy Portfolio",
+    name: t('walletAccounts.account7Name'),
     type: "passive" as const,
     color: "from-purple-500 to-purple-700",
-    description: ""
+    description: t('walletAccounts.account7Description')
   }, {
-    name: "Ultimate Freedom",
+    name: t('walletAccounts.account8Name'),
     type: "passive" as const,
     color: "from-purple-600 to-purple-800",
-    description: ""
+    description: t('walletAccounts.account8Description')
   }];
 };
 
@@ -177,6 +178,7 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
 const PreviewLana8Wonder = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { params } = useNostrLanaParams();
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
@@ -515,7 +517,7 @@ const PreviewLana8Wonder = () => {
       adjustedStartingPrice * 10000000
     ];
     
-    const accountConfigs = getAccountConfigs(effectivePlanCurrency as 'EUR' | 'USD' | 'GBP');
+    const accountConfigs = getAccountConfigs(effectivePlanCurrency as 'EUR' | 'USD' | 'GBP', t);
     
     const account6TargetValue = 1000000;
     const account7TargetValue = 10000000;

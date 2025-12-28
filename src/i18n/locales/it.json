@@ -171,5 +171,28 @@
     "highestProjectedValue": "Valore massimo previsto",
     "completeSplitProjection": "Proiezione split completa",
     "portfolioFixedNote": "Dopo aver raggiunto {{amount}}, il valore del portafoglio rimane fisso mentre i LANA rimanenti si adattano per mantenere questo valore poiché il prezzo LANA raddoppia ad ogni split."
+  },
+  "walletAccounts": {
+    "account": "Conto",
+    "linear": "LINEARE",
+    "compound": "COMPOSTO",
+    "passive": "PASSIVO",
+    "totalCashOut": "Incasso totale",
+    "account1Name": "Recupero iniziale",
+    "account1Description": "Recupera il tuo investimento iniziale di {{currency}}88",
+    "account2Name": "Accelerazione della crescita",
+    "account2Description": "Raddoppia i tuoi rendimenti con una crescita strategica",
+    "account3Name": "Punto di svolta",
+    "account3Description": "{{currency}}50.000+ strategia di crescita composta",
+    "account4Name": "Fase di espansione",
+    "account4Description": "{{currency}}500.000+ moltiplicazione del patrimonio",
+    "account5Name": "Creazione di ricchezza",
+    "account5Description": "{{currency}}2.670.000+ rendimenti sostanziali",
+    "account6Name": "Reddito passivo",
+    "account6Description": "",
+    "account7Name": "Portafoglio ereditario",
+    "account7Description": "",
+    "account8Name": "Libertà definitiva",
+    "account8Description": ""
   }
 }

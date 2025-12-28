@@ -171,5 +171,28 @@
     "highestProjectedValue": "Highest projected value",
     "completeSplitProjection": "Complete Split Projection",
     "portfolioFixedNote": "After reaching {{amount}}, portfolio value remains fixed while remaining LANA adjusts to maintain this value as LANA price doubles with each split."
+  },
+  "walletAccounts": {
+    "account": "Account",
+    "linear": "LINEAR",
+    "compound": "COMPOUND",
+    "passive": "PASSIVE",
+    "totalCashOut": "Total Cash Out",
+    "account1Name": "Initial Recovery",
+    "account1Description": "Recover your initial {{currency}}88 investment",
+    "account2Name": "Growth Acceleration",
+    "account2Description": "Double your returns with strategic growth",
+    "account3Name": "Breakthrough Point",
+    "account3Description": "{{currency}}50,000+ compound growth strategy",
+    "account4Name": "Expansion Phase",
+    "account4Description": "{{currency}}500,000+ wealth multiplication",
+    "account5Name": "Wealth Creation",
+    "account5Description": "{{currency}}2,670,000+ substantial returns",
+    "account6Name": "Passive Income",
+    "account6Description": "",
+    "account7Name": "Legacy Portfolio",
+    "account7Description": "",
+    "account8Name": "Ultimate Freedom",
+    "account8Description": ""
   }
 }
