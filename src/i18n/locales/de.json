@@ -171,5 +171,28 @@
     "highestProjectedValue": "Höchster prognostizierter Wert",
     "completeSplitProjection": "Vollständige Split-Prognose",
     "portfolioFixedNote": "Nach Erreichen von {{amount}} bleibt der Portfoliowert fixiert, während sich die verbleibenden LANA anpassen, um diesen Wert zu halten, da sich der LANA-Preis mit jedem Split verdoppelt."
+  },
+  "walletAccounts": {
+    "account": "Konto",
+    "linear": "LINEAR",
+    "compound": "ZINSESZINS",
+    "passive": "PASSIV",
+    "totalCashOut": "Gesamtauszahlung",
+    "account1Name": "Anfängliche Rückgewinnung",
+    "account1Description": "Erhalten Sie Ihre anfängliche {{currency}}88 Investition zurück",
+    "account2Name": "Wachstumsbeschleunigung",
+    "account2Description": "Verdoppeln Sie Ihre Renditen mit strategischem Wachstum",
+    "account3Name": "Durchbruchspunkt",
+    "account3Description": "{{currency}}50.000+ Zinseszins-Wachstumsstrategie",
+    "account4Name": "Expansionsphase",
+    "account4Description": "{{currency}}500.000+ Vermögensmultiplikation",
+    "account5Name": "Vermögensaufbau",
+    "account5Description": "{{currency}}2.670.000+ erhebliche Renditen",
+    "account6Name": "Passives Einkommen",
+    "account6Description": "",
+    "account7Name": "Vermächtnis-Portfolio",
+    "account7Description": "",
+    "account8Name": "Ultimative Freiheit",
+    "account8Description": ""
   }
 }

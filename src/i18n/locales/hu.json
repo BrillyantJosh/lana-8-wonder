@@ -171,5 +171,28 @@
     "highestProjectedValue": "Legmagasabb várható érték",
     "completeSplitProjection": "Teljes Split előrejelzés",
     "portfolioFixedNote": "A {{amount}} elérése után a portfólió értéke rögzített marad, míg a maradék LANA ehhez az értékhez igazodik, ahogy a LANA ára megduplázódik minden split-tel."
+  },
+  "walletAccounts": {
+    "account": "Számla",
+    "linear": "LINEÁRIS",
+    "compound": "KAMATOS",
+    "passive": "PASSZÍV",
+    "totalCashOut": "Összes kivétel",
+    "account1Name": "Kezdeti megtérülés",
+    "account1Description": "Szerezd vissza a kezdeti {{currency}}88 befektetésed",
+    "account2Name": "Növekedés gyorsítás",
+    "account2Description": "Duplázd meg a hozamodat stratégiai növekedéssel",
+    "account3Name": "Áttörési pont",
+    "account3Description": "{{currency}}50,000+ kamatos növekedési stratégia",
+    "account4Name": "Terjeszkedési fázis",
+    "account4Description": "{{currency}}500,000+ vagyonszorzás",
+    "account5Name": "Vagyonteremtés",
+    "account5Description": "{{currency}}2,670,000+ jelentős hozamok",
+    "account6Name": "Passzív jövedelem",
+    "account6Description": "",
+    "account7Name": "Örökség portfólió",
+    "account7Description": "",
+    "account8Name": "Teljes szabadság",
+    "account8Description": ""
   }
 }

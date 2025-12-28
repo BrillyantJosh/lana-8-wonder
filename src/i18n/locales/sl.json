@@ -171,5 +171,28 @@
     "highestProjectedValue": "Najvišja predvidena vrednost",
     "completeSplitProjection": "Popolna projekcija delitev",
     "portfolioFixedNote": "Po dosegu {{amount}} vrednost portfelja ostane fiksna, medtem ko se preostali LANA prilagodi za ohranjanje te vrednosti, saj se cena LANA podvoji z vsako delitvijo."
+  },
+  "walletAccounts": {
+    "account": "Račun",
+    "linear": "LINEAREN",
+    "compound": "OBRESTNI",
+    "passive": "PASIVEN",
+    "totalCashOut": "Skupno izplačilo",
+    "account1Name": "Začetna povrnitev",
+    "account1Description": "Povrnite svojo začetno naložbo {{currency}}88",
+    "account2Name": "Pospešitev rasti",
+    "account2Description": "Podvojite donose s strateško rastjo",
+    "account3Name": "Točka preboja",
+    "account3Description": "{{currency}}50.000+ strategija obrestne rasti",
+    "account4Name": "Faza širitve",
+    "account4Description": "{{currency}}500.000+ množenje bogastva",
+    "account5Name": "Ustvarjanje bogastva",
+    "account5Description": "{{currency}}2.670.000+ znatni donosi",
+    "account6Name": "Pasivni dohodek",
+    "account6Description": "",
+    "account7Name": "Portfelj dediščine",
+    "account7Description": "",
+    "account8Name": "Končna svoboda",
+    "account8Description": ""
   }
 }
