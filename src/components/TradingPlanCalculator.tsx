@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronDown, ChevronUp, TrendingUp, Wallet, Coins, Loader2 } from "lucide-react";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { getCurrencySymbol } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+
 interface TradingLevel {
   level: number;
   triggerPrice: string;
@@ -250,7 +252,9 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
   
   return levels;
 }
+
 export default function TradingPlanCalculator() {
+  const { t } = useTranslation();
   const {
     params,
     loading,
@@ -476,16 +480,16 @@ export default function TradingPlanCalculator() {
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-4">
             <Coins className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-foreground">Let's see Your 8th Wonder Plan</h2>
+            <h2 className="text-2xl font-bold text-foreground">{t('tradingCalculator.title')}</h2>
           </div>
           <p className="text-muted-foreground">
-            Current prices loaded from Nostr Network. Select your currency and generate your personalized 8-account trading strategy.
+            {t('tradingCalculator.description')}
           </p>
           
           <div className="grid gap-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-foreground">
-                Select Currency
+                {t('tradingCalculator.selectCurrency')}
               </label>
               <Select value={selectedCurrency} onValueChange={(value: 'EUR' | 'USD' | 'GBP') => {
               setSelectedCurrency(value);
@@ -494,7 +498,7 @@ export default function TradingPlanCalculator() {
               }
             }} disabled={loading}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select currency" />
+                  <SelectValue placeholder={t('tradingCalculator.selectCurrency')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="EUR">EUR (€)</SelectItem>
@@ -507,13 +511,13 @@ export default function TradingPlanCalculator() {
             <div className="flex gap-4 items-end">
               <div className="flex-1">
                 <label className="block text-sm font-medium mb-2 text-foreground">
-                  Current LANA Price ({selectedCurrency})
+                  {t('tradingCalculator.currentPrice')} ({selectedCurrency})
                 </label>
-                <Input type="number" step="0.000001" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder="Price loaded from Nostr" className="text-lg" disabled={loading} />
+                <Input type="number" step="0.000001" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder={t('tradingCalculator.loadingPrices')} className="text-lg" disabled={loading} />
               </div>
               <Button onClick={calculatePlan} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading || !currentPrice}>
                 <TrendingUp className="w-5 h-5 mr-2" />
-                Generate Plan
+                {t('tradingCalculator.generatePlan')}
               </Button>
             </div>
           </div>
@@ -521,24 +525,24 @@ export default function TradingPlanCalculator() {
           {accounts.length > 0 && <div className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Initial Investment</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('tradingCalculator.initialInvestment')}</p>
                   <p className="text-3xl font-bold text-foreground">{currencySymbol}88</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Total Lanas</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('tradingCalculator.totalLanas')}</p>
                   <p className="text-3xl font-bold text-foreground">
                     {formatNumber(88 / parseFloat(currentPrice))}
                   </p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Lana8Wonder Donation</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('tradingCalculator.lana8WonderDonation')}</p>
                   <p className="text-3xl font-bold text-foreground">
                     {formatNumber(12 / parseFloat(currentPrice))}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">LANA</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-                  <p className="text-sm text-muted-foreground mb-2">Total LANA to step into Lana8Wonder</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('tradingCalculator.totalLanaToStep')}</p>
                   <p className="text-3xl font-bold text-foreground">
                     {formatNumber((88 + 12) / parseFloat(currentPrice))}
                   </p>
@@ -553,7 +557,7 @@ export default function TradingPlanCalculator() {
       {accounts.length > 0 && <div className="space-y-4">
           <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Wallet className="w-6 h-6 text-primary" />
-            In current Split you can create next 8 Lana Wonder Accounts
+            {t('tradingCalculator.accountsTitle')}
           </h3>
           
           {accounts.map(account => <Card key={account.number} className="overflow-hidden shadow-card hover:shadow-mystical transition-all duration-300">
@@ -562,7 +566,7 @@ export default function TradingPlanCalculator() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold text-white">
-                        Account {account.number}
+                        {t('tradingCalculator.account')} {account.number}
                       </span>
                       <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white uppercase">
                         {account.type}
@@ -573,7 +577,7 @@ export default function TradingPlanCalculator() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-white/80 mb-1">
-                      {account.type === "passive" ? "Portfolio Value" : "Total Cash Out"}
+                      {account.type === "passive" ? t('tradingCalculator.portfolioValue') : t('tradingCalculator.totalCashOut')}
                     </p>
                     <p className="text-2xl font-bold text-white">
                       {currencySymbol}{formatNumber(account.type === "passive" && account.portfolioValue ? account.portfolioValue : account.totalCashOut)}
@@ -590,12 +594,12 @@ export default function TradingPlanCalculator() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Level</th>
-                          <th className="text-right py-3 px-4 font-semibold text-foreground">Trigger Price</th>
-                          <th className="text-right py-3 px-4 font-semibold text-foreground">Split</th>
-                          <th className="text-right py-3 px-4 font-semibold text-foreground">LANA on Sale</th>
-                          <th className="text-right py-3 px-4 font-semibold text-foreground">Cash Out</th>
-                          <th className="text-right py-3 px-4 font-semibold text-foreground">Remaining</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.level')}</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.triggerPrice')}</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.split')}</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.lanaOnSale')}</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.cashOut')}</th>
+                          <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.remaining')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -627,10 +631,10 @@ export default function TradingPlanCalculator() {
                     </table>
                   </div>
                   {account.number < 6 && account.levels.length > 10 && <p className="text-center text-sm text-muted-foreground mt-4">
-                      Showing first 10 of {account.levels.length} levels
+                      {t('tradingCalculator.showingFirst', { count: 10, total: account.levels.length })}
                     </p>}
                   {account.number >= 6 && account.number <= 8 && <p className="text-center text-sm text-muted-foreground mt-4">
-                      Showing all {account.levels.length} levels to Split 37
+                      {t('tradingCalculator.showingAll', { count: account.levels.length })}
                     </p>}
                 </div>}
             </Card>)}
@@ -639,9 +643,9 @@ export default function TradingPlanCalculator() {
       {/* Portfolio Growth Projection */}
       {portfolioProjection.length > 0 && <Card className="overflow-hidden shadow-card border-border">
           <div className="bg-gradient-to-r from-indigo-500 to-indigo-700 p-6">
-            <h3 className="text-2xl font-bold text-white mb-2">Portfolio Growth Projection</h3>
+            <h3 className="text-2xl font-bold text-white mb-2">{t('tradingCalculator.portfolioGrowthProjection')}</h3>
             <p className="text-white/90 text-sm">
-              Projected value of your remaining LANA from Account 8 at each Split milestone
+              {t('tradingCalculator.portfolioProjectionDescription')}
             </p>
           </div>
           
@@ -649,9 +653,9 @@ export default function TradingPlanCalculator() {
             {/* Summary Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Starting Split</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('tradingCalculator.startingSplit')}</p>
                 <p className="text-2xl font-bold text-foreground">
-                  Split {portfolioProjection[0].splitNumber}
+                  {t('tradingCalculator.split')} {portfolioProjection[0].splitNumber}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {currencySymbol}{formatNumber(portfolioProjection[0].portfolioValue)}
@@ -659,7 +663,7 @@ export default function TradingPlanCalculator() {
               </div>
               
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Remaining LANA</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('tradingCalculator.remainingLana')}</p>
                 <p className="text-2xl font-bold text-foreground">
                   {passiveAccountSplits.has(portfolioProjection[0].splitNumber) && '≈ '}
                   {formatNumber(portfolioProjection[0].remainingLana)}
@@ -667,12 +671,12 @@ export default function TradingPlanCalculator() {
               </div>
               
               <div className="bg-muted/30 border border-border rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Target Milestone</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('tradingCalculator.targetMilestone')}</p>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {currencySymbol}100,000,000
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Split {portfolioProjection[portfolioProjection.length - 1].splitNumber}
+                  {t('tradingCalculator.split')} {portfolioProjection[portfolioProjection.length - 1].splitNumber}
                 </p>
               </div>
             </div>
@@ -682,44 +686,44 @@ export default function TradingPlanCalculator() {
               const milestone100M = portfolioProjection.find(p => p.portfolioValue >= 100000000);
               if (milestone100M) {
                 return <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/30 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-2">🎯 Milestone Achievement</p>
+                    <p className="text-sm text-muted-foreground mb-2">🎯 {t('tradingCalculator.milestoneAchievement')}</p>
                     <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
                       {currencySymbol}100,000,000
                     </p>
                     <p className="text-lg text-foreground">
-                      Reached at <span className="font-bold text-primary">Split {milestone100M.splitNumber}</span>
+                      {t('tradingCalculator.reachedAt')} <span className="font-bold text-primary">{t('tradingCalculator.split')} {milestone100M.splitNumber}</span>
                     </p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      LANA Price: {currencySymbol}{formatNumber(milestone100M.splitPrice)}
+                      {t('tradingCalculator.lanaPrice')}: {currencySymbol}{formatNumber(milestone100M.splitPrice)}
                     </p>
                   </div>;
               }
               return <div className="bg-muted/20 border border-border rounded-lg p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">📊 Maximum Projection</p>
+                  <p className="text-sm text-muted-foreground mb-2">📊 {t('tradingCalculator.maximumProjection')}</p>
                   <p className="text-lg text-foreground">
-                    {currencySymbol}100M milestone not reached by Split 37
+                    {t('tradingCalculator.milestoneNotReached', { amount: `${currencySymbol}100M` })}
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Highest projected value: {currencySymbol}{formatNumber(portfolioProjection[portfolioProjection.length - 1].portfolioValue)}
+                    {t('tradingCalculator.highestProjectedValue')}: {currencySymbol}{formatNumber(portfolioProjection[portfolioProjection.length - 1].portfolioValue)}
                   </p>
                 </div>;
             })()}
 
             {/* Full Projection Table */}
             <div>
-              <h4 className="text-lg font-semibold text-foreground mb-4">Complete Split Projection</h4>
+              <h4 className="text-lg font-semibold text-foreground mb-4">{t('tradingCalculator.completeSplitProjection')}</h4>
               <p className="text-sm text-muted-foreground mb-4 italic">
-                After reaching {currencySymbol}100M, portfolio value remains fixed while remaining LANA adjusts to maintain this value as LANA price doubles with each split.
+                {t('tradingCalculator.portfolioFixedNote', { amount: `${currencySymbol}100M` })}
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-border">
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Split</th>
-                      <th className="text-right py-3 px-4 font-semibold text-foreground">LANA Price</th>
-                      <th className="text-right py-3 px-4 font-semibold text-foreground">Cash Out</th>
-                      <th className="text-right py-3 px-4 font-semibold text-foreground">Portfolio Value</th>
-                      <th className="text-right py-3 px-4 font-semibold text-foreground">Remaining LANA</th>
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.split')}</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.lanaPrice')}</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.cashOut')}</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.portfolioValue')}</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">{t('tradingCalculator.remainingLana')}</th>
                     </tr>
                   </thead>
                   <tbody>

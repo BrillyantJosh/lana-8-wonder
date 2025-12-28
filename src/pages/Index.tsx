@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { getCurrencySymbol } from "@/lib/utils";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
+  const { t } = useTranslation();
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -35,18 +37,18 @@ const Index = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Connecting...</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">{t('index.connecting')}</span>
                     </>
                   ) : error ? (
                     <>
                       <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0" />
-                      <Badge variant="destructive" className="text-xs">Disconnected</Badge>
+                      <Badge variant="destructive" className="text-xs">{t('index.disconnected')}</Badge>
                     </>
                   ) : params ? (
                     <>
                       <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
                       <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
-                        Connected
+                        {t('index.connected')}
                       </Badge>
                     </>
                   ) : null}
@@ -54,12 +56,12 @@ const Index = () => {
               </DialogTrigger>
               <DialogContent className="max-w-[90vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Nostr Network Status</DialogTitle>
+                  <DialogTitle>{t('index.nostrNetworkStatus')}</DialogTitle>
                 </DialogHeader>
                 {loading && (
                   <div className="flex items-center justify-center gap-3 py-8">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Connecting to Nostr Network...</span>
+                    <span className="text-sm text-muted-foreground">{t('index.connectingToNostr')}</span>
                   </div>
                 )}
                 {error && (
@@ -75,7 +77,7 @@ const Index = () => {
           <div className="flex items-center gap-2 flex-shrink-0">
             <LanguageSelector />
             <Button variant="default" size="sm" asChild className="text-xs sm:text-sm">
-              <Link to="/login">Log in</Link>
+              <Link to="/login">{t('index.logIn')}</Link>
             </Button>
           </div>
         </div>
@@ -99,13 +101,13 @@ const Index = () => {
               <div className="flex items-center justify-center gap-2 sm:gap-3">
                 <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-primary animate-pulse flex-shrink-0" />
                 <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                  Lana8Wonder
+                  {t('index.title')}
                 </h1>
                 <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-accent animate-pulse flex-shrink-0" />
               </div>
               
               <p className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-foreground max-w-4xl mx-auto px-2">
-                Transform your {currencySymbol}88 investment into extraordinary wealth with 8-account.
+                {t('index.tagline', { currency: currencySymbol })}
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-4 sm:pt-8 max-w-4xl mx-auto">
@@ -118,9 +120,9 @@ const Index = () => {
                 </div>
                 <blockquote className="text-left px-2">
                   <p className="text-sm sm:text-base md:text-lg lg:text-xl font-medium text-foreground italic">
-                    "Compound interest is the eighth wonder of the world. He who understands it, earns it… He who doesn't, pays it."
+                    "{t('index.quote')}"
                   </p>
-                  <cite className="block mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground not-italic">— Albert Einstein</cite>
+                  <cite className="block mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground not-italic">— {t('index.quoteAuthor')}</cite>
                 </blockquote>
               </div>
             </div>
@@ -142,10 +144,10 @@ const Index = () => {
       <footer className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-border">
         <div className="text-center text-muted-foreground px-2">
           <p className="text-xs sm:text-sm">
-            © 2024 Lana8Wonder. Investment strategies calculated using proven mathematical formulas.
+            {t('index.footer')}
           </p>
           <p className="text-xs mt-2">
-            Initial investment: {currencySymbol}88 | 8 Accounts | Linear, Compound & Passive Strategies
+            {t('index.footerDetails', { currency: currencySymbol })}
           </p>
         </div>
       </footer>
