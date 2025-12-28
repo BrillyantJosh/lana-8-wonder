@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LanaSystemParams } from '@/hooks/useNostrLanaParams';
 import { WaitingListDialog } from './WaitingListDialog';
+import { useTranslation } from 'react-i18next';
 
 interface AvailableSlotsCardProps {
   params: LanaSystemParams | null;
@@ -18,6 +19,7 @@ export const AvailableSlotsCard = ({
   params,
   loading
 }: AvailableSlotsCardProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [donationWalletId, setDonationWalletId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -153,6 +155,7 @@ export const AvailableSlotsCard = ({
       window.open(`https://100million2everyone.com/?return_url=${returnUrl}&site_name=${siteName}`, '_blank');
     }
   };
+  
   if (loading || fetchingBalance || reservedSlotsCount === null || showSlotsOnLandingPage === null) {
     return <Card className="w-full bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-primary/20">
         <CardContent className="pt-6">
@@ -166,24 +169,26 @@ export const AvailableSlotsCard = ({
         </CardContent>
       </Card>;
   }
+  
   if (error) {
     return <Card className="w-full bg-gradient-to-br from-destructive/10 via-background to-destructive/5 border-destructive/20">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
             <AlertCircle className="h-8 w-8 text-destructive" />
-            <h2 className="text-xl font-semibold text-foreground">Slot Information Unavailable</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t('availableSlots.slotInfoUnavailable')}</h2>
           </div>
           <p className="text-muted-foreground">{error}</p>
         </CardContent>
       </Card>;
   }
+  
   return <Card className="w-full bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-primary/20 shadow-lg">
       <CardContent className="pt-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-full bg-primary/20">
             <Ticket className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Available Lana8Wonder Slots for buying</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">{t('availableSlots.title')}</h2>
         </div>
 
         <div className="bg-background/50 rounded-lg p-6 mb-4 text-center">
@@ -191,12 +196,12 @@ export const AvailableSlotsCard = ({
             {availableSlots !== null ? availableSlots : '—'}
           </div>
           <div className="text-lg text-muted-foreground">
-            {availableSlots === 1 ? 'slot available' : 'slots available'}
+            {availableSlots === 1 ? t('availableSlots.slotAvailable') : t('availableSlots.slotsAvailable')}
           </div>
         </div>
 
         {lanaEquivalent && <p className="text-sm text-muted-foreground text-center mb-6">
-            Each slot requires ~{lanaEquivalent.toLocaleString()} LANA (€100 at current rate)
+            {t('availableSlots.eachSlotRequires', { amount: lanaEquivalent.toLocaleString() })}
           </p>}
 
         {availableSlots === 0 ? (
@@ -204,7 +209,7 @@ export const AvailableSlotsCard = ({
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                No slots are currently available. Join our waiting list and we'll notify you when a slot becomes available.
+                {t('availableSlots.noSlotsMessage')}
               </p>
             </div>
             <Button 
@@ -212,12 +217,12 @@ export const AvailableSlotsCard = ({
               className="w-full text-lg py-6 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg" 
               size="lg"
             >
-              📋 Join Waiting List
+              📋 {t('availableSlots.joinWaitingList')}
             </Button>
           </div>
         ) : (
           <Button onClick={handleBuyClick} className="w-full text-lg py-6" size="lg">
-            🚀 Buy Lana8Wonder
+            🚀 {t('availableSlots.buyButton')}
           </Button>
         )}
 
@@ -225,17 +230,17 @@ export const AvailableSlotsCard = ({
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="mx-2 sm:mx-0 max-w-[calc(100vw-1rem)] sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Do you have a registered Lana Wallet?</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">{t('availableSlots.walletQuestion')}</DialogTitle>
               <DialogDescription className="text-sm sm:text-base">
-                To purchase Lana8Wonder, you need a Lana wallet. If you don't have one yet, we'll help you create it.
+                {t('availableSlots.walletDescription')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleNoWallet} className="w-full sm:w-auto text-sm sm:text-base">
-                No, create wallet
+                {t('availableSlots.noCreateWallet')}
               </Button>
               <Button onClick={handleHasWallet} className="w-full sm:w-auto text-sm sm:text-base">
-                Yes, I have a wallet
+                {t('availableSlots.yesHaveWallet')}
               </Button>
             </DialogFooter>
           </DialogContent>
