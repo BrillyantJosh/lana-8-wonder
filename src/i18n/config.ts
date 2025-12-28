@@ -4,12 +4,14 @@ import en from './locales/en.json';
 import sl from './locales/sl.json';
 import de from './locales/de.json';
 import it from './locales/it.json';
+import hu from './locales/hu.json';
 
 const resources = {
   en: { translation: en },
   sl: { translation: sl },
   de: { translation: de },
   it: { translation: it },
+  hu: { translation: hu },
 };
 
 // Get language from sessionStorage or default to 'en'

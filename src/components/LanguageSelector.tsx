@@ -13,6 +13,7 @@ const languages = [
   { code: "sl", name: "Slovenian", nativeName: "Slovenščina" },
   { code: "de", name: "German", nativeName: "Deutsch" },
   { code: "it", name: "Italian", nativeName: "Italiano" },
+  { code: "hu", name: "Hungarian", nativeName: "Magyar" },
 ];
 
 export const LanguageSelector = () => {
