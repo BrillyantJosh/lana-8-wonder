@@ -34,45 +34,45 @@ interface ProjectionData {
   remainingLana: number;
   totalCashOut: number;
 }
-const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP') => {
+const getAccountConfigs = (currency: 'EUR' | 'USD' | 'GBP', t: (key: string, options?: Record<string, string>) => string) => {
   const symbol = getCurrencySymbol(currency);
   return [{
-    name: "Initial Recovery",
+    name: t('walletAccounts.account1Name'),
     type: "linear" as const,
     color: "from-orange-400 to-orange-600",
-    description: `Recover your initial ${symbol}88 investment`
+    description: t('walletAccounts.account1Description', { currency: symbol })
   }, {
-    name: "Growth Acceleration",
+    name: t('walletAccounts.account2Name'),
     type: "linear" as const,
     color: "from-orange-500 to-orange-700",
-    description: "Double your returns with strategic growth"
+    description: t('walletAccounts.account2Description')
   }, {
-    name: "Breakthrough Point",
+    name: t('walletAccounts.account3Name'),
     type: "compound" as const,
     color: "from-green-400 to-green-600",
-    description: `${symbol}50,000+ compound growth strategy`
+    description: t('walletAccounts.account3Description', { currency: symbol })
   }, {
-    name: "Expansion Phase",
+    name: t('walletAccounts.account4Name'),
     type: "compound" as const,
     color: "from-green-500 to-green-700",
-    description: `${symbol}500,000+ wealth multiplication`
+    description: t('walletAccounts.account4Description', { currency: symbol })
   }, {
-    name: "Wealth Creation",
+    name: t('walletAccounts.account5Name'),
     type: "compound" as const,
     color: "from-green-600 to-green-800",
-    description: `${symbol}2,670,000+ substantial returns`
+    description: t('walletAccounts.account5Description', { currency: symbol })
   }, {
-    name: "Passive Income",
+    name: t('walletAccounts.account6Name'),
     type: "passive" as const,
     color: "from-purple-400 to-purple-600",
     description: ""
   }, {
-    name: "Legacy Portfolio",
+    name: t('walletAccounts.account7Name'),
     type: "passive" as const,
     color: "from-purple-500 to-purple-700",
     description: ""
   }, {
-    name: "Ultimate Freedom",
+    name: t('walletAccounts.account8Name'),
     type: "passive" as const,
     color: "from-purple-600 to-purple-800",
     description: ""
@@ -405,7 +405,7 @@ export default function TradingPlanCalculator() {
     adjustedStartingPrice * 10000000 // Account 8: continues where Account 7 ends
     ];
     
-    const accountConfigs = getAccountConfigs(selectedCurrency);
+    const accountConfigs = getAccountConfigs(selectedCurrency, t);
     
     // Target values for passive accounts
     const account6TargetValue = 1000000; // £1M
