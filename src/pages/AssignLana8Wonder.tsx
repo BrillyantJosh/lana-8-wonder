@@ -442,7 +442,7 @@ const AssignLana8Wonder = () => {
           <CardHeader>
             <CardTitle>{t('sendLana.sourceWallet')}</CardTitle>
             <CardDescription>
-              This wallet will fund the Lana 8 Wonder plan
+              {t('assignLana8Wonder.sourceWalletDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -460,27 +460,27 @@ const AssignLana8Wonder = () => {
                 <p className="text-sm font-semibold mb-3">{t('assignLana8Wonder.transactionBreakdown')}</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="text-muted-foreground">Required Deposit ({currencySymbol}):</span>
+                    <span className="text-muted-foreground">{t('assignLana8Wonder.requiredDeposit', { currency: currencySymbol })}</span>
                     <span className="font-mono text-right">{minRequiredLana.toFixed(2)} LANA</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="text-muted-foreground">PHI Donation (Lana 8 Wonder):</span>
+                    <span className="text-muted-foreground">{t('assignLana8Wonder.phiDonation')}</span>
                     <span className="font-mono text-right">{phiDonation.toFixed(2)} LANA</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="text-muted-foreground">Total to 8 Wallets:</span>
+                    <span className="text-muted-foreground">{t('assignLana8Wonder.totalTo8Wallets')}</span>
                     <span className="font-mono text-right">{totalFor8Wallets.toFixed(2)} LANA</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="text-muted-foreground">Per Wallet (8 accounts):</span>
+                    <span className="text-muted-foreground">{t('assignLana8Wonder.perWallet')}</span>
                     <span className="font-mono text-right">{amountPerWallet.toFixed(2)} LANA</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1 pt-2 border-t font-semibold">
-                    <span>Total to Transfer:</span>
+                    <span>{t('assignLana8Wonder.totalToTransfer')}</span>
                     <span className="font-mono text-right">{totalTransferred.toFixed(2)} LANA</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-muted-foreground">
-                    <span>Remaining in Wallet:</span>
+                    <span>{t('assignLana8Wonder.remainingInWallet')}</span>
                     <span className="font-mono text-right">{remainingBalance.toFixed(2)} LANA</span>
                   </div>
                 </div>
@@ -495,7 +495,7 @@ const AssignLana8Wonder = () => {
               <div className="space-y-1.5">
                 <CardTitle>{t('assignLana8Wonder.walletAssignment')}</CardTitle>
                 <CardDescription>
-                  All wallets must be empty (balance = 0) or new/unregistered
+                  {t('assignLana8Wonder.walletsEmptyRequirement')}
                 </CardDescription>
               </div>
               <Button 
@@ -531,7 +531,7 @@ const AssignLana8Wonder = () => {
                         id={`wallet-${index}`}
                         value={wallet.address}
                         onChange={(e) => handleAddressChange(index, e.target.value)}
-                        placeholder="Enter wallet address or scan QR code"
+                        placeholder={t('assignLana8Wonder.walletInputPlaceholder')}
                         disabled={wallet.isChecking || scannerActive === index}
                         className="font-mono text-sm"
                       />
