@@ -196,7 +196,7 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
 
 const UpgradeSplitConfirm = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [splitSelection, setSplitSelection] = useState<{ splitNumber: number; price: number } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -212,6 +212,20 @@ const UpgradeSplitConfirm = () => {
 
   const selectedCurrency: 'EUR' | 'USD' | 'GBP' = 'EUR';
   const currencySymbol = getCurrencySymbol(selectedCurrency);
+
+  // Update account names/descriptions when language changes
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const accountConfigs = getAccountConfigs(selectedCurrency, t);
+      setAccounts(prevAccounts => 
+        prevAccounts.map((account, index) => ({
+          ...account,
+          name: accountConfigs[index].name,
+          description: accountConfigs[index].description
+        }))
+      );
+    }
+  }, [i18n.language, selectedCurrency, t]);
 
   useEffect(() => {
     const sessionData = sessionStorage.getItem("lana_session");

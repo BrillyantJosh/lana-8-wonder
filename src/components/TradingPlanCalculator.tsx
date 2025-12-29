@@ -254,7 +254,7 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
 }
 
 export default function TradingPlanCalculator() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     params,
     loading,
@@ -274,6 +274,20 @@ export default function TradingPlanCalculator() {
       setCurrentPrice(rate.toString());
     }
   }, [params, selectedCurrency, currentPrice]);
+
+  // Update account names/descriptions when language changes
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const accountConfigs = getAccountConfigs(selectedCurrency, t);
+      setAccounts(prevAccounts => 
+        prevAccounts.map((account, index) => ({
+          ...account,
+          name: accountConfigs[index].name,
+          description: accountConfigs[index].description
+        }))
+      );
+    }
+  }, [i18n.language, selectedCurrency, t]);
 
   const buildRemainingLanaMap = (accounts: Account[], totalInitialLana: number): Map<number, number> => {
     const lanaMap = new Map<number, number>();
