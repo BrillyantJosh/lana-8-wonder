@@ -12,6 +12,7 @@ import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrencySymbol } from "@/lib/utils";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const CreateLana8Wonder = () => {
   const { t } = useTranslation();
@@ -44,7 +45,7 @@ const CreateLana8Wonder = () => {
       
       // Set greeting with profile name
       const displayName = parsedSession.profileDisplayName || parsedSession.profileName || "User";
-      setGreeting(`Hello, ${displayName}!`);
+      setGreeting(displayName);
 
       if (!params?.relays || params.relays.length === 0) {
         toast.error("No relays available");
@@ -184,7 +185,7 @@ const CreateLana8Wonder = () => {
       <div className="max-w-4xl mx-auto">
         {greeting && (
           <div className="mb-4 sm:mb-6">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greeting}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t('createLana8Wonder.greeting', { name: greeting })}</h1>
           </div>
         )}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
@@ -192,10 +193,13 @@ const CreateLana8Wonder = () => {
             <h2 className="text-xl sm:text-2xl font-bold">{t('createLana8Wonder.pageTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('createLana8Wonder.pageSubtitle')}</p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
-            <LogOut className="mr-2 h-4 w-4" />
-            {t('createLana8Wonder.logout')}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <LanguageSelector />
+            <Button variant="outline" onClick={handleLogout} className="flex-1 sm:flex-initial">
+              <LogOut className="mr-2 h-4 w-4" />
+              {t('createLana8Wonder.logout')}
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:gap-6 mb-6 sm:mb-8">

@@ -17,6 +17,7 @@ import { validateLanaAddress } from "@/lib/walletValidation";
 import { generate8Wallets } from "@/lib/walletGenerator";
 import { generateWalletsPDF } from "@/lib/pdfGenerator";
 import { GenerateWalletsDialog } from "@/components/GenerateWalletsDialog";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface WalletValidation {
   address: string;
@@ -424,11 +425,12 @@ const AssignLana8Wonder = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <Button variant="ghost" onClick={() => navigate("/create-lana8wonder")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('common.back')}
           </Button>
+          <LanguageSelector />
         </div>
 
         <div className="mb-8">

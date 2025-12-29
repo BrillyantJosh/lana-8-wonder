@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +22,7 @@ const formatNumber = (value: number, decimals: number = 4): string => {
 };
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [plan, setPlan] = useState<Lana8WonderPlan | null>(null);
@@ -45,7 +47,7 @@ const Dashboard = () => {
       
       // Set greeting with profile name
       const displayName = parsedSession.profileDisplayName || parsedSession.profileName || "User";
-      setGreeting(`Hello, ${displayName}!`);
+      setGreeting(displayName);
 
       if (!params?.relays || params.relays.length === 0) {
         toast.error("No relays available");
@@ -188,7 +190,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading your annuity plan...</p>
+          <p className="text-muted-foreground">{t('dashboard.loadingPlan')}</p>
         </div>
       </div>
     );
@@ -199,8 +201,8 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
-            <CardTitle>No Plan Found</CardTitle>
-            <CardDescription>Redirecting to plan creation...</CardDescription>
+            <CardTitle>{t('dashboard.noPlanFound')}</CardTitle>
+            <CardDescription>{t('dashboard.redirectingToPlanCreation')}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -212,13 +214,13 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto">
         {greeting && (
           <div className="mb-4 sm:mb-6">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greeting}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t('dashboard.greeting', { name: greeting })}</h1>
           </div>
         )}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold">Lana8Wonder Dashboard</h2>
-            <p className="text-sm text-muted-foreground">Your Annuity Plan</p>
+            <h2 className="text-xl sm:text-2xl font-bold">{t('dashboard.dashboardTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('dashboard.yourAnnuityPlan')}</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto items-center flex-wrap">
             <LanguageSelector />
@@ -228,7 +230,7 @@ const Dashboard = () => {
                 className="flex-1 sm:flex-initial bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800"
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
-                Upgrade Split
+                {t('dashboard.upgradeSplit')}
               </Button>
             )}
             {isAdmin && (
@@ -237,7 +239,7 @@ const Dashboard = () => {
                 onClick={() => navigate('/admin-buy-lana')}
                 className="flex-1 sm:flex-initial"
               >
-                Admin Panel
+                {t('dashboard.adminPanel')}
               </Button>
             )}
             <Button 
@@ -246,7 +248,7 @@ const Dashboard = () => {
               className="flex-1 sm:flex-initial"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              {t('dashboard.logout')}
             </Button>
           </div>
         </div>
@@ -254,19 +256,19 @@ const Dashboard = () => {
         <div className="grid gap-6 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>Account Information</CardTitle>
+              <CardTitle>{t('dashboard.accountInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Wallet ID</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.walletId')}</p>
                 <p className="font-mono text-xs sm:text-sm break-all">{session.walletId}</p>
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Nostr HEX ID</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.nostrHexId')}</p>
                 <p className="font-mono text-xs sm:text-sm break-all">{session.nostrHexId}</p>
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Nostr npub</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.nostrNpub')}</p>
                 <p className="font-mono text-xs sm:text-sm break-all">{session.nostrNpubId}</p>
               </div>
             </CardContent>
@@ -274,7 +276,7 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Plan Overview</CardTitle>
+              <CardTitle>{t('dashboard.planOverview')}</CardTitle>
               <CardDescription>
                 {plan.coin}/{plan.currency} • Policy {plan.policy} • Schema {plan.accounts.length} accounts
               </CardDescription>
@@ -282,21 +284,21 @@ const Dashboard = () => {
             <CardContent>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total Accounts</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.totalAccounts')}</p>
                   <p className="text-xl sm:text-2xl font-bold">{plan.accounts.length}</p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total Levels</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.totalLevels')}</p>
                   <p className="text-xl sm:text-2xl font-bold">
                     {plan.accounts.reduce((sum, acc) => sum + acc.levels.length, 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Currency</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.currency')}</p>
                   <p className="text-xl sm:text-2xl font-bold">{plan.currency}</p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Asset</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.asset')}</p>
                   <p className="text-xl sm:text-2xl font-bold">{plan.coin}</p>
                 </div>
               </div>
@@ -350,10 +352,10 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span className="text-green-600">💰</span>
-                    Withdrawal Required
+                    {t('dashboard.withdrawalRequired')}
                   </CardTitle>
                   <CardDescription>
-                    Based on current {plan.currency} exchange rate: {formatNumber(currentExchangeRate, 4)}
+                    {t('dashboard.basedOnExchangeRate', { currency: plan.currency, rate: formatNumber(currentExchangeRate, 4) })}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -366,13 +368,15 @@ const Dashboard = () => {
                         <div key={info.accountId} className="border rounded-lg p-3 sm:p-4 bg-background">
                           <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-2">
                             <div className="flex-1 w-full">
-                              <p className="font-semibold text-base sm:text-lg">Account {info.accountId}</p>
+                              <p className="font-semibold text-base sm:text-lg">{t('dashboard.account')} {info.accountId}</p>
                               <p className="text-xs sm:text-sm text-muted-foreground mb-1">
-                                {info.triggeredCount} level{info.triggeredCount !== 1 ? 's' : ''} triggered
+                                {info.triggeredCount === 1 
+                                  ? t('dashboard.levelsTriggered', { count: info.triggeredCount })
+                                  : t('dashboard.levelsTriggeredPlural', { count: info.triggeredCount })}
                               </p>
                               {account && (
                                 <p className="text-xs font-mono text-muted-foreground break-all">
-                                  From: {account.wallet}
+                                  {t('dashboard.from')}: {account.wallet}
                                 </p>
                               )}
                             </div>
@@ -380,7 +384,7 @@ const Dashboard = () => {
                               <p className="text-xl sm:text-2xl font-bold text-green-600">
                                 {formatNumber(info.withdrawalAmount, 4)} LANA
                               </p>
-                              <p className="text-xs text-muted-foreground mb-2">to withdraw</p>
+                              <p className="text-xs text-muted-foreground mb-2">{t('dashboard.toWithdraw')}</p>
                               <Button 
                                 size="sm"
                                 onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount)}
@@ -393,11 +397,11 @@ const Dashboard = () => {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm mt-3 pt-3 border-t">
                             <div>
-                              <p className="text-muted-foreground">Current Balance:</p>
+                              <p className="text-muted-foreground">{t('dashboard.currentBalance')}:</p>
                               <p className="font-mono text-xs sm:text-sm">{formatNumber(info.currentBalance, 4)} LANA</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Required Balance:</p>
+                              <p className="text-muted-foreground">{t('dashboard.requiredBalance')}:</p>
                               <p className="font-mono text-xs sm:text-sm">{formatNumber(info.requiredBalance, 4)} LANA</p>
                             </div>
                           </div>
@@ -408,7 +412,7 @@ const Dashboard = () => {
                     {withdrawalInfo.length > 1 && (
                       <div className="border-t pt-4 mt-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          <p className="font-semibold text-base sm:text-lg">Total Withdrawal Required:</p>
+                          <p className="font-semibold text-base sm:text-lg">{t('dashboard.totalWithdrawalRequired')}:</p>
                           <p className="text-2xl sm:text-3xl font-bold text-green-600">
                             {formatNumber(totalWithdrawal, 4)} LANA
                           </p>
@@ -430,24 +434,24 @@ const Dashboard = () => {
             return (
               <Card key={account.account_id}>
                 <CardHeader>
-                  <CardTitle className="text-lg sm:text-xl">Account {account.account_id}</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl">{t('dashboard.account')} {account.account_id}</CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
                     <div className="space-y-1">
-                      <div>Wallet: <span className="font-mono break-all">{account.wallet}</span></div>
-                      <div>{account.levels.length} levels
+                      <div>{t('dashboard.wallet')}: <span className="font-mono break-all">{account.wallet}</span></div>
+                      <div>{account.levels.length} {t('dashboard.levels')}
                         {balancesLoading ? (
                           <span className="ml-2 text-muted-foreground">
-                            <Loader2 className="inline h-3 w-3 animate-spin" /> Loading...
+                            <Loader2 className="inline h-3 w-3 animate-spin" /> {t('dashboard.loadingBalance')}
                           </span>
                         ) : walletBalances[account.wallet] !== undefined ? (
                           <span className="ml-2 font-semibold text-primary">
-                            • Balance: {formatNumber(walletBalances[account.wallet], 8)} LANA
+                            • {t('dashboard.balance')}: {formatNumber(walletBalances[account.wallet], 8)} LANA
                           </span>
                         ) : null}
                       </div>
                       {currentExchangeRate > 0 && (
                         <div className="text-muted-foreground">
-                          Current {plan.currency} rate: {formatNumber(currentExchangeRate, 4)}
+                          {t('dashboard.currentRate', { currency: plan.currency })}: {formatNumber(currentExchangeRate, 4)}
                         </div>
                       )}
                     </div>
@@ -458,12 +462,12 @@ const Dashboard = () => {
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Level</TableHead>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Trigger ({plan.currency})</TableHead>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Coins</TableHead>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Cash Out</TableHead>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Remaining</TableHead>
-                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.level')}</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.trigger')} ({plan.currency})</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.coins')}</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.cashOut')}</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.remaining')}</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">{t('dashboard.status')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -493,7 +497,7 @@ const Dashboard = () => {
                                 {isPaidOut && (
                                   <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
                                     <CheckCircle2 className="mr-1 h-3 w-3" />
-                                    <span className="hidden sm:inline">Paid Out</span>
+                                    <span className="hidden sm:inline">{t('dashboard.paidOut')}</span>
                                     <span className="sm:hidden">✓</span>
                                   </Badge>
                                 )}
