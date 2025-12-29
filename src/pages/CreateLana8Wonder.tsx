@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCurrencySymbol } from "@/lib/utils";
 
 const CreateLana8Wonder = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
@@ -137,7 +139,7 @@ const CreateLana8Wonder = () => {
           .eq("wallet_type", "annuity");
         
         if (wallets && wallets.length === 8) {
-          toast.success("Loading your existing Lana8Wonder plan...");
+          toast.success(t('createLana8Wonder.loadingExistingPlan'));
           navigate("/preview-lana8wonder");
         }
       } catch (error) {
@@ -187,27 +189,27 @@ const CreateLana8Wonder = () => {
         )}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold">Create Lana8Wonder Plan</h2>
-            <p className="text-sm text-muted-foreground">Set up your annuity structure</p>
+            <h2 className="text-xl sm:text-2xl font-bold">{t('createLana8Wonder.pageTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('createLana8Wonder.pageSubtitle')}</p>
           </div>
           <Button variant="outline" onClick={handleLogout} className="w-full sm:w-auto">
             <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            {t('createLana8Wonder.logout')}
           </Button>
         </div>
 
         <div className="grid gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Account Information</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">{t('createLana8Wonder.accountInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Wallet ID</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('createLana8Wonder.walletId')}</p>
                 <p className="font-mono text-xs sm:text-sm break-all">{session.walletId}</p>
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Nostr HEX ID</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('createLana8Wonder.nostrHexId')}</p>
                 <p className="font-mono text-xs sm:text-sm break-all">{session.nostrHexId}</p>
               </div>
             </CardContent>
@@ -217,13 +219,13 @@ const CreateLana8Wonder = () => {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
-                <CardTitle className="text-lg sm:text-xl">Your Registered Wallets</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">{t('createLana8Wonder.registeredWallets')}</CardTitle>
               </div>
               <CardDescription className="text-xs sm:text-sm">
-                Select wallets from this list when creating your annuity plan.
+                {t('createLana8Wonder.selectWalletsDescription')}
                 {minimumRequired > 0 && (
                   <span className="block mt-1 text-foreground">
-                    Minimum required balance: <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {currencySymbol} deposit + 0.5 LANA for transaction fees)
+                    {t('createLana8Wonder.minimumBalance')} <strong>{minimumRequired.toFixed(4)} LANA</strong> (100 {currencySymbol} {t('createLana8Wonder.depositInfo', { amount: '', currency: '' }).replace('deposit', '').trim()})
                   </span>
                 )}
               </CardDescription>
@@ -235,9 +237,9 @@ const CreateLana8Wonder = () => {
                 </div>
               ) : allWallets.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">No wallets found for your account</p>
+                  <p className="text-sm text-muted-foreground">{t('createLana8Wonder.noWalletsFound')}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Contact your registrar to add wallets
+                    {t('createLana8Wonder.contactRegistrar')}
                   </p>
                 </div>
               ) : (
@@ -253,7 +255,7 @@ const CreateLana8Wonder = () => {
                           <CardContent className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs text-muted-foreground mb-1">Wallet Address</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t('createLana8Wonder.walletAddress')}</p>
                                 <p className="font-mono text-xs break-all">{wallet.wallet_address}</p>
                               </div>
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap shrink-0">
@@ -263,7 +265,7 @@ const CreateLana8Wonder = () => {
                             
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <p className="text-xs text-muted-foreground mb-1">Balance</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t('createLana8Wonder.balance')}</p>
                                 <div className="text-sm font-semibold">
                                   {balancesLoading ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -276,7 +278,7 @@ const CreateLana8Wonder = () => {
                               </div>
                               
                               <div>
-                                <p className="text-xs text-muted-foreground mb-1">Note</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t('createLana8Wonder.note')}</p>
                                 <p className="text-sm text-muted-foreground truncate">{wallet.note || "—"}</p>
                               </div>
                             </div>
@@ -286,16 +288,16 @@ const CreateLana8Wonder = () => {
                                 {!balancesLoading && minimumRequired > 0 && (
                                   hasEnoughBalance ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs">
-                                      ✓ Sufficient
+                                      ✓ {t('createLana8Wonder.sufficient')}
                                     </Badge>
                                   ) : (
                                     <div className="space-y-1">
                                       <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit">
                                         <AlertCircle className="h-3 w-3" />
-                                        Insufficient
+                                        {t('createLana8Wonder.insufficient')}
                                       </Badge>
                                       <p className="text-xs text-muted-foreground">
-                                        Min: {minimumRequired.toFixed(4)} LANA
+                                        {t('createLana8Wonder.min')} {minimumRequired.toFixed(4)} LANA
                                       </p>
                                     </div>
                                   )
@@ -325,7 +327,7 @@ const CreateLana8Wonder = () => {
                                         }
                                         
                                         if (existingWallets && existingWallets.length === 8) {
-                                          toast.success("Found existing annuity plan, loading preview...");
+                                          toast.success(t('createLana8Wonder.existingPlanFound'));
                                           navigate("/preview-lana8wonder");
                                           return;
                                         }
@@ -347,7 +349,7 @@ const CreateLana8Wonder = () => {
                                   }}
                                   className="text-xs shrink-0"
                                 >
-                                  Assign to L8W
+                                  {t('createLana8Wonder.assignToL8W')}
                                 </Button>
                               )}
                             </div>
@@ -362,12 +364,12 @@ const CreateLana8Wonder = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="font-semibold">Wallet Address</TableHead>
-                          <TableHead className="font-semibold">Type</TableHead>
-                          <TableHead className="font-semibold">Balance</TableHead>
-                          <TableHead className="font-semibold">Note</TableHead>
-                          <TableHead className="font-semibold">Status</TableHead>
-                          <TableHead className="font-semibold">Action</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.walletAddress')}</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.type')}</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.balance')}</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.note')}</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.status')}</TableHead>
+                          <TableHead className="font-semibold">{t('createLana8Wonder.action')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -399,16 +401,16 @@ const CreateLana8Wonder = () => {
                                 {!balancesLoading && minimumRequired > 0 && (
                                   hasEnoughBalance ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
-                                      ✓ Sufficient
+                                      ✓ {t('createLana8Wonder.sufficient')}
                                     </Badge>
                                   ) : (
                                     <div className="space-y-1">
                                       <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit whitespace-nowrap">
                                         <AlertCircle className="h-3 w-3" />
-                                        Insufficient
+                                        {t('createLana8Wonder.insufficient')}
                                       </Badge>
                                       <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                        Min: {minimumRequired.toFixed(4)} LANA
+                                        {t('createLana8Wonder.min')} {minimumRequired.toFixed(4)} LANA
                                       </p>
                                     </div>
                                   )
@@ -437,12 +439,12 @@ const CreateLana8Wonder = () => {
                                             console.error("Error checking wallets:", walletsError);
                                           }
                                           
-                                          if (existingWallets && existingWallets.length === 8) {
-                                            toast.success("Found existing annuity plan, loading preview...");
-                                            navigate("/preview-lana8wonder");
-                                            return;
-                                          }
+                                        if (existingWallets && existingWallets.length === 8) {
+                                          toast.success(t('createLana8Wonder.existingPlanFound'));
+                                          navigate("/preview-lana8wonder");
+                                          return;
                                         }
+                                      }
                                         
                                         navigate('/assign-lana8wonder', { 
                                           state: { 
@@ -460,7 +462,7 @@ const CreateLana8Wonder = () => {
                                     }}
                                     className="text-xs whitespace-nowrap"
                                   >
-                                    Assign to L8W
+                                    {t('createLana8Wonder.assignToL8W')}
                                   </Button>
                                 )}
                               </TableCell>
