@@ -148,9 +148,9 @@ const Index = () => {
         <div className="max-w-5xl mx-auto">
           <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-8">
-              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-8">
                 {/* Video Embed */}
-                <div className="lg:w-1/4">
+                <div className="w-full md:basis-1/4 md:flex-none md:max-w-[320px]">
                   <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
                     <iframe
                       src={getVideoUrl(i18n.language)}
@@ -163,7 +163,7 @@ const Index = () => {
                 </div>
                 
                 {/* Text Content */}
-                <div className="lg:w-3/4 space-y-3 flex flex-col justify-center">
+                <div className="flex-1 min-w-0 space-y-3 flex flex-col justify-center">
                   <h2 className="text-xl sm:text-2xl font-bold text-primary">
                     {t('index.whatIsLana.title')}
                   </h2>
