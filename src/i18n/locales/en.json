@@ -192,7 +192,13 @@
     "quote": "Compound interest is the eighth wonder of the world. He who understands it, earns it… He who doesn't, pays it.",
     "quoteAuthor": "Albert Einstein",
     "footer": "© 2024 Lana8Wonder. Investment strategies calculated using proven mathematical formulas.",
-    "footerDetails": "Initial investment: {{currency}}88 | 8 Accounts | Linear, Compound & Passive Strategies"
+    "footerDetails": "Initial investment: {{currency}}88 | 8 Accounts | Linear, Compound & Passive Strategies",
+    "whatIsLana": {
+      "title": "What is Lana?",
+      "question1": "How can 100 euros become 100 million euros?",
+      "question2": "A utopian idea or a real possibility?",
+      "description": "The video presents a simple concept of long-term growth through Lana8Wonder — where a small initial step, time, and collaboration create an exponential effect. It's not about quick profits, but about understanding the flow of money and shared value."
+    }
   },
   "availableSlots": {
     "title": "Available Lana8Wonder Slots for buying",

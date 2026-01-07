@@ -192,7 +192,13 @@
     "quote": "L'interesse composto è l'ottava meraviglia del mondo. Chi lo capisce, lo guadagna… Chi non lo capisce, lo paga.",
     "quoteAuthor": "Albert Einstein",
     "footer": "© 2024 Lana8Wonder. Strategie di investimento calcolate con formule matematiche comprovate.",
-    "footerDetails": "Investimento iniziale: {{currency}}88 | 8 Conti | Strategie Lineari, Composte e Passive"
+    "footerDetails": "Investimento iniziale: {{currency}}88 | 8 Conti | Strategie Lineari, Composte e Passive",
+    "whatIsLana": {
+      "title": "Cos'è Lana?",
+      "question1": "Come possono 100 euro diventare 100 milioni di euro?",
+      "question2": "Un'idea utopica o una possibilità reale?",
+      "description": "Il video presenta un semplice concetto di crescita a lungo termine attraverso Lana8Wonder — dove un piccolo passo iniziale, il tempo e la collaborazione creano un effetto esponenziale. Non si tratta di profitti rapidi, ma di comprendere il flusso del denaro e del valore condiviso."
+    }
   },
   "availableSlots": {
     "title": "Slot Lana8Wonder disponibili per l'acquisto",

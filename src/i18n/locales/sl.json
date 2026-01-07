@@ -192,7 +192,13 @@
     "quote": "Obrestne obresti so osmi čudež sveta. Kdor jih razume, jih zasluži… Kdor ne, jih plača.",
     "quoteAuthor": "Albert Einstein",
     "footer": "© 2024 Lana8Wonder. Naložbene strategije izračunane z dokazanimi matematičnimi formulami.",
-    "footerDetails": "Začetna naložba: {{currency}}88 | 8 Računov | Linearne, Obrestne in Pasivne strategije"
+    "footerDetails": "Začetna naložba: {{currency}}88 | 8 Računov | Linearne, Obrestne in Pasivne strategije",
+    "whatIsLana": {
+      "title": "Kaj je Lana?",
+      "question1": "Kako lahko iz 100 evrov nastane 100 milijonov evrov?",
+      "question2": "Utopična ideja ali realna možnost?",
+      "description": "Video predstavi preprost koncept dolgoročne rasti skozi Lana8Wonder — kjer majhen začetni korak, čas in sodelovanje ustvarijo eksponenten učinek. Ne gre za hitre dobičke, temveč za razumevanje flova denarja in skupne vrednosti."
+    }
   },
   "availableSlots": {
     "title": "Razpoložljive pozicije Lana8Wonder za nakup",

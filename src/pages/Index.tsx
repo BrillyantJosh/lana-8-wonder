@@ -13,9 +13,22 @@ import { Link } from "react-router-dom";
 import { getCurrencySymbol } from "@/lib/utils";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useTranslation } from "react-i18next";
+import { Card, CardContent } from "@/components/ui/card";
+
+// Video URLs - prepared for multi-language support
+const getVideoUrl = (language: string): string => {
+  const videoUrls: Record<string, string> = {
+    sl: "https://www.youtube.com/embed/cP-MNpeo6gw",
+    // When English version is available, add here:
+    // en: "https://www.youtube.com/embed/ENGLISH_VIDEO_ID",
+    default: "https://www.youtube.com/embed/cP-MNpeo6gw"
+  };
+  
+  return videoUrls[language] || videoUrls.default;
+};
 
 const Index = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -129,6 +142,46 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* What is Lana Video Section */}
+      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
+        <div className="max-w-5xl mx-auto">
+          <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardContent className="p-4 sm:p-8">
+              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+                {/* Video Embed */}
+                <div className="lg:w-1/2">
+                  <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
+                    <iframe
+                      src={getVideoUrl(i18n.language)}
+                      title={t('index.whatIsLana.title')}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+                </div>
+                
+                {/* Text Content */}
+                <div className="lg:w-1/2 space-y-4 flex flex-col justify-center">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-primary">
+                    {t('index.whatIsLana.title')}
+                  </h2>
+                  <p className="text-lg sm:text-xl font-semibold text-foreground">
+                    {t('index.whatIsLana.question1')}
+                  </p>
+                  <p className="text-lg sm:text-xl font-semibold text-foreground">
+                    {t('index.whatIsLana.question2')}
+                  </p>
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                    {t('index.whatIsLana.description')}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       {/* Available Slots Section */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">

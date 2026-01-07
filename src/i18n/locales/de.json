@@ -192,7 +192,13 @@
     "quote": "Zinseszins ist das achte Weltwunder. Wer ihn versteht, verdient ihn… Wer nicht, bezahlt ihn.",
     "quoteAuthor": "Albert Einstein",
     "footer": "© 2024 Lana8Wonder. Anlagestrategien mit bewährten mathematischen Formeln berechnet.",
-    "footerDetails": "Anfangsinvestition: {{currency}}88 | 8 Konten | Lineare, Zinseszins- & Passive Strategien"
+    "footerDetails": "Anfangsinvestition: {{currency}}88 | 8 Konten | Lineare, Zinseszins- & Passive Strategien",
+    "whatIsLana": {
+      "title": "Was ist Lana?",
+      "question1": "Wie können aus 100 Euro 100 Millionen Euro werden?",
+      "question2": "Eine utopische Idee oder eine reale Möglichkeit?",
+      "description": "Das Video präsentiert ein einfaches Konzept des langfristigen Wachstums durch Lana8Wonder — wo ein kleiner erster Schritt, Zeit und Zusammenarbeit einen exponentiellen Effekt erzeugen. Es geht nicht um schnelle Gewinne, sondern um das Verständnis des Geldflusses und des gemeinsamen Wertes."
+    }
   },
   "availableSlots": {
     "title": "Verfügbare Lana8Wonder Plätze zum Kauf",
