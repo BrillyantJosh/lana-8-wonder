@@ -192,7 +192,13 @@
     "quote": "A kamatos kamat a világ nyolcadik csodája. Aki megérti, megkeresi… Aki nem, megfizeti.",
     "quoteAuthor": "Albert Einstein",
     "footer": "© 2024 Lana8Wonder. Befektetési stratégiák bevált matematikai képletekkel számítva.",
-    "footerDetails": "Kezdő befektetés: {{currency}}88 | 8 Számla | Lineáris, Kamatos és Passzív Stratégiák"
+    "footerDetails": "Kezdő befektetés: {{currency}}88 | 8 Számla | Lineáris, Kamatos és Passzív Stratégiák",
+    "whatIsLana": {
+      "title": "Mi az a Lana?",
+      "question1": "Hogyan válhat 100 euróból 100 millió euró?",
+      "question2": "Utópisztikus ötlet vagy valós lehetőség?",
+      "description": "A videó bemutatja a hosszú távú növekedés egyszerű koncepcióját a Lana8Wonder-en keresztül — ahol egy kis kezdő lépés, az idő és az együttműködés exponenciális hatást hoz létre. Nem a gyors nyereségről szól, hanem a pénzáramlás és a közös érték megértéséről."
+    }
   },
   "availableSlots": {
     "title": "Elérhető Lana8Wonder helyek vásárlásra",
