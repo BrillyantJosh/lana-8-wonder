@@ -150,7 +150,7 @@ const Index = () => {
             <CardContent className="p-4 sm:p-8">
               <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* Video Embed */}
-                <div className="lg:w-1/2">
+                <div className="lg:w-1/4">
                   <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
                     <iframe
                       src={getVideoUrl(i18n.language)}
@@ -163,17 +163,17 @@ const Index = () => {
                 </div>
                 
                 {/* Text Content */}
-                <div className="lg:w-1/2 space-y-4 flex flex-col justify-center">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-primary">
+                <div className="lg:w-3/4 space-y-3 flex flex-col justify-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-primary">
                     {t('index.whatIsLana.title')}
                   </h2>
-                  <p className="text-lg sm:text-xl font-semibold text-foreground">
+                  <p className="text-base sm:text-lg font-semibold text-foreground">
                     {t('index.whatIsLana.question1')}
                   </p>
-                  <p className="text-lg sm:text-xl font-semibold text-foreground">
+                  <p className="text-base sm:text-lg font-semibold text-foreground">
                     {t('index.whatIsLana.question2')}
                   </p>
-                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {t('index.whatIsLana.description')}
                   </p>
                 </div>
