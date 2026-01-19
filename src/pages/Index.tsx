@@ -14,7 +14,7 @@ import { getCurrencySymbol } from "@/lib/utils";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 // Video URLs - prepared for multi-language support
 const getVideoUrl = (language: string): string => {
   const videoUrls: Record<string, string> = {
@@ -142,6 +142,94 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* FAQ Section */}
+      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
+        <div className="max-w-5xl mx-auto">
+          <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardContent className="p-4 sm:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">FAQ</h2>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    1. Kaj je Lana8Wonder?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                    Lana8Wonder je način oz. odločitev za pridružitev skupnosti imetnikov registriranih Lan z zavedanjem/sprejemanjem določenih pravil in samoodgovornosti. Vaš vložek raste z rastjo omrežja, s potrpežljivim sodelovanjem in ne s špekulacijami. Poglejmo kaj pa pravi ustvarjalec L8W:{" "}
+                    <a href="https://youtu.be/cpzb5qKMAXM?si=VMHT2ZpXF40mHE4K" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://youtu.be/cpzb5qKMAXM
+                    </a>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-2">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    2. Kako deluje Lana8Wonder?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                    Investicija je enkratna – to je 100 EUR. Lahko rečemo, da je dostopna vsakomur. Znesek se razdeli na 8 računov, namenjenih dolgoročni rasti omrežja in posledično premoženja – brez tekočih stroškov in zapletenega upravljanja.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-3">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    3. Kaj so registrirane Lane?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                    Registrirane Lane so Lane, ki so rezultat dela ustvarjalcev Lane, Lana vitezov oz. njihovega prispevka LanaCoinu. Vrednost registrirane Lane je fiksna in se podvoji v vsakem splitu. Nakup reg. lan je najhitrejši in najpreprostejši način participacije v Lana svetu.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-4">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    4. Kaj pa neregistrirane Lane?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                    Neregistrirane Lane pa lahko kupite na menjalnicah – tako kot ostale kriptovalute. Vas zanima več? Pridružite se delavnicam, ki se vršijo na tedenskem nivoju.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-5">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    5. Kako pa se vključim v Lana8Wonder?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+                    <p>Ste na pravem mestu: lana8wonder.com</p>
+                    <p>Pomagajte si z videi:</p>
+                    <p>
+                      1. korak:{" "}
+                      <a href="https://youtu.be/AjLZJC1NUMY?si=fnHCG72s9SZsavmn" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        https://youtu.be/AjLZJC1NUMY
+                      </a>
+                    </p>
+                    <p>
+                      2. korak:{" "}
+                      <a href="https://youtu.be/JKyQrO6Im5A?si=wiUcYGPHTI3kNpn5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        https://youtu.be/JKyQrO6Im5A
+                      </a>
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-6">
+                  <AccordionTrigger className="text-left text-sm sm:text-base">
+                    6. Sem uspešno realiziral/objavil plan v Lana8W. Kaj pa sedaj?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+                    <p>Počakaj na nov split. Lana svet lahko raziskuješ (in v njem sodeluješ) z vstopom v{" "}
+                      <a href="https://mejmosefajn.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        https://mejmosefajn.org/
+                      </a>
+                      . Tvoj WIF (privatni ključ) glavne denarnice je vstopnica do le tega in več...
+                    </p>
+                    <p>Organizirana bo delavnica, spremljaj objave na Mejmosefajn.org in – igraj se...</p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       {/* What is Lana Video Section */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
