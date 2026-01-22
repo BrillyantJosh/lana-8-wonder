@@ -6,8 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Copy } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Trash2 } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 
 interface BuyLanaRecord {
@@ -33,6 +43,7 @@ const AdminBuyLana = () => {
   const [loading, setLoading] = useState(true);
   const [txInputs, setTxInputs] = useState<Record<string, string>>({});
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState<{ id: string; step: 1 | 2 } | null>(null);
 
   // Check if user is admin
   useEffect(() => {
@@ -190,6 +201,48 @@ const AdminBuyLana = () => {
     }
   };
 
+  // Delete record with double confirmation
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmStep({ id, step: 1 });
+  };
+
+  const handleFirstConfirm = () => {
+    if (deleteConfirmStep) {
+      setDeleteConfirmStep({ id: deleteConfirmStep.id, step: 2 });
+    }
+  };
+
+  const handleFinalDelete = async () => {
+    if (!deleteConfirmStep) return;
+
+    setProcessingIds((prev) => new Set(prev).add(deleteConfirmStep.id));
+    try {
+      const { error } = await supabase
+        .from('buy_lana')
+        .delete()
+        .eq('id', deleteConfirmStep.id);
+
+      if (error) throw error;
+
+      toast.success('Record deleted successfully');
+      setDeleteConfirmStep(null);
+      fetchRecords();
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      toast.error('Failed to delete record');
+    } finally {
+      setProcessingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(deleteConfirmStep.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmStep(null);
+  };
+
   if (isAdmin === null || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -286,17 +339,27 @@ const AdminBuyLana = () => {
                           <TableCell className="capitalize">{record.payment_method}</TableCell>
                           <TableCell>{record.phone_number || '-'}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() => handleMarkAsPaid(record.id)}
-                              disabled={processingIds.has(record.id)}
-                            >
-                              {processingIds.has(record.id) ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                'Mark as Paid'
-                              )}
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleMarkAsPaid(record.id)}
+                                disabled={processingIds.has(record.id)}
+                              >
+                                {processingIds.has(record.id) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  'Mark as Paid'
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteClick(record.id)}
+                                disabled={processingIds.has(record.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -371,20 +434,29 @@ const AdminBuyLana = () => {
                           </div>
                         </div>
 
-                        <Button
-                          className="w-full"
-                          onClick={() => handleMarkAsPaid(record.id)}
-                          disabled={processingIds.has(record.id)}
-                        >
-                          {processingIds.has(record.id) ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            'Mark as Paid'
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1"
+                            onClick={() => handleMarkAsPaid(record.id)}
+                            disabled={processingIds.has(record.id)}
+                          >
+                            {processingIds.has(record.id) ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              'Mark as Paid'
+                            )}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleDeleteClick(record.id)}
+                            disabled={processingIds.has(record.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </Card>
                   ))
@@ -740,6 +812,60 @@ const AdminBuyLana = () => {
           </Tabs>
         </Card>
       </div>
+
+      {/* First Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmStep?.step === 1} onOpenChange={(open) => !open && handleCancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this buy LANA record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleFirstConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Second (Final) Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmStep?.step === 2} onOpenChange={(open) => !open && handleCancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">⚠️ Final Confirmation</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block font-semibold text-foreground">
+                This is your last chance to cancel!
+              </span>
+              <span className="block">
+                The record will be permanently deleted and cannot be recovered. Are you absolutely sure?
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleFinalDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {processingIds.has(deleteConfirmStep?.id || '') ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Permanently'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
