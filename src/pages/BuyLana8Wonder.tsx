@@ -4,13 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wallet, CreditCard, Building2, ArrowLeft, QrCode, Loader2 } from 'lucide-react';
+import { Wallet, CreditCard, Building2, ArrowLeft, QrCode, Loader2, AlertCircle } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
 import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const BuyLana8Wonder = () => {
   const navigate = useNavigate();
@@ -27,6 +37,7 @@ const BuyLana8Wonder = () => {
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [contactDetails, setContactDetails] = useState<string>('');
+  const [showPaymentConfirmDialog, setShowPaymentConfirmDialog] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
@@ -534,7 +545,7 @@ const BuyLana8Wonder = () => {
                           <Button 
                             type="button"
                             className="w-full text-sm sm:text-base"
-                            onClick={() => window.open(buyerProfile.payment_link, '_blank')}
+                            onClick={() => setShowPaymentConfirmDialog(true)}
                           >
                             Open Payment Page
                           </Button>
@@ -545,6 +556,58 @@ const BuyLana8Wonder = () => {
                       </CardContent>
                     </Card>
                   )}
+
+                  {/* Pre-payment confirmation dialog */}
+                  <AlertDialog open={showPaymentConfirmDialog} onOpenChange={setShowPaymentConfirmDialog}>
+                    <AlertDialogContent className="max-w-md">
+                      <AlertDialogHeader>
+                        <div className="flex justify-center mb-4">
+                          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                            <AlertCircle className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+                          </div>
+                        </div>
+                        <AlertDialogTitle className="text-center text-xl">
+                          Important: Complete Your Purchase
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-4 text-center">
+                            <div className="bg-muted rounded-lg p-4 space-y-3">
+                              <div className="flex items-start gap-3 text-left">
+                                <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                                <p className="text-sm">You will be redirected to the secure payment page</p>
+                              </div>
+                              <div className="flex items-start gap-3 text-left">
+                                <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                                <p className="text-sm">Complete your payment of <strong>100 {selectedCurrency}</strong></p>
+                              </div>
+                              <div className="flex items-start gap-3 text-left">
+                                <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                                <p className="text-sm"><strong>Return to this page</strong> and click <strong>"I have paid"</strong></p>
+                              </div>
+                            </div>
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                              <p className="text-amber-800 dark:text-amber-200 text-sm font-medium">
+                                ⚠️ Your purchase will NOT be registered if you skip the final step!
+                              </p>
+                            </div>
+                          </div>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="w-full sm:w-auto"
+                          onClick={() => {
+                            if (buyerProfile?.payment_link) {
+                              window.open(buyerProfile.payment_link, '_blank');
+                            }
+                          }}
+                        >
+                          I understand, open payment page
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
 
                 {/* Bank Transfer Option */}
