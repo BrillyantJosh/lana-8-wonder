@@ -823,13 +823,13 @@ const AdminBuyLana = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button 
+              variant="destructive"
               onClick={handleFirstConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Yes, Continue
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -849,10 +849,11 @@ const AdminBuyLana = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button 
+              variant="destructive"
               onClick={handleFinalDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={processingIds.has(deleteConfirmStep?.id || '')}
             >
               {processingIds.has(deleteConfirmStep?.id || '') ? (
                 <>
@@ -862,7 +863,7 @@ const AdminBuyLana = () => {
               ) : (
                 'Delete Permanently'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
