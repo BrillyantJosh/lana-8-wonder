@@ -198,6 +198,26 @@
       "question1": "How can 100 euros become 100 million euros?",
       "question2": "A utopian idea or a real possibility?",
       "description": "The video presents a simple concept of long-term growth through Lana8Wonder — where a small initial step, time, and collaboration create an exponential effect. It's not about quick profits, but about understanding the flow of money and shared value."
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "1. What is Lana8Wonder?",
+      "a1": "Lana8Wonder is a way or decision to join the community of registered Lana holders with awareness/acceptance of certain rules and self-responsibility. Your investment grows with the growth of the network, through patient collaboration, not speculation. Let's see what the L8W creator says:",
+      "q2": "2. How does Lana8Wonder work?",
+      "a2": "The investment is one-time – it's 100 EUR. We can say it's accessible to everyone. The amount is divided into 8 accounts, intended for long-term network and consequent wealth growth – without ongoing costs and complicated management.",
+      "q3": "3. What are registered Lanas?",
+      "a3": "Registered Lanas are Lanas that are the result of the work of Lana creators, Lana knights, or their contribution to LanaCoin. The value of registered Lana is fixed and doubles with each split. Buying registered Lanas is the fastest and simplest way to participate in the Lana world.",
+      "q4": "4. What about unregistered Lanas?",
+      "a4": "Unregistered Lanas can be purchased on exchanges – just like other cryptocurrencies. Interested in more? Join the workshops held on a weekly basis.",
+      "q5": "5. How do I join Lana8Wonder?",
+      "a5_intro": "You're in the right place: lana8wonder.com",
+      "a5_videos": "Help yourself with videos:",
+      "a5_step1": "Step 1:",
+      "a5_step2": "Step 2:",
+      "q6": "6. I successfully created/published a plan in Lana8W. What now?",
+      "a6_intro": "Wait for a new split. You can explore (and participate in) the Lana world by entering",
+      "a6_wif": ". Your WIF (private key) of the main wallet is the ticket to this and more...",
+      "a6_workshop": "A workshop will be organized, follow announcements on Mejmosefajn.org and – play..."
     }
   },
   "availableSlots": {

@@ -198,6 +198,26 @@
       "question1": "Wie können aus 100 Euro 100 Millionen Euro werden?",
       "question2": "Eine utopische Idee oder eine reale Möglichkeit?",
       "description": "Das Video präsentiert ein einfaches Konzept des langfristigen Wachstums durch Lana8Wonder — wo ein kleiner erster Schritt, Zeit und Zusammenarbeit einen exponentiellen Effekt erzeugen. Es geht nicht um schnelle Gewinne, sondern um das Verständnis des Geldflusses und des gemeinsamen Wertes."
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "1. Was ist Lana8Wonder?",
+      "a1": "Lana8Wonder ist eine Entscheidung, der Gemeinschaft der registrierten Lana-Inhaber beizutreten, mit dem Bewusstsein und der Akzeptanz bestimmter Regeln und Eigenverantwortung. Ihre Investition wächst mit dem Wachstum des Netzwerks, durch geduldige Zusammenarbeit, nicht durch Spekulation. Schauen wir, was der L8W-Schöpfer sagt:",
+      "q2": "2. Wie funktioniert Lana8Wonder?",
+      "a2": "Die Investition ist einmalig – 100 EUR. Wir können sagen, sie ist für jeden zugänglich. Der Betrag wird auf 8 Konten aufgeteilt, die für das langfristige Wachstum des Netzwerks und folglich des Vermögens bestimmt sind – ohne laufende Kosten und komplizierte Verwaltung.",
+      "q3": "3. Was sind registrierte Lanas?",
+      "a3": "Registrierte Lanas sind das Ergebnis der Arbeit von Lana-Erstellern, Lana-Rittern oder ihres Beitrags zu LanaCoin. Der Wert einer registrierten Lana ist fest und verdoppelt sich mit jedem Split. Der Kauf registrierter Lanas ist der schnellste und einfachste Weg, an der Lana-Welt teilzunehmen.",
+      "q4": "4. Was ist mit nicht registrierten Lanas?",
+      "a4": "Nicht registrierte Lanas können an Börsen gekauft werden – genau wie andere Kryptowährungen. Interessiert an mehr? Nehmen Sie an den wöchentlichen Workshops teil.",
+      "q5": "5. Wie trete ich Lana8Wonder bei?",
+      "a5_intro": "Sie sind am richtigen Ort: lana8wonder.com",
+      "a5_videos": "Helfen Sie sich mit Videos:",
+      "a5_step1": "Schritt 1:",
+      "a5_step2": "Schritt 2:",
+      "q6": "6. Ich habe erfolgreich einen Plan in Lana8W erstellt/veröffentlicht. Was nun?",
+      "a6_intro": "Warten Sie auf einen neuen Split. Sie können die Lana-Welt erkunden (und daran teilnehmen), indem Sie eintreten in",
+      "a6_wif": ". Ihr WIF (privater Schlüssel) der Haupt-Wallet ist das Ticket dazu und mehr...",
+      "a6_workshop": "Ein Workshop wird organisiert, verfolgen Sie Ankündigungen auf Mejmosefajn.org und – spielen Sie..."
     }
   },
   "availableSlots": {

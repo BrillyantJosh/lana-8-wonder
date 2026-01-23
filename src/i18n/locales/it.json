@@ -198,6 +198,26 @@
       "question1": "Come possono 100 euro diventare 100 milioni di euro?",
       "question2": "Un'idea utopica o una possibilità reale?",
       "description": "Il video presenta un semplice concetto di crescita a lungo termine attraverso Lana8Wonder — dove un piccolo passo iniziale, il tempo e la collaborazione creano un effetto esponenziale. Non si tratta di profitti rapidi, ma di comprendere il flusso del denaro e del valore condiviso."
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "1. Cos'è Lana8Wonder?",
+      "a1": "Lana8Wonder è un modo o una decisione per unirsi alla comunità dei possessori di Lana registrati, con la consapevolezza e l'accettazione di determinate regole e auto-responsabilità. Il tuo investimento cresce con la crescita della rete, attraverso una collaborazione paziente, non speculazione. Vediamo cosa dice il creatore di L8W:",
+      "q2": "2. Come funziona Lana8Wonder?",
+      "a2": "L'investimento è una tantum – 100 EUR. Possiamo dire che è accessibile a tutti. L'importo è diviso in 8 conti, destinati alla crescita a lungo termine della rete e di conseguenza del patrimonio – senza costi correnti e gestione complicata.",
+      "q3": "3. Cosa sono le Lana registrate?",
+      "a3": "Le Lana registrate sono il risultato del lavoro dei creatori di Lana, dei cavalieri Lana o del loro contributo a LanaCoin. Il valore di una Lana registrata è fisso e raddoppia con ogni split. L'acquisto di Lana registrate è il modo più veloce e semplice per partecipare al mondo Lana.",
+      "q4": "4. E le Lana non registrate?",
+      "a4": "Le Lana non registrate possono essere acquistate sugli exchange – proprio come le altre criptovalute. Interessato a saperne di più? Partecipa ai workshop settimanali.",
+      "q5": "5. Come mi unisco a Lana8Wonder?",
+      "a5_intro": "Sei nel posto giusto: lana8wonder.com",
+      "a5_videos": "Aiutati con i video:",
+      "a5_step1": "Passo 1:",
+      "a5_step2": "Passo 2:",
+      "q6": "6. Ho creato/pubblicato con successo un piano in Lana8W. E ora?",
+      "a6_intro": "Aspetta un nuovo split. Puoi esplorare (e partecipare) al mondo Lana entrando in",
+      "a6_wif": ". Il tuo WIF (chiave privata) del wallet principale è il biglietto per questo e altro...",
+      "a6_workshop": "Verrà organizzato un workshop, segui gli annunci su Mejmosefajn.org e – gioca..."
     }
   },
   "availableSlots": {
