@@ -198,6 +198,26 @@
       "question1": "Hogyan válhat 100 euróból 100 millió euró?",
       "question2": "Utópisztikus ötlet vagy valós lehetőség?",
       "description": "A videó bemutatja a hosszú távú növekedés egyszerű koncepcióját a Lana8Wonder-en keresztül — ahol egy kis kezdő lépés, az idő és az együttműködés exponenciális hatást hoz létre. Nem a gyors nyereségről szól, hanem a pénzáramlás és a közös érték megértéséről."
+    },
+    "faq": {
+      "title": "GYIK",
+      "q1": "1. Mi az a Lana8Wonder?",
+      "a1": "A Lana8Wonder egy mód vagy döntés arra, hogy csatlakozz a regisztrált Lana tulajdonosok közösségéhez, bizonyos szabályok és önfelelősség tudatosításával és elfogadásával. A befektetésed a hálózat növekedésével nő, türelmes együttműködéssel, nem spekulációval. Nézzük, mit mond az L8W alkotója:",
+      "q2": "2. Hogyan működik a Lana8Wonder?",
+      "a2": "A befektetés egyszeri – 100 EUR. Mondhatjuk, hogy mindenki számára elérhető. Az összeg 8 számlára oszlik, amelyek a hálózat és ezáltal a vagyon hosszú távú növekedésére szolgálnak – folyamatos költségek és bonyolult kezelés nélkül.",
+      "q3": "3. Mik azok a regisztrált Lanák?",
+      "a3": "A regisztrált Lanák a Lana alkotók, Lana lovagok munkájának vagy a LanaCoinhoz való hozzájárulásuk eredményei. A regisztrált Lana értéke fix, és minden split-tel megduplázódik. A regisztrált Lanák vásárlása a leggyorsabb és legegyszerűbb módja a Lana világban való részvételnek.",
+      "q4": "4. Mi a helyzet a nem regisztrált Lanákkal?",
+      "a4": "A nem regisztrált Lanákat tőzsdéken lehet megvásárolni – akárcsak más kriptovalutákat. Érdekel a bővebb információ? Csatlakozz a heti rendszerességgel tartott workshopokhoz.",
+      "q5": "5. Hogyan csatlakozhatok a Lana8Wonderhez?",
+      "a5_intro": "Jó helyen jársz: lana8wonder.com",
+      "a5_videos": "Segíts magadon a videókkal:",
+      "a5_step1": "1. lépés:",
+      "a5_step2": "2. lépés:",
+      "q6": "6. Sikeresen létrehoztam/közzétettem egy tervet a Lana8W-ben. Mi most?",
+      "a6_intro": "Várj egy új split-re. Felfedezheted (és részt vehetsz) a Lana világban a belépéssel ide:",
+      "a6_wif": ". A fő tárcád WIF-je (privát kulcs) a belépőjegy ehhez és még többhöz...",
+      "a6_workshop": "Workshop lesz szervezve, kövesd a hirdetéseket a Mejmosefajn.org-on és – játssz..."
     }
   },
   "availableSlots": {

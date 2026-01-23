@@ -148,14 +148,14 @@ const Index = () => {
         <div className="max-w-5xl mx-auto">
           <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">FAQ</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">{t('index.faq.title')}</h2>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    1. Kaj je Lana8Wonder?
+                    {t('index.faq.q1')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    Lana8Wonder je način oz. odločitev za pridružitev skupnosti imetnikov registriranih Lan z zavedanjem/sprejemanjem določenih pravil in samoodgovornosti. Vaš vložek raste z rastjo omrežja, s potrpežljivim sodelovanjem in ne s špekulacijami. Poglejmo kaj pa pravi ustvarjalec L8W:{" "}
+                    {t('index.faq.a1')}{" "}
                     <a href="https://youtu.be/cpzb5qKMAXM?si=VMHT2ZpXF40mHE4K" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                       https://youtu.be/cpzb5qKMAXM
                     </a>
@@ -164,46 +164,46 @@ const Index = () => {
 
                 <AccordionItem value="item-2">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    2. Kako deluje Lana8Wonder?
+                    {t('index.faq.q2')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    Investicija je enkratna – to je 100 EUR. Lahko rečemo, da je dostopna vsakomur. Znesek se razdeli na 8 računov, namenjenih dolgoročni rasti omrežja in posledično premoženja – brez tekočih stroškov in zapletenega upravljanja.
+                    {t('index.faq.a2')}
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="item-3">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    3. Kaj so registrirane Lane?
+                    {t('index.faq.q3')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    Registrirane Lane so Lane, ki so rezultat dela ustvarjalcev Lane, Lana vitezov oz. njihovega prispevka LanaCoinu. Vrednost registrirane Lane je fiksna in se podvoji v vsakem splitu. Nakup reg. lan je najhitrejši in najpreprostejši način participacije v Lana svetu.
+                    {t('index.faq.a3')}
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="item-4">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    4. Kaj pa neregistrirane Lane?
+                    {t('index.faq.q4')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    Neregistrirane Lane pa lahko kupite na menjalnicah – tako kot ostale kriptovalute. Vas zanima več? Pridružite se delavnicam, ki se vršijo na tedenskem nivoju.
+                    {t('index.faq.a4')}
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="item-5">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    5. Kako pa se vključim v Lana8Wonder?
+                    {t('index.faq.q5')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                    <p>Ste na pravem mestu: lana8wonder.com</p>
-                    <p>Pomagajte si z videi:</p>
+                    <p>{t('index.faq.a5_intro')}</p>
+                    <p>{t('index.faq.a5_videos')}</p>
                     <p>
-                      1. korak:{" "}
+                      {t('index.faq.a5_step1')}{" "}
                       <a href="https://youtu.be/AjLZJC1NUMY?si=fnHCG72s9SZsavmn" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                         https://youtu.be/AjLZJC1NUMY
                       </a>
                     </p>
                     <p>
-                      2. korak:{" "}
+                      {t('index.faq.a5_step2')}{" "}
                       <a href="https://youtu.be/JKyQrO6Im5A?si=wiUcYGPHTI3kNpn5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                         https://youtu.be/JKyQrO6Im5A
                       </a>
@@ -213,16 +213,16 @@ const Index = () => {
 
                 <AccordionItem value="item-6">
                   <AccordionTrigger className="text-left text-sm sm:text-base">
-                    6. Sem uspešno realiziral/objavil plan v Lana8W. Kaj pa sedaj?
+                    {t('index.faq.q6')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                    <p>Počakaj na nov split. Lana svet lahko raziskuješ (in v njem sodeluješ) z vstopom v{" "}
+                    <p>{t('index.faq.a6_intro')}{" "}
                       <a href="https://mejmosefajn.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                         https://mejmosefajn.org/
                       </a>
-                      . Tvoj WIF (privatni ključ) glavne denarnice je vstopnica do le tega in več...
+                      {t('index.faq.a6_wif')}
                     </p>
-                    <p>Organizirana bo delavnica, spremljaj objave na Mejmosefajn.org in – igraj se...</p>
+                    <p>{t('index.faq.a6_workshop')}</p>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

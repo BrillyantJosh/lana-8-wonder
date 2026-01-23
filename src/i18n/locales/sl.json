@@ -198,6 +198,26 @@
       "question1": "Kako lahko iz 100 evrov nastane 100 milijonov evrov?",
       "question2": "Utopična ideja ali realna možnost?",
       "description": "Video predstavi preprost koncept dolgoročne rasti skozi Lana8Wonder — kjer majhen začetni korak, čas in sodelovanje ustvarijo eksponenten učinek. Ne gre za hitre dobičke, temveč za razumevanje flova denarja in skupne vrednosti."
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "1. Kaj je Lana8Wonder?",
+      "a1": "Lana8Wonder je način oz. odločitev za pridružitev skupnosti imetnikov registriranih Lan z zavedanjem/sprejemanjem določenih pravil in samoodgovornosti. Vaš vložek raste z rastjo omrežja, s potrpežljivim sodelovanjem in ne s špekulacijami. Poglejmo kaj pa pravi ustvarjalec L8W:",
+      "q2": "2. Kako deluje Lana8Wonder?",
+      "a2": "Investicija je enkratna – to je 100 EUR. Lahko rečemo, da je dostopna vsakomur. Znesek se razdeli na 8 računov, namenjenih dolgoročni rasti omrežja in posledično premoženja – brez tekočih stroškov in zapletenega upravljanja.",
+      "q3": "3. Kaj so registrirane Lane?",
+      "a3": "Registrirane Lane so Lane, ki so rezultat dela ustvarjalcev Lane, Lana vitezov oz. njihovega prispevka LanaCoinu. Vrednost registrirane Lane je fiksna in se podvoji v vsakem splitu. Nakup reg. lan je najhitrejši in najpreprostejši način participacije v Lana svetu.",
+      "q4": "4. Kaj pa neregistrirane Lane?",
+      "a4": "Neregistrirane Lane pa lahko kupite na menjalnicah – tako kot ostale kriptovalute. Vas zanima več? Pridružite se delavnicam, ki se vršijo na tedenskem nivoju.",
+      "q5": "5. Kako pa se vključim v Lana8Wonder?",
+      "a5_intro": "Ste na pravem mestu: lana8wonder.com",
+      "a5_videos": "Pomagajte si z videi:",
+      "a5_step1": "1. korak:",
+      "a5_step2": "2. korak:",
+      "q6": "6. Sem uspešno realiziral/objavil plan v Lana8W. Kaj pa sedaj?",
+      "a6_intro": "Počakaj na nov split. Lana svet lahko raziskuješ (in v njem sodeluješ) z vstopom v",
+      "a6_wif": ". Tvoj WIF (privatni ključ) glavne denarnice je vstopnica do le tega in več...",
+      "a6_workshop": "Organizirana bo delavnica, spremljaj objave na Mejmosefajn.org in – igraj se..."
     }
   },
   "availableSlots": {
