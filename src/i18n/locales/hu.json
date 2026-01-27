@@ -178,13 +178,7 @@
     "paymentInfo": "Fizetési adatok",
     "amount": "Összeg",
     "paymentMethod": "Fizetési mód",
-    "submit": "Rendelés elküldése",
-    "bankTransfer": {
-      "accountHolder": "Számlatulajdonos",
-      "accountHolderName": "Matejka Sojer",
-      "address": "Cím",
-      "accountHolderAddress": "Na Peske 9 Notranje Gorice, Szlovénia"
-    }
+    "submit": "Rendelés elküldése"
   },
   "index": {
     "connecting": "Csatlakozás...",

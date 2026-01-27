@@ -178,13 +178,7 @@
     "paymentInfo": "Payment Information",
     "amount": "Amount",
     "paymentMethod": "Payment Method",
-    "submit": "Submit Order",
-    "bankTransfer": {
-      "accountHolder": "Account Holder",
-      "accountHolderName": "Matejka Sojer",
-      "address": "Address",
-      "accountHolderAddress": "Na Peske 9 Notranje Gorice, Slovenia"
-    }
+    "submit": "Submit Order"
   },
   "index": {
     "connecting": "Connecting...",
