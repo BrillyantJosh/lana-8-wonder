@@ -671,6 +671,27 @@ const BuyLana8Wonder = () => {
                             .filter((pm: any) => pm.scope === 'collect' || pm.scope === 'both')
                             .map((pm: any, idx: number) => (
                               <div key={idx} className="bg-background rounded-lg p-3 space-y-2">
+                                {/* Account holder name */}
+                                {(buyerProfile.display_name || buyerProfile.name) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">Account Holder:</span>
+                                    <span className="text-xs font-mono">{buyerProfile.display_name || buyerProfile.name}</span>
+                                  </div>
+                                )}
+                                {/* Address (location) */}
+                                {buyerProfile.location && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">Address:</span>
+                                    <span className="text-xs font-mono text-right">{buyerProfile.location}</span>
+                                  </div>
+                                )}
+                                {/* Country */}
+                                {buyerProfile.country && (
+                                  <div className="flex justify-between">
+                                    <span className="text-xs text-muted-foreground">Country:</span>
+                                    <span className="text-xs font-mono">{buyerProfile.country}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between">
                                   <span className="text-xs text-muted-foreground">Method:</span>
                                   <span className="text-xs font-mono">{pm.label || pm.scheme}</span>
