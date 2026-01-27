@@ -729,6 +729,27 @@ const BuyLana8Wonder = () => {
                         <div className="border-t border-border pt-4 space-y-2">
                           <p className="text-sm font-semibold text-center">Bank Transfer Details</p>
                           <div className="bg-background rounded-lg p-3 space-y-2">
+                            {/* Account Holder - from display_name or name */}
+                            {(buyerProfile.display_name || buyerProfile.name) && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Account Holder:</span>
+                                <span className="text-xs font-mono">{buyerProfile.display_name || buyerProfile.name}</span>
+                              </div>
+                            )}
+                            {/* Address - from location */}
+                            {buyerProfile.location && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Address:</span>
+                                <span className="text-xs font-mono text-right">{buyerProfile.location}</span>
+                              </div>
+                            )}
+                            {/* Country */}
+                            {buyerProfile.country && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Country:</span>
+                                <span className="text-xs font-mono">{buyerProfile.country}</span>
+                              </div>
+                            )}
                             {buyerProfile.bankName && (
                               <div className="flex justify-between">
                                 <span className="text-xs text-muted-foreground">Bank:</span>
@@ -749,7 +770,7 @@ const BuyLana8Wonder = () => {
                             )}
                             {buyerProfile.bankAddress && (
                               <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Address:</span>
+                                <span className="text-xs text-muted-foreground">Bank Address:</span>
                                 <span className="text-xs">{buyerProfile.bankAddress}</span>
                               </div>
                             )}
