@@ -699,6 +699,11 @@ const BuyLana8Wonder = () => {
                                 </div>
                               </div>
                             ))}
+                          {/* Account holder details - static info for bank transfer */}
+                          <div className="bg-background rounded-lg p-3 space-y-1 mt-2 text-xs text-muted-foreground">
+                            <p>Matejka Sojer</p>
+                            <p>Na Peske 9 Notranje Gorice, Slovenia</p>
+                          </div>
                         </div>
                       )}
 
