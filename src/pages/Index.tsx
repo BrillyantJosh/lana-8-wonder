@@ -185,7 +185,7 @@ const Index = () => {
                     {t('index.faq.q4')}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {t('index.faq.a4')}
+                    <span dangerouslySetInnerHTML={{ __html: t('index.faq.a4') }} />
                   </AccordionContent>
                 </AccordionItem>
 
