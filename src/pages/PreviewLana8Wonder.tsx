@@ -605,7 +605,7 @@ const PreviewLana8Wonder = () => {
         },
         body: JSON.stringify({
           method: 'register_virgin_wallets_for_existing_user',
-          api_key: 'ak_4mh3c7k5mx4ibskeufyv8p',
+          api_key: 'ak_11nxrkztcptoefn7gypg4cj',
           data: {
             nostr_id_hex: nostrHexId,
             wallets: walletsData
@@ -846,6 +846,7 @@ const PreviewLana8Wonder = () => {
                   })}
                 </div>
                 
+                {(() => { console.log('🔍 RENDER DEBUG: walletRegistered =', walletRegistered, ', nostrHexId =', nostrHexId, ', effectiveWallets =', effectiveWallets?.length); return null; })()}
                 {walletRegistered ? (
                   <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
                     <div className="flex items-center justify-center gap-2 mb-2">
