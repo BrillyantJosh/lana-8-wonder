@@ -598,7 +598,7 @@ const PreviewLana8Wonder = () => {
       });
 
       // Call external API
-      const response = await fetch('https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api', {
+      const response = await fetch('https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
