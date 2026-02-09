@@ -1,38 +1,60 @@
 
 
-# Zamenjava API servisa za registracijo denarnic
+# Dodajanje boljšega logiranja za API klic registracije denarnic
 
-## Kaj se spremeni
+## Problem
 
-Samo **1 vrstica** v datoteki `src/pages/PreviewLana8Wonder.tsx` — zamenjava URL-ja zunanjega API servisa.
+Trenutno ni dovolj informacij v logih, da bi ugotovili, zakaj registracija ne deluje. Konzolni logi ne prikazujejo nobenih sledi klica API-ja.
 
-## Sprememba
+## Resitev
 
-| Staro | Novo |
-|-------|------|
-| `https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api` | `https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets` |
+Dodati podrobnejse logiranje v `registerWallets` funkcijo v `src/pages/PreviewLana8Wonder.tsx`, da bomo lahko videli:
+- Ali se funkcija sploh poklice
+- Kaksen je request body
+- Kaksen je HTTP status odgovora
+- Ali je odgovor JSON ali HTML (pogosta napaka pri napacnem endpointu)
+- Tocno sporocilo napake
 
-## Preverjeno
+## Spremembe
 
-- Metoda ostane enaka: `register_virgin_wallets_for_existing_user`
-- API key ostane enak: `ak_4mh3c7k5mx4ibskeufyv8p`
-- Struktura zahtevka (request body) je identicna
-- Struktura odgovora (response) je identicna
-- Nobenih drugih sprememb ni potrebnih
+### Datoteka: `src/pages/PreviewLana8Wonder.tsx`
 
-## Tehnični detajl
-
-Datoteka: `src/pages/PreviewLana8Wonder.tsx`, vrstica 601
+Razsirim logiranje okoli API klica (vrstice 595-648):
 
 ```text
-// Staro:
-const response = await fetch('https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api', {
+// Pred klicem:
+console.log('=== WALLET REGISTRATION START ===');
+console.log('URL:', 'https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets');
+console.log('Nostr Hex ID:', nostrHexId);
+console.log('Wallets:', JSON.stringify(walletsData, null, 2));
 
-// Novo:
-const response = await fetch('https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets', {
+// Po odgovoru (pred JSON parse):
+console.log('Response status:', response.status);
+console.log('Response Content-Type:', response.headers.get('content-type'));
+
+// Ce ni JSON:
+const contentType = response.headers.get('content-type');
+if (!contentType?.includes('application/json')) {
+  const textBody = await response.text();
+  console.error('Non-JSON response:', textBody.substring(0, 500));
+  throw new Error(`API returned non-JSON response (status ${response.status})`);
+}
+
+// Po JSON parse:
+console.log('Response body:', JSON.stringify(result, null, 2));
+
+// V catch bloku:
+console.error('Full error details:', {
+  name: error?.name,
+  message: error?.message,
+  stack: error?.stack
+});
 ```
 
-## Opomba glede varnosti
+## Tehnicni povzetek
 
-API key je trenutno zapisan neposredno v frontend kodi (vidno vsem). To je bilo tako tudi prej, ni nova tezava. Ce zelite to popraviti v prihodnosti, se lahko API key premakne v backend funkcijo.
+| Datoteka | Sprememba |
+|----------|-----------|
+| `src/pages/PreviewLana8Wonder.tsx` | Dodaj podrobno logiranje pred, med in po API klicu + preverjanje Content-Type pred JSON parsiranjem |
 
+Po tej spremembi bomo ob naslednjem poizkusu registracije tocno videli, kaj se dogaja v konzolnih logih.
