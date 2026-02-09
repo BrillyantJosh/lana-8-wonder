@@ -1,81 +1,38 @@
 
-# Popravek: Prikaz podatkov o imetniku računa v legacy bančni sekciji
 
-## Problem
+# Zamenjava API servisa za registracijo denarnic
 
-Na strani `/buy-lana8wonder` se ne prikazujejo podatki o imetniku računa (ime, naslov, država), čeprav so bila polja dodana v kodo.
+## Kaj se spremeni
 
-### Analiza
+Samo **1 vrstica** v datoteki `src/pages/PreviewLana8Wonder.tsx` — zamenjava URL-ja zunanjega API servisa.
 
-Po pregledu kode sem ugotovil naslednje:
+## Sprememba
 
-1. **Obstajata dve sekciji** za prikaz bančnih podatkov:
-   - **Nova sekcija** (`payment_methods` array) - vrstice 667-724
-   - **Legacy sekcija** (stara bančna polja) - vrstice 726-758
+| Staro | Novo |
+|-------|------|
+| `https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api` | `https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets` |
 
-2. **Nova polja sem dodal samo v prvo sekcijo** (`payment_methods`), ampak Nostr profil za `nostr_hex_id_buying_lanas` očitno uporablja **legacy bančna polja** (`bankName`, `bankAccount`, `bankSWIFT`, `bankAddress`), zato se prikaže legacy sekcija.
+## Preverjeno
 
-3. **V legacy sekciji manjkajo nova polja** za:
-   - Account Holder (ime imetnika računa)
-   - Address (lokacija/naslov)
-   - Country (država)
+- Metoda ostane enaka: `register_virgin_wallets_for_existing_user`
+- API key ostane enak: `ak_4mh3c7k5mx4ibskeufyv8p`
+- Struktura zahtevka (request body) je identicna
+- Struktura odgovora (response) je identicna
+- Nobenih drugih sprememb ni potrebnih
 
-## Rešitev
+## Tehnični detajl
 
-Dodam manjkajoča polja v legacy fallback sekcijo (vrstice 731-756):
-
-```
-/src/pages/BuyLana8Wonder.tsx
-```
-
-**Spremembe v legacy sekciji:**
+Datoteka: `src/pages/PreviewLana8Wonder.tsx`, vrstica 601
 
 ```text
-{/* Legacy bank fields fallback */}
-{(!buyerProfile.payment_methods || buyerProfile.payment_methods.length === 0) && 
- (buyerProfile.bankName || buyerProfile.bankAccount) && (
-  <div className="border-t border-border pt-4 space-y-2">
-    <p className="text-sm font-semibold text-center">Bank Transfer Details</p>
-    <div className="bg-background rounded-lg p-3 space-y-2">
-      
-      {/* NOVA: Account Holder */}
-      {(buyerProfile.display_name || buyerProfile.name) && (
-        <div className="flex justify-between">
-          <span className="text-xs text-muted-foreground">Account Holder:</span>
-          <span className="text-xs font-mono">{buyerProfile.display_name || buyerProfile.name}</span>
-        </div>
-      )}
-      
-      {/* NOVA: Address (location) */}
-      {buyerProfile.location && (
-        <div className="flex justify-between">
-          <span className="text-xs text-muted-foreground">Address:</span>
-          <span className="text-xs font-mono text-right">{buyerProfile.location}</span>
-        </div>
-      )}
-      
-      {/* NOVA: Country */}
-      {buyerProfile.country && (
-        <div className="flex justify-between">
-          <span className="text-xs text-muted-foreground">Country:</span>
-          <span className="text-xs font-mono">{buyerProfile.country}</span>
-        </div>
-      )}
+// Staro:
+const response = await fetch('https://pnhrbebgneacgcatuxdq.supabase.co/functions/v1/external-api', {
 
-      {/* Obstoječa polja ostanejo */}
-      {buyerProfile.bankName && ...}
-      {buyerProfile.bankAccount && ...}
-      {buyerProfile.bankSWIFT && ...}
-      {buyerProfile.bankAddress && ...}
-    </div>
-  </div>
-)}
+// Novo:
+const response = await fetch('https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets', {
 ```
 
-## Tehnični povzetek
+## Opomba glede varnosti
 
-| Datoteka | Sprememba |
-|----------|-----------|
-| `src/pages/BuyLana8Wonder.tsx` | Dodaj 3 nova polja (Account Holder, Address, Country) v legacy fallback sekcijo |
+API key je trenutno zapisan neposredno v frontend kodi (vidno vsem). To je bilo tako tudi prej, ni nova tezava. Ce zelite to popraviti v prihodnosti, se lahko API key premakne v backend funkcijo.
 
-Po tej spremembi bodo podatki o imetniku računa vidni ne glede na to, ali Nostr profil uporablja novo `payment_methods` strukturo ali stara legacy bančna polja.
