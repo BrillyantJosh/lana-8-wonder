@@ -592,10 +592,10 @@ const PreviewLana8Wonder = () => {
         notes: `Lana 8 Wonder Account ${index + 1}`
       }));
 
-      console.log('🔄 Registering wallets...', {
-        nostr_id_hex: nostrHexId,
-        wallets_count: walletsData.length
-      });
+      console.log('=== WALLET REGISTRATION START ===');
+      console.log('URL:', 'https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets');
+      console.log('Nostr Hex ID:', nostrHexId);
+      console.log('Wallets:', JSON.stringify(walletsData, null, 2));
 
       // Call external API
       const response = await fetch('https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets', {
@@ -613,7 +613,19 @@ const PreviewLana8Wonder = () => {
         })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response Content-Type:', response.headers.get('content-type'));
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        const textBody = await response.text();
+        console.error('Non-JSON response:', textBody.substring(0, 500));
+        throw new Error(`API returned non-JSON response (status ${response.status})`);
+      }
+
       const result = await response.json();
+      console.log('Response body:', JSON.stringify(result, null, 2));
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Failed to register wallets');
@@ -642,9 +654,13 @@ const PreviewLana8Wonder = () => {
         { duration: 5000 }
       );
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error registering wallets:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to register wallets');
+      console.error('Full error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack
+      });
     } finally {
       setIsRegistering(false);
     }
