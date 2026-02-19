@@ -139,9 +139,20 @@ export async function fetchKind30889(customerHexId: string, relayUrls: string[])
       return [];
     }
 
+    // Deduplikacija: obdrži samo najnovejši event za vsakega registrarja (pubkey)
+    const latestByRegistrar = new Map<string, typeof events[0]>();
+    for (const event of events) {
+      const existing = latestByRegistrar.get(event.pubkey);
+      if (!existing || event.created_at > existing.created_at) {
+        latestByRegistrar.set(event.pubkey, event);
+      }
+    }
+    const dedupedEvents = Array.from(latestByRegistrar.values());
+    console.log(`After dedup by registrar: ${dedupedEvents.length} unique registrar events (was ${events.length})`);
+
     const records: WalletListRecord[] = [];
 
-    for (const event of events) {
+    for (const event of dedupedEvents) {
       const dTag = event.tags.find(t => t[0] === "d");
       const statusTag = event.tags.find(t => t[0] === "status");
       const walletTags = event.tags.filter(t => t[0] === "w");

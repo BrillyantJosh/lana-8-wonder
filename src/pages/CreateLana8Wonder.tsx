@@ -166,6 +166,13 @@ const CreateLana8Wonder = () => {
     }))
   );
 
+  // Deduplikacija po wallet_address - varnostna mreža za client-side
+  const uniqueWallets = allWallets.filter((wallet, index, self) =>
+    index === self.findIndex(w => w.wallet_address === wallet.wallet_address)
+  );
+  // Backward-compatible alias
+  const allWalletsDeduped = uniqueWallets;
+
   // Calculate minimum required LANA balance (100 currency units / exchange rate)
   const getMinimumRequiredBalance = (currency: string = "EUR"): number => {
     if (!exchangeRates) return 0;
@@ -239,7 +246,7 @@ const CreateLana8Wonder = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : allWallets.length === 0 ? (
+              ) : allWalletsDeduped.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-muted-foreground">{t('createLana8Wonder.noWalletsFound')}</p>
                   <p className="text-xs text-muted-foreground mt-2">
@@ -250,7 +257,7 @@ const CreateLana8Wonder = () => {
                 <>
                   {/* Mobile Card View */}
                   <div className="md:hidden space-y-4">
-                    {allWallets.map((wallet, idx) => {
+                    {allWalletsDeduped.map((wallet, idx) => {
                       const currentBalance = walletBalances[wallet.wallet_address] || 0;
                       const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
                       
@@ -377,7 +384,7 @@ const CreateLana8Wonder = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {allWallets.map((wallet, idx) => {
+                        {allWalletsDeduped.map((wallet, idx) => {
                           const currentBalance = walletBalances[wallet.wallet_address] || 0;
                           const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
                           
