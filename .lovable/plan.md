@@ -1,60 +1,73 @@
 
+# Vzrok problema in predlagani popravek
 
-# Dodajanje boljšega logiranja za API klic registracije denarnic
+## Kaj se dogaja
 
-## Problem
+Ko `fetchKind30889` pokliče relay z filtrom `{ kinds: [30889], "#d": [customerHexId] }`, relay vrne **vse** KIND 30889 evente ki imajo ta `#d` tag - ne glede na avtorja (registrarja) in ne glede na čas nastanka.
 
-Trenutno ni dovolj informacij v logih, da bi ugotovili, zakaj registracija ne deluje. Konzolni logi ne prikazujejo nobenih sledi klica API-ja.
+Možni scenariji zakaj sta dva eventa:
+1. Registrar je objavil event dvakrat (npr. enkrat na vsakem relayu - `relay.lanavault.space` in `relay.lanacoin-eternity.com`)
+2. Obstajata dva registrarja ki sta objavila event za istega kupca
+3. Stari in novi event (posodobitev) sta oba na relayu
 
-## Resitev
+Ker koda naredi `flatMap` čez vse `walletRecords`, se ista denarnica pojavi dvakrat.
 
-Dodati podrobnejse logiranje v `registerWallets` funkcijo v `src/pages/PreviewLana8Wonder.tsx`, da bomo lahko videli:
-- Ali se funkcija sploh poklice
-- Kaksen je request body
-- Kaksen je HTTP status odgovora
-- Ali je odgovor JSON ali HTML (pogosta napaka pri napacnem endpointu)
-- Tocno sporocilo napake
+## Kje točno je napaka
 
-## Spremembe
+**`src/lib/nostrClient.ts` (vrstica 121-168)**: `fetchKind30889` ne filtrira duplikatov. Vrne vse evente, tudi če vsebujejo enake denarnice.
 
-### Datoteka: `src/pages/PreviewLana8Wonder.tsx`
+**`src/pages/CreateLana8Wonder.tsx` (vrstica 161-167)**: `allWallets` je `flatMap` čez vse `walletRecords` brez deduplikacije.
 
-Razsirim logiranje okoli API klica (vrstice 595-648):
+## Predlagani popravek
 
-```text
-// Pred klicem:
-console.log('=== WALLET REGISTRATION START ===');
-console.log('URL:', 'https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets');
-console.log('Nostr Hex ID:', nostrHexId);
-console.log('Wallets:', JSON.stringify(walletsData, null, 2));
+### Sprememba 1: `src/lib/nostrClient.ts`
 
-// Po odgovoru (pred JSON parse):
-console.log('Response status:', response.status);
-console.log('Response Content-Type:', response.headers.get('content-type'));
+Po pridobitvi vseh eventov, obdrži samo **najnovejši event za vsakega registrarja** (glede na `event.pubkey` + `created_at`). Na ta način, če je isti registrar objavil event večkrat, se upošteva samo zadnji.
 
-// Ce ni JSON:
-const contentType = response.headers.get('content-type');
-if (!contentType?.includes('application/json')) {
-  const textBody = await response.text();
-  console.error('Non-JSON response:', textBody.substring(0, 500));
-  throw new Error(`API returned non-JSON response (status ${response.status})`);
+```ts
+// Grupiramo evente po registrarju (pubkey), obdržimo samo najnovejšega
+const latestByRegistrar = new Map<string, typeof events[0]>();
+for (const event of events) {
+  const existing = latestByRegistrar.get(event.pubkey);
+  if (!existing || event.created_at > existing.created_at) {
+    latestByRegistrar.set(event.pubkey, event);
+  }
 }
-
-// Po JSON parse:
-console.log('Response body:', JSON.stringify(result, null, 2));
-
-// V catch bloku:
-console.error('Full error details:', {
-  name: error?.name,
-  message: error?.message,
-  stack: error?.stack
-});
+const dedupedEvents = Array.from(latestByRegistrar.values());
 ```
 
-## Tehnicni povzetek
+### Sprememba 2: `src/pages/CreateLana8Wonder.tsx`
+
+Deduplikacija denarnic po `wallet_address` preden se prikažejo:
+
+```ts
+const allWallets = walletRecords.flatMap(record => 
+  record.wallets.map(wallet => ({
+    ...wallet,
+    status: record.status,
+    registrar: record.registrar_pubkey
+  }))
+);
+
+// Deduplikacija - obdrži samo prvo pojavitev vsake denarnice
+const uniqueWallets = allWallets.filter((wallet, index, self) =>
+  index === self.findIndex(w => w.wallet_address === wallet.wallet_address)
+);
+```
+
+Nato se `uniqueWallets` namesto `allWallets` uporablja v JSX za prikaz.
+
+## Katera sprememba je boljša
+
+**Priporočam obe spremembi skupaj:**
+- Sprememba v `nostrClient.ts` reši problem pri viru (server-side deduplication po registrarju)
+- Sprememba v `CreateLana8Wonder.tsx` je varnostna mreža (client-side deduplication po naslovu)
+
+Tako je zagotovljeno da se nobena denarnica ne prikaže dvakrat, ne glede na vzrok podvajanja.
+
+## Datoteke za spremembo
 
 | Datoteka | Sprememba |
-|----------|-----------|
-| `src/pages/PreviewLana8Wonder.tsx` | Dodaj podrobno logiranje pred, med in po API klicu + preverjanje Content-Type pred JSON parsiranjem |
-
-Po tej spremembi bomo ob naslednjem poizkusu registracije tocno videli, kaj se dogaja v konzolnih logih.
+|---|---|
+| `src/lib/nostrClient.ts` | Deduplikacija KIND 30889 eventov po registrar pubkey (najnovejši event na registrarja) |
+| `src/pages/CreateLana8Wonder.tsx` | Deduplikacija `allWallets` po `wallet_address` pred prikazom |
