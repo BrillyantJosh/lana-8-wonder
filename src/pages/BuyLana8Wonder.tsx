@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Wallet, CreditCard, Building2, ArrowLeft, QrCode, Loader2, AlertCircle } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { api as supabase } from '@/integrations/api/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
 import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';

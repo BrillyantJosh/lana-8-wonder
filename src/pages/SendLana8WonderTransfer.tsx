@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
 import { Html5Qrcode } from "html5-qrcode";
 

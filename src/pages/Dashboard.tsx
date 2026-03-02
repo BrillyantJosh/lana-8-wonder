@@ -10,7 +10,7 @@ import { LanaSession } from "@/lib/lanaKeys";
 import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 // Helper function to format numbers with thousands separator

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Loader2, QrCode, CheckCircle2, XCircle, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { Html5Qrcode } from "html5-qrcode";
 import { getCurrencySymbol } from "@/lib/utils";

@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    container_name: lana-8-wonder
+    restart: unless-stopped
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - VIRTUAL_HOST=uk.lana8wonder.com
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=uk.lana8wonder.com
+      - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - webproxy
+
+networks:
+  webproxy:
+    external: true

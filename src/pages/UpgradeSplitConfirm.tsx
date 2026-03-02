@@ -6,7 +6,7 @@ import { ArrowLeft, LogOut, TrendingUp, Wallet, ChevronDown, ChevronUp, Coins, L
 import { LanaSession } from "@/lib/lanaKeys";
 import { getCurrencySymbol } from "@/lib/utils";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 import { fetchKind88888, Lana8WonderPlan } from "@/lib/nostrClient";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";

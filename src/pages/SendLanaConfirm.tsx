@@ -9,7 +9,7 @@ import { ArrowLeft, Send, QrCode, X, AlertCircle, CheckCircle2, Loader2 } from "
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 
 const SendLanaConfirm = () => {
   const navigate = useNavigate();

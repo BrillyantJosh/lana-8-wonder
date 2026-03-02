@@ -8,7 +8,7 @@ import { LanaSession } from "@/lib/lanaKeys";
 import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/integrations/api/client";
 
 const SendLana = () => {
   const navigate = useNavigate();

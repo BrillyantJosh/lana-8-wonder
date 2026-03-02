@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, QrCode, CheckCircle, XCircle, Wallet, UserPlus } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { api as supabase } from '@/integrations/api/client';
 import { convertWifToIds } from '@/lib/lanaKeys';
 import { fetchKind0Profile } from '@/lib/nostrClient';
 

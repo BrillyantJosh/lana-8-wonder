@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SimplePool, Filter } from 'nostr-tools';
-import { supabase } from '@/integrations/supabase/client';
+import { api as supabase } from '@/integrations/api/client';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

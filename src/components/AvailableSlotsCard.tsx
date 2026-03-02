@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Ticket, AlertCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { api as supabase } from '@/integrations/api/client';
 import { LanaSystemParams } from '@/hooks/useNostrLanaParams';
 import { WaitingListDialog } from './WaitingListDialog';
 import { useTranslation } from 'react-i18next';
