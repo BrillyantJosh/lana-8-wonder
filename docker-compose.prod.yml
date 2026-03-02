@@ -13,6 +13,7 @@ services:
       - LETSENCRYPT_HOST=uk.lana8wonder.com,si.lana8wonder.com,hu.lana8wonder.com,at.lana8wonder.com
       - NODE_ENV=production
       - PORT=3000
+      - LANA_REGISTER_API_KEY=REDACTED_API_KEY
     networks:
       - webproxy
 

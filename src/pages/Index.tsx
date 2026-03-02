@@ -1,5 +1,4 @@
 import TradingPlanCalculator from "@/components/TradingPlanCalculator";
-import { AvailableSlotsCard } from "@/components/AvailableSlotsCard";
 import lanaCoin from "@/assets/lana-coin.png";
 import einsteinImg from "@/assets/einstein.png";
 import { Sparkles, Wifi, Loader2 } from "lucide-react";
@@ -271,9 +270,25 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Available Slots Section */}
+      {/* Buy LANA CTA Section */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
-        <AvailableSlotsCard params={params} loading={loading} />
+        <div className="max-w-5xl mx-auto">
+          <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background">
+            <CardContent className="p-6 sm:p-10 text-center space-y-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-primary">
+                {t('buyLana.title')}
+              </h2>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
+                {t('buyLana.step2Notice')}
+              </p>
+              <Button size="lg" className="text-lg px-8 py-6" asChild>
+                <Link to="/buy-lana8wonder">
+                  {t('buyLana.indexBuyButton')}
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* Main Content */}

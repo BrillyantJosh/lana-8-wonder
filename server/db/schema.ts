@@ -127,6 +127,11 @@ export function initializeSchema(db: Database.Database): void {
   try { db.exec('ALTER TABLE profiles ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
   try { db.exec('ALTER TABLE waiting_list ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
 
+  // Add new columns to buy_lana (safe migration)
+  try { db.exec("ALTER TABLE buy_lana ADD COLUMN split TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE buy_lana ADD COLUMN email TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE buy_lana ADD COLUMN status TEXT DEFAULT 'pending'"); } catch(e) { /* column already exists */ }
+
   // Seed domains
   const insertDomain = db.prepare(`
     INSERT OR IGNORE INTO domains (domain_key, hostname, display_name, currency_default)

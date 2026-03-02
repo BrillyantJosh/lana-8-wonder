@@ -15,7 +15,7 @@ const ALLOWED_TABLES = [
   'domain_admins',
 ] as const;
 
-const DOMAIN_SCOPED_TABLES = ['buy_lana', 'profiles', 'waiting_list'] as const;
+const DOMAIN_SCOPED_TABLES = ['buy_lana', 'profiles'] as const;
 
 function isDomainScoped(table: string): boolean {
   return (DOMAIN_SCOPED_TABLES as readonly string[]).includes(table);
