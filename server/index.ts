@@ -10,6 +10,9 @@ import sendLanaTransactionRouter from './routes/sendLanaTransaction.js';
 import sendLanaMultiOutputRouter from './routes/sendLanaMultiOutput.js';
 import publishPlanRouter from './routes/publishPlan.js';
 import processPendingPaymentsRouter from './routes/processPendingPayments.js';
+import { domainKeyMiddleware } from './middleware/domainKey.js';
+import domainConfigRouter from './routes/domainConfig.js';
+import adminAuthRouter from './routes/adminAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +23,7 @@ const PORT = parseInt(process.env.PORT || process.env.SERVER_PORT || '3000', 10)
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(domainKeyMiddleware);
 
 // Initialize database
 getDb();
@@ -30,6 +34,8 @@ app.use('/api/send-lana-transaction', sendLanaTransactionRouter);
 app.use('/api/send-lana-multi-output', sendLanaMultiOutputRouter);
 app.use('/api/publish-lana8wonder-plan', publishPlanRouter);
 app.use('/api/process-pending-payments', processPendingPaymentsRouter);
+app.use('/api/domain-config', domainConfigRouter);
+app.use('/api/check-admin', adminAuthRouter);
 
 // API Routes - Generic DB CRUD
 app.use('/api/db', dbRouter);

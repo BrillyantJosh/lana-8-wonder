@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api as supabase } from '@/integrations/api/client';
+import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -19,7 +19,7 @@ const AdminSlotsVisibility = () => {
     const checkAdminAndFetchSetting = async () => {
       try {
         const sessionData = sessionStorage.getItem('lana_session');
-        
+
         if (!sessionData) {
           navigate('/login');
           return;
@@ -33,28 +33,35 @@ const AdminSlotsVisibility = () => {
           return;
         }
 
-        const { data: adminUser } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('nostr_hex_id', userNostrHexId)
-          .maybeSingle();
+        // Check admin via /api/check-admin
+        const adminRes = await fetch('/api/check-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          },
+          body: JSON.stringify({ nostr_hex_id: userNostrHexId })
+        });
+        const adminJson = await adminRes.json();
 
-        if (!adminUser) {
+        if (!adminJson.data?.isGlobalAdmin && !adminJson.data?.isDomainAdmin) {
           navigate('/dashboard');
           return;
         }
 
         setIsAdmin(true);
 
-        // Fetch current setting
-        const { data: setting } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'show_lots_on_landing_page')
-          .maybeSingle();
+        // Fetch current setting from domain config
+        const configRes = await fetch('/api/domain-config', {
+          headers: {
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          }
+        });
+        const configJson = await configRes.json();
 
-        if (setting) {
-          setShowSlots(setting.setting_value.toLowerCase() === 'yes');
+        if (configJson.data) {
+          const val = configJson.data.show_slots_on_landing_page?.toString().toLowerCase();
+          setShowSlots(val !== 'no' && val !== 'false');
         }
       } catch (error) {
         console.error('Error:', error);
@@ -70,12 +77,35 @@ const AdminSlotsVisibility = () => {
   const handleToggle = async (checked: boolean) => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('app_settings')
-        .update({ setting_value: checked ? 'Yes' : 'No' })
-        .eq('setting_key', 'show_lots_on_landing_page');
+      const domainKey = getDomainKey();
 
-      if (error) throw error;
+      if (domainKey) {
+        // Update via domain config API
+        const sessionData = sessionStorage.getItem('lana_session');
+        const session = sessionData ? JSON.parse(sessionData) : {};
+
+        const res = await fetch('/api/domain-config', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Domain-Key': domainKey
+          },
+          body: JSON.stringify({
+            nostr_hex_id: session.nostrHexId,
+            show_slots_on_landing_page: checked ? 'Yes' : 'No'
+          })
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error.message);
+      } else {
+        // Fallback to app_settings for non-domain context
+        const { error } = await supabase
+          .from('app_settings')
+          .update({ setting_value: checked ? 'Yes' : 'No' })
+          .eq('setting_key', 'show_lots_on_landing_page');
+
+        if (error) throw error;
+      }
 
       setShowSlots(checked);
       toast.success(`Slots visibility set to ${checked ? 'Yes' : 'No'}`);

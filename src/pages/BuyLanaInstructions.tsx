@@ -3,27 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { api as supabase } from '@/integrations/api/client';
+import { getDomainKey } from '@/integrations/api/client';
 
 const BuyLanaInstructions = () => {
   const navigate = useNavigate();
   const [contactDetails, setContactDetails] = useState<string>('');
 
-  // Fetch contact details from app_settings
+  // Fetch contact details from domain config
   useEffect(() => {
     const fetchContactDetails = async () => {
       try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'contact_details')
-          .single();
-
-        if (!error && data) {
-          setContactDetails(data.setting_value);
+        const res = await fetch('/api/domain-config', {
+          headers: {
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          }
+        });
+        const json = await res.json();
+        if (json.data?.contact_details) {
+          setContactDetails(json.data.contact_details);
         }
       } catch (error) {
-        console.error('Error fetching contact details:', error);
+        console.error('Error fetching domain config:', error);
       }
     };
 

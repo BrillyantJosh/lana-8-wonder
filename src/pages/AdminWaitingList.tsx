@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api as supabase } from '@/integrations/api/client';
+import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -46,7 +46,7 @@ const AdminWaitingList = () => {
     const checkAdminStatus = async () => {
       try {
         const sessionData = sessionStorage.getItem('lana_session');
-        
+
         if (!sessionData) {
           setIsAdmin(false);
           return;
@@ -60,13 +60,17 @@ const AdminWaitingList = () => {
           return;
         }
 
-        const { data: adminUser } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('nostr_hex_id', userNostrHexId)
-          .maybeSingle();
+        const res = await fetch('/api/check-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          },
+          body: JSON.stringify({ nostr_hex_id: userNostrHexId })
+        });
+        const json = await res.json();
 
-        setIsAdmin(!!adminUser);
+        setIsAdmin(json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);

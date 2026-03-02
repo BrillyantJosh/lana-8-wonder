@@ -13,6 +13,7 @@ import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { validateWifAndGetAddress } from "@/lib/wifValidation";
+import { getDomainKey } from "@/integrations/api/client";
 
 const Login = () => {
   const { t, i18n } = useTranslation();
@@ -201,7 +202,8 @@ const Login = () => {
         ...ids,
         profileName: profile.name,
         profileDisplayName: profile.display_name,
-        currency: profile.currency || "EUR" // Use profile currency or default to EUR
+        currency: profile.currency || "EUR", // Use profile currency or default to EUR
+        domainKey: getDomainKey()
       };
       
       sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));

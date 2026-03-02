@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Ticket, AlertCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { api as supabase } from '@/integrations/api/client';
+import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { LanaSystemParams } from '@/hooks/useNostrLanaParams';
 import { WaitingListDialog } from './WaitingListDialog';
 import { useTranslation } from 'react-i18next';
@@ -31,25 +31,23 @@ export const AvailableSlotsCard = ({
   const [reservedSlotsCount, setReservedSlotsCount] = useState<number | null>(null);
   const [showSlotsOnLandingPage, setShowSlotsOnLandingPage] = useState<boolean | null>(null);
 
-  // Fetch donation_wallet_id and webpage from app_settings
+  // Fetch domain config (replaces app_settings lookup)
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('setting_key, setting_value')
-          .in('setting_key', ['donation_wallet_id', 'webpage', 'show_lots_on_landing_page']);
-        
-        if (error) throw error;
-        
-        if (data) {
-          const donationWallet = data.find(s => s.setting_key === 'donation_wallet_id');
-          const webpage = data.find(s => s.setting_key === 'webpage');
-          const showSlotsSetting = data.find(s => s.setting_key === 'show_lots_on_landing_page');
-          
-          if (donationWallet) setDonationWalletId(donationWallet.setting_value);
-          if (webpage) setWebpageUrl(webpage.setting_value);
-          setShowSlotsOnLandingPage(showSlotsSetting?.setting_value?.toLowerCase() !== 'no');
+        const res = await fetch('/api/domain-config', {
+          headers: {
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          }
+        });
+        const json = await res.json();
+        if (json.data) {
+          if (json.data.donation_wallet_id) setDonationWalletId(json.data.donation_wallet_id);
+          setWebpageUrl(''); // Not needed for domain config
+          setShowSlotsOnLandingPage(
+            json.data.show_slots_on_landing_page?.toString().toLowerCase() !== 'no' &&
+            json.data.show_slots_on_landing_page?.toString().toLowerCase() !== 'false'
+          );
         }
       } catch (err) {
         console.error('Error fetching settings:', err);

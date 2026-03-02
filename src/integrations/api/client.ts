@@ -1,3 +1,14 @@
+export function getDomainKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  // e.g., "uk.lana8wonder.com" -> "uk", "localhost" -> null
+  if (parts.length >= 3) {
+    return parts[0];
+  }
+  return null;
+}
+
 type FilterEntry =
   | { type: "eq"; column: string; value: unknown }
   | { type: "is"; column: string; value: unknown }
@@ -229,10 +240,12 @@ class QueryBuilder<T = unknown> implements PromiseLike<SupabaseResponse<T>> {
         method = "GET";
     }
 
+    const domainKey = getDomainKey();
     const fetchOptions: RequestInit = {
       method,
       headers: {
         "Content-Type": "application/json",
+        ...(domainKey ? { "X-Domain-Key": domainKey } : {}),
       },
     };
 
@@ -297,9 +310,13 @@ const functions = {
     options?: { body?: Record<string, unknown> }
   ): Promise<{ data: T | null; error: { message: string; [key: string]: unknown } | null }> {
     try {
+      const domainKey = getDomainKey();
       const res = await fetch(`/api/${name}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(domainKey ? { "X-Domain-Key": domainKey } : {}),
+        },
         body: JSON.stringify(options?.body ?? {}),
       });
 

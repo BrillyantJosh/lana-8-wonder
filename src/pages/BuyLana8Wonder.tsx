@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Wallet, CreditCard, Building2, ArrowLeft, QrCode, Loader2, AlertCircle } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
-import { api as supabase } from '@/integrations/api/client';
+import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
 import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
@@ -101,47 +101,48 @@ const BuyLana8Wonder = () => {
                       walletError === null &&
                       params?.exchangeRates?.[selectedCurrency];
 
-  // Fetch contact details from app_settings
+  // Fetch contact details from domain config
   useEffect(() => {
-    const fetchContactDetails = async () => {
+    const fetchDomainConfig = async () => {
       try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'contact_details')
-          .single();
-
-        if (!error && data) {
-          setContactDetails(data.setting_value);
+        const res = await fetch('/api/domain-config', {
+          headers: {
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          }
+        });
+        const json = await res.json();
+        if (json.data) {
+          setContactDetails(json.data.contact_details || '');
         }
       } catch (error) {
-        console.error('Error fetching contact details:', error);
+        console.error('Error fetching domain config:', error);
       }
     };
 
-    fetchContactDetails();
+    fetchDomainConfig();
   }, []);
 
-  // Fetch buyer profile from Nostr
+  // Fetch buyer profile from Nostr (using domain config for nostr_hex_id)
   useEffect(() => {
     const fetchBuyerProfile = async () => {
       try {
         setIsLoadingProfile(true);
-        
-        // Fetch nostr_hex_id from app_settings
-        const { data: settings, error } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'nostr_hex_id_buying_lanas')
-          .single();
 
-        if (error || !settings) {
-          console.error('Error fetching buyer hex ID:', error);
+        // Fetch nostr_hex_id_buying_lanas from domain config
+        const res = await fetch('/api/domain-config', {
+          headers: {
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          }
+        });
+        const json = await res.json();
+
+        if (!json.data?.nostr_hex_id_buying_lanas) {
+          console.error('No buyer hex ID in domain config');
           toast.error('Failed to load payment information');
           return;
         }
 
-        const buyerHexId = settings.setting_value;
+        const buyerHexId = json.data.nostr_hex_id_buying_lanas;
 
         // Wait for relays to be available
         if (!params?.relays || params.relays.length === 0) {
@@ -151,7 +152,7 @@ const BuyLana8Wonder = () => {
 
         // Fetch KIND 0 profile
         const profile = await fetchKind0Profile(buyerHexId, params.relays);
-        
+
         if (!profile) {
           toast.error('Payment profile not found');
           return;
@@ -159,7 +160,7 @@ const BuyLana8Wonder = () => {
 
         setBuyerProfile(profile);
         console.log('Buyer profile loaded:', profile);
-        
+
       } catch (error) {
         console.error('Error fetching buyer profile:', error);
         toast.error('Failed to load payment information');

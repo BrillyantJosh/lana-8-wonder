@@ -72,6 +72,32 @@ export function initializeSchema(db: Database.Database): void {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS domains (
+      domain_key TEXT PRIMARY KEY,
+      hostname TEXT UNIQUE NOT NULL,
+      display_name TEXT NOT NULL,
+      donation_wallet_id TEXT,
+      donation_wallet_private_key TEXT,
+      contact_details TEXT,
+      payment_link TEXT,
+      nostr_hex_id_buying_lanas TEXT,
+      currency_default TEXT DEFAULT 'EUR',
+      show_slots_on_landing_page TEXT DEFAULT 'true',
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS domain_admins (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      domain_key TEXT NOT NULL REFERENCES domains(domain_key) ON DELETE CASCADE,
+      nostr_hex_id TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(domain_key, nostr_hex_id)
+    );
   `);
 
   // Seed admin users
@@ -95,6 +121,48 @@ export function initializeSchema(db: Database.Database): void {
   insertSetting.run('webpage', '', 'Webpage URL');
   insertSetting.run('show_lots_on_landing_page', 'true', 'Show available slots on landing page');
   insertSetting.run('effective_exchange_rate', '', 'Current effective exchange rate');
+
+  // Add domain_key columns to existing tables (safe migration)
+  try { db.exec('ALTER TABLE buy_lana ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
+  try { db.exec('ALTER TABLE profiles ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
+  try { db.exec('ALTER TABLE waiting_list ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
+
+  // Seed domains
+  const insertDomain = db.prepare(`
+    INSERT OR IGNORE INTO domains (domain_key, hostname, display_name, currency_default)
+    VALUES (?, ?, ?, ?)
+  `);
+  insertDomain.run('uk', 'uk.lana8wonder.com', 'United Kingdom', 'GBP');
+  insertDomain.run('si', 'si.lana8wonder.com', 'Slovenia', 'EUR');
+  insertDomain.run('hu', 'hu.lana8wonder.com', 'Hungary', 'EUR');
+  insertDomain.run('at', 'at.lana8wonder.com', 'Austria', 'EUR');
+
+  // Seed domain_admins
+  const insertDomainAdmin = db.prepare(`
+    INSERT OR IGNORE INTO domain_admins (domain_key, nostr_hex_id, description)
+    VALUES (?, ?, ?)
+  `);
+  // e013... -> HU, UK
+  insertDomainAdmin.run('hu', 'e01368761feeb32a8fbc5b85502847ecdbbbcb1256ae35da268416c755982ca0', 'Domain Admin HU');
+  insertDomainAdmin.run('uk', 'e01368761feeb32a8fbc5b85502847ecdbbbcb1256ae35da268416c755982ca0', 'Domain Admin UK');
+  // 56e8... -> UK, SI, AT
+  insertDomainAdmin.run('uk', '56e8670aa65491f8595dc3a71c94aa7445dcdca755ca5f77c07218498a362061', 'Domain Admin UK');
+  insertDomainAdmin.run('si', '56e8670aa65491f8595dc3a71c94aa7445dcdca755ca5f77c07218498a362061', 'Domain Admin SI');
+  insertDomainAdmin.run('at', '56e8670aa65491f8595dc3a71c94aa7445dcdca755ca5f77c07218498a362061', 'Domain Admin AT');
+  // 4f87... -> SI
+  insertDomainAdmin.run('si', '4f8735cf707b3980ff2ed284cda7c0fb4150cd1b137fc170a30aafd9d93e84d6', 'Domain Admin SI');
+  // ba85... -> AT
+  insertDomainAdmin.run('at', 'ba8500d89a4e8ae475314079365f995ca221fb668ee7c63d147aa28f49838ff1', 'Domain Admin AT');
+
+  // Migrate app_settings values to all domains (initial setup)
+  db.exec(`
+    UPDATE domains SET
+      donation_wallet_id = COALESCE(donation_wallet_id, (SELECT setting_value FROM app_settings WHERE setting_key = 'donation_wallet_id')),
+      donation_wallet_private_key = COALESCE(donation_wallet_private_key, (SELECT setting_value FROM app_settings WHERE setting_key = 'donation_wallet_id_PrivatKey')),
+      contact_details = COALESCE(contact_details, (SELECT setting_value FROM app_settings WHERE setting_key = 'contact_details')),
+      nostr_hex_id_buying_lanas = COALESCE(nostr_hex_id_buying_lanas, (SELECT setting_value FROM app_settings WHERE setting_key = 'nostr_hex_id_buying_lanas'))
+    WHERE donation_wallet_id IS NULL OR donation_wallet_id = ''
+  `);
 
   console.log('Database schema initialized with seed data');
 }

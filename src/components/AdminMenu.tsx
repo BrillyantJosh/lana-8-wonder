@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api as supabase } from '@/integrations/api/client';
+import { getDomainKey } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, ChevronDown, CreditCard, Users, Eye } from 'lucide-react';
+import { Settings, ChevronDown, CreditCard, Users, Eye, Globe } from 'lucide-react';
 
 interface AdminMenuProps {
   className?: string;
@@ -22,7 +22,7 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
     const checkAdminStatus = async () => {
       try {
         const sessionData = sessionStorage.getItem('lana_session');
-        
+
         if (!sessionData) {
           setIsAdmin(false);
           return;
@@ -36,13 +36,17 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
           return;
         }
 
-        const { data: adminUser } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('nostr_hex_id', userNostrHexId)
-          .maybeSingle();
+        const res = await fetch('/api/check-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          },
+          body: JSON.stringify({ nostr_hex_id: userNostrHexId })
+        });
+        const json = await res.json();
 
-        setIsAdmin(!!adminUser);
+        setIsAdmin(json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
@@ -75,6 +79,10 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         <DropdownMenuItem onClick={() => navigate('/admin-slots-visibility')}>
           <Eye className="h-4 w-4 mr-2" />
           Slots Visibility
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/admin-domain-settings')}>
+          <Globe className="h-4 w-4 mr-2" />
+          Domain Settings
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

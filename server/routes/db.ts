@@ -11,7 +11,15 @@ const ALLOWED_TABLES = [
   'buy_lana',
   'waiting_list',
   'admin_users',
+  'domains',
+  'domain_admins',
 ] as const;
+
+const DOMAIN_SCOPED_TABLES = ['buy_lana', 'profiles', 'waiting_list'] as const;
+
+function isDomainScoped(table: string): boolean {
+  return (DOMAIN_SCOPED_TABLES as readonly string[]).includes(table);
+}
 
 type AllowedTable = (typeof ALLOWED_TABLES)[number];
 
@@ -149,6 +157,13 @@ router.get('/:table', (req: Request, res: Response) => {
 
     const selectCols = buildSelect(query.select);
     const { conditions, params } = buildWhere(query);
+
+    // Domain scoping: auto-filter by domain_key for scoped tables
+    if (isDomainScoped(table) && req.domainKey) {
+      conditions.push('"domain_key" = ?');
+      params.push(req.domainKey);
+    }
+
     const whereSQL = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
     const orderSQL = buildOrderBy(query.order);
     const limitSQL = query.limit ? ` LIMIT ${parseInt(query.limit, 10)}` : '';
@@ -208,6 +223,11 @@ router.post('/:table', (req: Request, res: Response) => {
     const results: unknown[] = [];
 
     const insertRow = (row: Record<string, unknown>) => {
+      // Auto-inject domain_key for scoped tables
+      if (isDomainScoped(table) && req.domainKey && !row.domain_key) {
+        row.domain_key = req.domainKey;
+      }
+
       // Generate ID if not provided
       if (!row.id) {
         row.id = crypto.randomUUID();
@@ -325,6 +345,11 @@ router.patch('/:table', (req: Request, res: Response) => {
     const results: unknown[] = [];
 
     for (const row of rows) {
+      // Auto-inject domain_key for scoped tables
+      if (isDomainScoped(table) && req.domainKey && !row.domain_key) {
+        row.domain_key = req.domainKey;
+      }
+
       // Generate ID if not provided
       if (!row.id) {
         row.id = crypto.randomUUID();
