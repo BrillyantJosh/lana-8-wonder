@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -253,7 +253,12 @@ function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetV
   return levels;
 }
 
-export default function TradingPlanCalculator() {
+interface TradingPlanCalculatorProps {
+  defaultCurrency?: 'EUR' | 'USD' | 'GBP';
+  autoCalculate?: boolean;
+}
+
+export default function TradingPlanCalculator({ defaultCurrency, autoCalculate = false }: TradingPlanCalculatorProps = {}) {
   const { t, i18n } = useTranslation();
   const {
     params,
@@ -261,11 +266,19 @@ export default function TradingPlanCalculator() {
     error
   } = useNostrLanaParams();
   const [currentPrice, setCurrentPrice] = useState<string>("");
-  const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
+  const [selectedCurrency, setSelectedCurrency] = useState<'EUR' | 'USD' | 'GBP'>(defaultCurrency || 'EUR');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
   const [portfolioProjection, setPortfolioProjection] = useState<ProjectionData[]>([]);
   const [passiveAccountSplits, setPassiveAccountSplits] = useState<Set<number>>(new Set());
+  const hasAutoCalculatedRef = useRef(false);
+
+  // Update currency when defaultCurrency prop changes
+  useEffect(() => {
+    if (defaultCurrency && defaultCurrency !== selectedCurrency && accounts.length === 0) {
+      setSelectedCurrency(defaultCurrency);
+    }
+  }, [defaultCurrency]);
 
   // Set default price from NOSTR params when loaded
   useEffect(() => {
@@ -392,9 +405,9 @@ export default function TradingPlanCalculator() {
     return projections;
   };
 
-  const calculatePlan = () => {
+  const calculatePlan = (priceOverride?: string) => {
     const initialInvestment = 88;
-    const price = parseFloat(currentPrice);
+    const price = parseFloat(priceOverride || currentPrice);
     const totalLanas = initialInvestment / price;
     const lanasPerAccount = totalLanas / 8;
 
@@ -464,18 +477,32 @@ export default function TradingPlanCalculator() {
       };
     });
     setAccounts(newAccounts);
-    
+
     // Build remaining LANA map considering all sales across all accounts
     const lanaMap = buildRemainingLanaMap(newAccounts, totalLanas);
-    
+
     // Track which splits have passive account activity
     const passiveSplits = getPassiveAccountSplits(newAccounts);
     setPassiveAccountSplits(passiveSplits);
-    
+
     // Calculate portfolio projection with accurate remaining LANA
     const projection = calculatePortfolioProjection(price, lanaMap, newAccounts);
     setPortfolioProjection(projection);
   };
+
+  // Auto-calculate when params are loaded and autoCalculate is enabled
+  useEffect(() => {
+    if (!autoCalculate || !params || loading || hasAutoCalculatedRef.current) return;
+
+    const rate = params.exchangeRates[selectedCurrency];
+    if (!rate || rate <= 0) return;
+
+    hasAutoCalculatedRef.current = true;
+    const priceStr = rate.toString();
+    setCurrentPrice(priceStr);
+    calculatePlan(priceStr);
+  }, [autoCalculate, params, loading, selectedCurrency]);
+
   const toggleAccount = (accountNumber: number) => {
     const newExpanded = new Set(expandedAccounts);
     if (newExpanded.has(accountNumber)) {
@@ -529,7 +556,7 @@ export default function TradingPlanCalculator() {
                 </label>
                 <Input type="number" step="0.000001" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder={t('tradingCalculator.loadingPrices')} className="text-lg" disabled={loading} />
               </div>
-              <Button onClick={calculatePlan} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading || !currentPrice}>
+              <Button onClick={() => calculatePlan()} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading || !currentPrice}>
                 <TrendingUp className="w-5 h-5 mr-2" />
                 {t('tradingCalculator.generatePlan')}
               </Button>

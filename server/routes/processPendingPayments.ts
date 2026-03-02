@@ -144,12 +144,12 @@ async function processPaymentBatch(
 
   console.log(`[${label}] Transaction broadcast successful:`, txid);
 
-  // 10. Update all processed records
+  // 10. Update all processed records — set tx + status = 'transferred'
   console.log(`[${label}] Updating database records...`);
   const recordIds = pendingRecords.map((r) => r.id);
   const placeholders = recordIds.map(() => '?').join(', ');
   db.prepare(
-    `UPDATE buy_lana SET tx = ?, updated_at = datetime('now') WHERE id IN (${placeholders})`
+    `UPDATE buy_lana SET tx = ?, status = 'transferred', updated_at = datetime('now') WHERE id IN (${placeholders})`
   ).run(txid, ...recordIds);
 
   console.log(`[${label}] Successfully updated ${recordIds.length} record(s)`);
@@ -180,7 +180,7 @@ export async function processPendingPayments(): Promise<any> {
   for (const domain of domains) {
     try {
       const pendingRecords = db.prepare(
-        `SELECT id, lana_wallet_id, lana_amount FROM buy_lana WHERE domain_key = ? AND tx IS NULL AND paid_on_account IS NOT NULL`
+        `SELECT id, lana_wallet_id, lana_amount FROM buy_lana WHERE domain_key = ? AND status = 'approved' AND tx IS NULL`
       ).all(domain.domain_key) as Array<{ id: string; lana_wallet_id: string; lana_amount: number }>;
 
       if (!pendingRecords || pendingRecords.length === 0) {
@@ -201,7 +201,7 @@ export async function processPendingPayments(): Promise<any> {
   // 3. Legacy fallback: process records with no domain_key using app_settings WIF
   try {
     const legacyRecords = db.prepare(
-      `SELECT id, lana_wallet_id, lana_amount FROM buy_lana WHERE domain_key IS NULL AND tx IS NULL AND paid_on_account IS NOT NULL`
+      `SELECT id, lana_wallet_id, lana_amount FROM buy_lana WHERE domain_key IS NULL AND status = 'approved' AND tx IS NULL`
     ).all() as Array<{ id: string; lana_wallet_id: string; lana_amount: number }>;
 
     if (legacyRecords && legacyRecords.length > 0) {

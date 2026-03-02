@@ -132,6 +132,14 @@ export function initializeSchema(db: Database.Database): void {
   try { db.exec("ALTER TABLE buy_lana ADD COLUMN email TEXT"); } catch(e) { /* column already exists */ }
   try { db.exec("ALTER TABLE buy_lana ADD COLUMN status TEXT DEFAULT 'pending'"); } catch(e) { /* column already exists */ }
 
+  // Migrate existing records to use status field (idempotent)
+  // Records with tx → 'transferred'
+  db.exec(`UPDATE buy_lana SET status = 'transferred' WHERE tx IS NOT NULL AND tx != '' AND (status IS NULL OR status = 'pending')`);
+  // Records with paid_on_account but no tx → 'paid' (waiting for admin to approve)
+  db.exec(`UPDATE buy_lana SET status = 'paid' WHERE paid_on_account IS NOT NULL AND paid_on_account != '' AND (tx IS NULL OR tx = '') AND (status IS NULL OR status = 'pending')`);
+  // Records with no paid_on_account → ensure 'pending'
+  db.exec(`UPDATE buy_lana SET status = 'pending' WHERE (paid_on_account IS NULL OR paid_on_account = '') AND (status IS NULL OR status = '')`);
+
   // Seed domains
   const insertDomain = db.prepare(`
     INSERT OR IGNORE INTO domains (domain_key, hostname, display_name, currency_default)
