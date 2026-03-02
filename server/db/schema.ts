@@ -18,7 +18,6 @@ export function initializeSchema(db: Database.Database): void {
       tx TEXT,
       published_plan INTEGER DEFAULT 0,
       selected_wallet TEXT,
-      allowed_upgrade INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );

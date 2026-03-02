@@ -8,7 +8,6 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BuyLana8Wonder from "./pages/BuyLana8Wonder";
 import AdminBuyLana from "./pages/AdminBuyLana";
-import AdminAllowanceUpgrade from "./pages/AdminAllowanceUpgrade";
 import AdminWaitingList from "./pages/AdminWaitingList";
 import AdminSlotsVisibility from "./pages/AdminSlotsVisibility";
 import BuyLanaInstructions from "./pages/BuyLanaInstructions";
@@ -19,9 +18,6 @@ import SendLana from "./pages/SendLana";
 import SendLanaConfirm from "./pages/SendLanaConfirm";
 import SendLanaResult from "./pages/SendLanaResult";
 import SendLana8WonderTransfer from "./pages/SendLana8WonderTransfer";
-import UpgradeSplit from "./pages/UpgradeSplit";
-import UpgradeSplitConfirm from "./pages/UpgradeSplitConfirm";
-import UpgradeSplitExecute from "./pages/UpgradeSplitExecute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,7 +34,6 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />
           <Route path="/admin-buy-lana" element={<AdminBuyLana />} />
-          <Route path="/admin-allowance-upgrade" element={<AdminAllowanceUpgrade />} />
           <Route path="/admin-waiting-list" element={<AdminWaitingList />} />
           <Route path="/admin-slots-visibility" element={<AdminSlotsVisibility />} />
           <Route path="/buy-lana-instructions" element={<BuyLanaInstructions />} />
@@ -49,9 +44,6 @@ const App = () => (
           <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
           <Route path="/send-lana-result" element={<SendLanaResult />} />
           <Route path="/send-lana8wonder-transfer" element={<SendLana8WonderTransfer />} />
-          <Route path="/upgrade-split" element={<UpgradeSplit />} />
-          <Route path="/upgrade-split-confirm" element={<UpgradeSplitConfirm />} />
-          <Route path="/upgrade-split-execute" element={<UpgradeSplitExecute />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

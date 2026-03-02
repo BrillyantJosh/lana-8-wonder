@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Loader2, Send, CheckCircle2, TrendingUp } from "lucide-react";
+import { LogOut, Loader2, Send, CheckCircle2 } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -31,7 +31,6 @@ const Dashboard = () => {
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [balancesLoading, setBalancesLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [hasUpgradeAllowance, setHasUpgradeAllowance] = useState(false);
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -120,15 +119,14 @@ const Dashboard = () => {
     }
   }, [navigate, params]);
 
-  // Check if user is admin and has upgrade allowance
+  // Check if user is admin
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
         const sessionData = sessionStorage.getItem('lana_session');
-        
+
         if (!sessionData) {
           setIsAdmin(false);
-          setHasUpgradeAllowance(false);
           return;
         }
 
@@ -137,11 +135,9 @@ const Dashboard = () => {
 
         if (!userNostrHexId) {
           setIsAdmin(false);
-          setHasUpgradeAllowance(false);
           return;
         }
 
-        // Check admin status
         const { data: adminUser } = await supabase
           .from('admin_users')
           .select('id')
@@ -149,19 +145,9 @@ const Dashboard = () => {
           .maybeSingle();
 
         setIsAdmin(!!adminUser);
-
-        // Check upgrade allowance
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('allowed_upgrade')
-          .eq('nostr_hex_id', userNostrHexId)
-          .maybeSingle();
-
-        setHasUpgradeAllowance(profile?.allowed_upgrade === true);
       } catch (error) {
         console.error('Error checking user status:', error);
         setIsAdmin(false);
-        setHasUpgradeAllowance(false);
       }
     };
 
@@ -224,15 +210,6 @@ const Dashboard = () => {
           </div>
           <div className="flex gap-2 w-full sm:w-auto items-center flex-wrap">
             <LanguageSelector />
-            {hasUpgradeAllowance && (
-              <Button 
-                onClick={() => navigate('/upgrade-split')}
-                className="flex-1 sm:flex-initial bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800"
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                {t('dashboard.upgradeSplit')}
-              </Button>
-            )}
             {isAdmin && (
               <Button 
                 variant="secondary" 
