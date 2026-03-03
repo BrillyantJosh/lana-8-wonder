@@ -28,26 +28,45 @@ const getVideoUrl = (language: string): string => {
   return videoUrls[language] || videoUrls.default;
 };
 
+interface DynamicFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  position: number;
+}
+
+interface DynamicWhatIsLana {
+  title: string;
+  question1: string;
+  question2: string;
+  description: string;
+  video_url: string;
+}
+
 const Index = () => {
   const { t, i18n } = useTranslation();
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [domainCurrency, setDomainCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
 
+  // Dynamic content state
+  const [dynamicFaq, setDynamicFaq] = useState<DynamicFaqItem[] | null>(null);
+  const [dynamicWhatIsLana, setDynamicWhatIsLana] = useState<DynamicWhatIsLana | null>(null);
+
   // Get currency symbol from domain config or session
   const sessionData = typeof window !== 'undefined' ? sessionStorage.getItem("lana_session") : null;
   const sessionCurrency = sessionData ? JSON.parse(sessionData).currency : null;
   const currencySymbol = getCurrencySymbol(sessionCurrency || domainCurrency || 'EUR');
 
+  const domainHeaders: Record<string, string> = {
+    ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+  };
+
   // Fetch domain config for default currency
   useEffect(() => {
     const fetchDomainCurrency = async () => {
       try {
-        const res = await fetch('/api/domain-config', {
-          headers: {
-            ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
-          }
-        });
+        const res = await fetch('/api/domain-config', { headers: domainHeaders });
         const json = await res.json();
         if (json.data?.currency_default) {
           const cur = json.data.currency_default.toUpperCase();
@@ -62,6 +81,30 @@ const Index = () => {
 
     fetchDomainCurrency();
   }, []);
+
+  // Fetch dynamic content (FAQ + What is Lana) when language changes
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const [faqRes, wilRes] = await Promise.all([
+          fetch(`/api/content/faq?language=${i18n.language}`, { headers: domainHeaders }),
+          fetch(`/api/content/what-is-lana?language=${i18n.language}`, { headers: domainHeaders }),
+        ]);
+
+        const faqJson = await faqRes.json();
+        const wilJson = await wilRes.json();
+
+        setDynamicFaq(faqJson.data && faqJson.data.length > 0 ? faqJson.data : null);
+        setDynamicWhatIsLana(wilJson.data || null);
+      } catch (error) {
+        console.error('Error fetching dynamic content:', error);
+        setDynamicFaq(null);
+        setDynamicWhatIsLana(null);
+      }
+    };
+
+    fetchContent();
+  }, [i18n.language]);
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -190,129 +233,152 @@ const Index = () => {
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {/* FAQ Section — dynamic from DB with i18n fallback */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
         <div className="max-w-5xl mx-auto">
           <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-8">
               <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">{t('index.faq.title')}</h2>
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q1')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {t('index.faq.a1')}{" "}
-                    <a href="https://youtu.be/cpzb5qKMAXM?si=VMHT2ZpXF40mHE4K" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      https://youtu.be/cpzb5qKMAXM
-                    </a>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-2">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q2')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {t('index.faq.a2')}
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-3">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q3')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {t('index.faq.a3')}
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-4">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q4')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    <span dangerouslySetInnerHTML={{ __html: t('index.faq.a4') }} />
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-5">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q5')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                    <p>{t('index.faq.a5_intro')}</p>
-                    <p>{t('index.faq.a5_videos')}</p>
-                    <p>
-                      {t('index.faq.a5_step1')}{" "}
-                      <a href="https://youtu.be/AjLZJC1NUMY?si=fnHCG72s9SZsavmn" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        https://youtu.be/AjLZJC1NUMY
-                      </a>
-                    </p>
-                    <p>
-                      {t('index.faq.a5_step2')}{" "}
-                      <a href="https://youtu.be/JKyQrO6Im5A?si=wiUcYGPHTI3kNpn5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        https://youtu.be/JKyQrO6Im5A
-                      </a>
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="item-6">
-                  <AccordionTrigger className="text-left text-sm sm:text-base">
-                    {t('index.faq.q6')}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                    <p>{t('index.faq.a6_intro')}{" "}
-                      <a href="https://mejmosefajn.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        https://mejmosefajn.org/
-                      </a>
-                      {t('index.faq.a6_wif')}
-                    </p>
-                    <p>{t('index.faq.a6_workshop')}</p>
-                  </AccordionContent>
-                </AccordionItem>
+                {dynamicFaq ? (
+                  dynamicFaq.map((item, index) => (
+                    <AccordionItem key={item.id} value={`item-${index + 1}`}>
+                      <AccordionTrigger className="text-left text-sm sm:text-base">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                        <span dangerouslySetInnerHTML={{ __html: item.answer }} />
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))
+                ) : (
+                  <>
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">
+                        {t('index.faq.q1')}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                        {t('index.faq.a1')}{" "}
+                        <a href="https://youtu.be/cpzb5qKMAXM?si=VMHT2ZpXF40mHE4K" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          https://youtu.be/cpzb5qKMAXM
+                        </a>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-2">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q2')}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">{t('index.faq.a2')}</AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-3">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q3')}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">{t('index.faq.a3')}</AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-4">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q4')}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                        <span dangerouslySetInnerHTML={{ __html: t('index.faq.a4') }} />
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-5">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q5')}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+                        <p>{t('index.faq.a5_intro')}</p>
+                        <p>{t('index.faq.a5_videos')}</p>
+                        <p>{t('index.faq.a5_step1')}{" "}
+                          <a href="https://youtu.be/AjLZJC1NUMY?si=fnHCG72s9SZsavmn" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://youtu.be/AjLZJC1NUMY</a>
+                        </p>
+                        <p>{t('index.faq.a5_step2')}{" "}
+                          <a href="https://youtu.be/JKyQrO6Im5A?si=wiUcYGPHTI3kNpn5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://youtu.be/JKyQrO6Im5A</a>
+                        </p>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-6">
+                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q6')}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+                        <p>{t('index.faq.a6_intro')}{" "}
+                          <a href="https://mejmosefajn.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://mejmosefajn.org/</a>
+                          {t('index.faq.a6_wif')}
+                        </p>
+                        <p>{t('index.faq.a6_workshop')}</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </>
+                )}
               </Accordion>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* What is Lana Video Section */}
+      {/* What is Lana Video Section — dynamic from DB with i18n fallback */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
         <div className="max-w-5xl mx-auto">
           <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-8">
-              <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-                {/* Video Embed */}
-                <div className="w-full md:basis-1/4 md:flex-none md:max-w-[320px]">
-                  <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
-                    <iframe
-                      src={getVideoUrl(i18n.language)}
-                      title={t('index.whatIsLana.title')}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full border-0"
-                    />
+              {dynamicWhatIsLana ? (
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                  {dynamicWhatIsLana.video_url && (
+                    <div className="w-full md:basis-1/4 md:flex-none md:max-w-[320px]">
+                      <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
+                        <iframe
+                          src={dynamicWhatIsLana.video_url}
+                          title={dynamicWhatIsLana.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full h-full border-0"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 space-y-3 flex flex-col justify-center">
+                    <h2 className="text-xl sm:text-2xl font-bold text-primary">
+                      {dynamicWhatIsLana.title}
+                    </h2>
+                    {dynamicWhatIsLana.question1 && (
+                      <p className="text-base sm:text-lg font-semibold text-foreground">
+                        {dynamicWhatIsLana.question1}
+                      </p>
+                    )}
+                    {dynamicWhatIsLana.question2 && (
+                      <p className="text-base sm:text-lg font-semibold text-foreground">
+                        {dynamicWhatIsLana.question2}
+                      </p>
+                    )}
+                    {dynamicWhatIsLana.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        <span dangerouslySetInnerHTML={{ __html: dynamicWhatIsLana.description }} />
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                {/* Text Content */}
-                <div className="flex-1 min-w-0 space-y-3 flex flex-col justify-center">
-                  <h2 className="text-xl sm:text-2xl font-bold text-primary">
-                    {t('index.whatIsLana.title')}
-                  </h2>
-                  <p className="text-base sm:text-lg font-semibold text-foreground">
-                    {t('index.whatIsLana.question1')}
-                  </p>
-                  <p className="text-base sm:text-lg font-semibold text-foreground">
-                    {t('index.whatIsLana.question2')}
-                  </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {t('index.whatIsLana.description')}
-                  </p>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                  <div className="w-full md:basis-1/4 md:flex-none md:max-w-[320px]">
+                    <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
+                      <iframe
+                        src={getVideoUrl(i18n.language)}
+                        title={t('index.whatIsLana.title')}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-3 flex flex-col justify-center">
+                    <h2 className="text-xl sm:text-2xl font-bold text-primary">
+                      {t('index.whatIsLana.title')}
+                    </h2>
+                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                      {t('index.whatIsLana.question1')}
+                    </p>
+                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                      {t('index.whatIsLana.question2')}
+                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t('index.whatIsLana.description')}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

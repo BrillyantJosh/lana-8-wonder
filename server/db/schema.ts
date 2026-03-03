@@ -98,6 +98,33 @@ export function initializeSchema(db: Database.Database): void {
       updated_at TEXT DEFAULT (datetime('now')),
       UNIQUE(domain_key, nostr_hex_id)
     );
+
+    CREATE TABLE IF NOT EXISTS faq_items (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      domain_key TEXT NOT NULL REFERENCES domains(domain_key) ON DELETE CASCADE,
+      language TEXT NOT NULL DEFAULT 'en',
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS what_is_lana (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      domain_key TEXT NOT NULL REFERENCES domains(domain_key) ON DELETE CASCADE,
+      language TEXT NOT NULL DEFAULT 'en',
+      title TEXT NOT NULL,
+      question1 TEXT,
+      question2 TEXT,
+      description TEXT,
+      video_url TEXT,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(domain_key, language)
+    );
   `);
 
   // Seed admin users

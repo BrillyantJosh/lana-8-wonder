@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, ChevronDown, CreditCard, Globe } from 'lucide-react';
+import { Settings, ChevronDown, CreditCard, Globe, FileText } from 'lucide-react';
 
 interface AdminMenuProps {
   className?: string;
@@ -75,6 +75,10 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         <DropdownMenuItem onClick={() => navigate('/admin-domain-settings')}>
           <Globe className="h-4 w-4 mr-2" />
           Domain Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/admin-content')}>
+          <FileText className="h-4 w-4 mr-2" />
+          Content Management
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
