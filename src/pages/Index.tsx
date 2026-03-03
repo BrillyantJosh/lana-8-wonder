@@ -169,11 +169,6 @@ const Index = () => {
         </div>
       </header>
 
-      {/* 8th Wonder Annuity Plan Calculator — shown by default */}
-      <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
-        <TradingPlanCalculator defaultCurrency={domainCurrency} autoCalculate={true} />
-      </main>
-
       {/* Buy LANA CTA Section */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
         <div className="max-w-5xl mx-auto">
@@ -322,6 +317,11 @@ const Index = () => {
           </Card>
         </div>
       </section>
+
+      {/* 8th Wonder Annuity Plan Calculator — auto-calculated, shown after What is Lana */}
+      <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
+        <TradingPlanCalculator defaultCurrency={domainCurrency} autoCalculate={true} />
+      </main>
 
       {/* Footer */}
       <footer className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-border">

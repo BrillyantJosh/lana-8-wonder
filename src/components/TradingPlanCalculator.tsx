@@ -516,8 +516,8 @@ export default function TradingPlanCalculator({ defaultCurrency, autoCalculate =
   const currencySymbol = getCurrencySymbol(selectedCurrency);
   
   return <div className="space-y-8">
-      {/* Calculator Input */}
-      <Card className="p-8 shadow-mystical bg-card border-border">
+      {/* Calculator Input — hidden when autoCalculate is true */}
+      {!autoCalculate && <Card className="p-8 shadow-mystical bg-card border-border">
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-4">
             <Coins className="w-6 h-6 text-primary" />
@@ -526,7 +526,7 @@ export default function TradingPlanCalculator({ defaultCurrency, autoCalculate =
           <p className="text-muted-foreground">
             {t('tradingCalculator.description')}
           </p>
-          
+
           <div className="grid gap-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-foreground">
@@ -592,7 +592,7 @@ export default function TradingPlanCalculator({ defaultCurrency, autoCalculate =
               </div>
             </div>}
         </div>
-      </Card>
+      </Card>}
 
       {/* Trading Accounts */}
       {accounts.length > 0 && <div className="space-y-4">
