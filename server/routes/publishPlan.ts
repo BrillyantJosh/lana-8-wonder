@@ -3,6 +3,12 @@ import { finalizeEvent } from 'nostr-tools/pure';
 import { hexToBytes } from 'nostr-tools/utils';
 import { SimplePool } from 'nostr-tools/pool';
 import { getDb } from '../db/connection.js';
+import WebSocket from 'ws';
+
+// Polyfill WebSocket for Node.js (required by nostr-tools SimplePool)
+if (typeof globalThis.WebSocket === 'undefined') {
+  (globalThis as any).WebSocket = WebSocket;
+}
 
 const router = Router();
 
