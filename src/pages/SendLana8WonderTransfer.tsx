@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode } from "lucide-react";
 import { toast } from "sonner";
-import { api as supabase } from "@/integrations/api/client";
+import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -51,7 +51,33 @@ const SendLana8WonderTransfer = () => {
     return null;
   }
 
-  const { sourceWallet, sourceBalance, wallets, donationWalletId, totalAmount, phiDonation, nostrHexId } = state;
+  const { sourceWallet, sourceBalance, wallets, donationWalletId: stateDonationWalletId, totalAmount, phiDonation, nostrHexId } = state;
+
+  // Always verify donation wallet from current domain's DB record (never trust stale state alone)
+  const [verifiedDonationWallet, setVerifiedDonationWallet] = useState<string>(stateDonationWalletId || '');
+
+  useEffect(() => {
+    const verifyDonationWallet = async () => {
+      const currentDomain = getDomainKey();
+      if (!currentDomain) return;
+
+      const { data: domainData } = await supabase
+        .from('domains')
+        .select('donation_wallet_id')
+        .eq('domain_key', currentDomain)
+        .single();
+
+      if (domainData?.donation_wallet_id) {
+        if (stateDonationWalletId && stateDonationWalletId !== domainData.donation_wallet_id) {
+          console.warn(`⚠️ Donation wallet mismatch! State: ${stateDonationWalletId}, DB: ${domainData.donation_wallet_id}. Using DB value.`);
+        }
+        setVerifiedDonationWallet(domainData.donation_wallet_id);
+      }
+    };
+    verifyDonationWallet();
+  }, [stateDonationWalletId]);
+
+  const donationWalletId = verifiedDonationWallet;
 
   // Calculate amounts
   const walletsWithAmounts = wallets.map((wallet: any) => ({

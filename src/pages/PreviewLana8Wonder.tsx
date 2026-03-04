@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { api as supabase } from "@/integrations/api/client";
+import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { getCurrencySymbol } from "@/lib/utils";
 
@@ -237,25 +237,21 @@ const PreviewLana8Wonder = () => {
   // Fetch donation wallet ID and set nostr hex id
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch donation wallet from domain configuration
-      const { data: domainData } = await supabase
-        .from('domains')
-        .select('donation_wallet_id')
-        .eq('domain_key', window.location.hostname.split('.')[0])
-        .single();
-
-      if (domainData?.donation_wallet_id) {
-        setDonationWalletId(domainData.donation_wallet_id);
-      } else {
-        // Fallback to app_settings (legacy)
-        const { data: settingData } = await supabase
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', 'donation_wallet_id')
+      // Fetch donation wallet from current domain's configuration
+      // IMPORTANT: each domain has its own donation wallet — never cross-contaminate
+      const currentDomain = getDomainKey();
+      if (currentDomain) {
+        const { data: domainData } = await supabase
+          .from('domains')
+          .select('donation_wallet_id')
+          .eq('domain_key', currentDomain)
           .single();
 
-        if (settingData?.setting_value) {
-          setDonationWalletId(settingData.setting_value);
+        if (domainData?.donation_wallet_id) {
+          console.log(`Donation wallet for domain "${currentDomain}":`, domainData.donation_wallet_id);
+          setDonationWalletId(domainData.donation_wallet_id);
+        } else {
+          console.warn(`No donation wallet configured for domain "${currentDomain}"`);
         }
       }
 
