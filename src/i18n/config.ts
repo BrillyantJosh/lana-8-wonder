@@ -14,8 +14,30 @@ const resources = {
   hu: { translation: hu },
 };
 
-// Get language from sessionStorage or default to 'en'
-const storedLanguage = sessionStorage.getItem('userLanguage') || 'en';
+// Map subdomain to default language
+const domainLanguageMap: Record<string, string> = {
+  si: 'sl',  // Slovenia → Slovenščina
+  hu: 'hu',  // Hungary → Magyar
+  uk: 'en',  // UK → English
+  at: 'de',  // Austria → Deutsch
+};
+
+function getDefaultLanguage(): string {
+  // If user already chose a language, respect that
+  const stored = sessionStorage.getItem('userLanguage');
+  if (stored) return stored;
+
+  // Detect subdomain (e.g. "si" from "si.lana8wonder.com")
+  const hostname = window.location.hostname;
+  const subdomain = hostname.split('.')[0];
+  const domainLang = domainLanguageMap[subdomain];
+  if (domainLang) return domainLang;
+
+  // Fallback to English
+  return 'en';
+}
+
+const storedLanguage = getDefaultLanguage();
 
 i18n
   .use(initReactI18next)
