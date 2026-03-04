@@ -304,10 +304,10 @@ const PreviewLana8Wonder = () => {
           setPublishedPlan(data.published_plan || false);
           setSelectedWallet(data.selected_wallet || null);
 
-          // If plan is already published, auto-navigate to dashboard
+          // If plan is already published, navigate to dashboard immediately
           if (data.published_plan) {
-            toast.success('Plan is already published! Redirecting...', { duration: 2000 });
-            setTimeout(() => navigate("/dashboard"), 2000);
+            navigate("/dashboard", { replace: true });
+            return;
           }
         }
       } catch (error) {
