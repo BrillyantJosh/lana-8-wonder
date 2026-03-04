@@ -186,7 +186,7 @@ export async function fetchKind30889(customerHexId: string, relayUrls: string[])
 }
 
 export async function fetchKind88888(nostrHexId: string, relayUrls: string[]): Promise<Lana8WonderPlan | null> {
-  const MAIN_PUBLISHER = "REDACTED_PUBKEY";
+  const MAIN_PUBLISHER = "a56253e6232b2ab5a96b60d233434d4f759ba4c858a3cc0f4ec51906dce73ae6";
   
   const filter: Filter = {
     kinds: [88888],

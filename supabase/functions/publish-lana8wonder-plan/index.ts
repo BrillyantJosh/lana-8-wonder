@@ -351,7 +351,7 @@ serve(async (req) => {
       tags: [
         ['d', `plan:${subject_hex}`],
         ['p', subject_hex],
-        ['mpub', 'REDACTED_PUBKEY'],
+        ['mpub', 'a56253e6232b2ab5a96b60d233434d4f759ba4c858a3cc0f4ec51906dce73ae6'],
         ['coin', 'LANA'],
         ['currency', currency],
         ['policy', 'v2'],
