@@ -190,6 +190,7 @@
     "step4Title": "Pagamento",
     "step4Amount": "Importo da pagare",
     "step4LanaAmount": "Riceverai",
+    "step4PaymentAmount": "Importo del pagamento",
     "step4PaymentMethod": "Metodo di pagamento",
     "step4CardPayment": "Carta di credito",
     "step4BankTransfer": "Bonifico bancario",

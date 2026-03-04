@@ -190,6 +190,7 @@
     "step4Title": "Payment",
     "step4Amount": "Amount to pay",
     "step4LanaAmount": "You will receive",
+    "step4PaymentAmount": "Payment amount",
     "step4PaymentMethod": "Payment method",
     "step4CardPayment": "Credit Card",
     "step4BankTransfer": "Bank Transfer",

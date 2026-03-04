@@ -608,6 +608,22 @@ const BuyLana8Wonder = () => {
           </div>
         ) : (
           <>
+            {/* Payment amount display */}
+            {currency && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
+                  <div className="text-center">
+                    <p className="text-base sm:text-lg">
+                      {t('buyLana.step4PaymentAmount')}:{' '}
+                      <span className="font-bold text-primary text-xl sm:text-2xl">
+                        100 {currency}
+                      </span>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Payment method toggle */}
             <div className="space-y-3">
               <Label className="text-sm sm:text-base">{t('buyLana.step4PaymentMethod')}</Label>

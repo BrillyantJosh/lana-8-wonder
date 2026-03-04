@@ -190,6 +190,7 @@
     "step4Title": "Fizetés",
     "step4Amount": "Fizetendő összeg",
     "step4LanaAmount": "Kapni fog",
+    "step4PaymentAmount": "Fizetési összeg",
     "step4PaymentMethod": "Fizetési mód",
     "step4CardPayment": "Bankkártya",
     "step4BankTransfer": "Banki átutalás",

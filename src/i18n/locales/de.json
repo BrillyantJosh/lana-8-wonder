@@ -190,6 +190,7 @@
     "step4Title": "Zahlung",
     "step4Amount": "Zu zahlender Betrag",
     "step4LanaAmount": "Sie erhalten",
+    "step4PaymentAmount": "Zahlungsbetrag",
     "step4PaymentMethod": "Zahlungsmethode",
     "step4CardPayment": "Kreditkarte",
     "step4BankTransfer": "Banküberweisung",

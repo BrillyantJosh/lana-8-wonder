@@ -190,6 +190,7 @@
     "step4Title": "Plačilo",
     "step4Amount": "Znesek za plačilo",
     "step4LanaAmount": "Prejeli boste",
+    "step4PaymentAmount": "Znesek plačila",
     "step4PaymentMethod": "Način plačila",
     "step4CardPayment": "Kreditna kartica",
     "step4BankTransfer": "Bančno nakazilo",
