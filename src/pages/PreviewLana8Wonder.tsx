@@ -303,6 +303,12 @@ const PreviewLana8Wonder = () => {
           setTxHash(data.tx || '');
           setPublishedPlan(data.published_plan || false);
           setSelectedWallet(data.selected_wallet || null);
+
+          // If plan is already published, auto-navigate to dashboard
+          if (data.published_plan) {
+            toast.success('Plan is already published! Redirecting...', { duration: 2000 });
+            setTimeout(() => navigate("/dashboard"), 2000);
+          }
         }
       } catch (error) {
         console.error('Error checking wallet registration:', error);
