@@ -266,18 +266,17 @@ const AssignLana8Wonder = () => {
       }));
       setWallets(newWallets);
       
-      // Get user name from Nostr profile
+      // Get user name from session (stored as profileName/profileDisplayName at login)
       const sessionData = sessionStorage.getItem("lana_session");
       let userName = "Anonymous User";
-      
+
       if (sessionData) {
         try {
           const session = JSON.parse(sessionData);
-          const nostrProfile = session.nostrProfile;
-          if (nostrProfile?.name) {
-            userName = nostrProfile.name;
-          } else if (nostrProfile?.display_name) {
-            userName = nostrProfile.display_name;
+          if (session.profileName) {
+            userName = session.profileName;
+          } else if (session.profileDisplayName) {
+            userName = session.profileDisplayName;
           }
         } catch (error) {
           console.error("Error parsing session:", error);
