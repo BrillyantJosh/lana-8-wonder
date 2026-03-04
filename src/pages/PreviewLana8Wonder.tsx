@@ -636,7 +636,7 @@ const PreviewLana8Wonder = () => {
       // Update profile to mark wallets as registered
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ wallet_registered: true })
+        .update({ wallet_registered: 1 })
         .eq('nostr_hex_id', nostrHexId);
 
       if (updateError) {
@@ -757,7 +757,7 @@ const PreviewLana8Wonder = () => {
         // Update published_plan in database only if at least one relay accepted
         await supabase
           .from('profiles')
-          .update({ published_plan: true })
+          .update({ published_plan: 1 })
           .eq('nostr_hex_id', nostrHexId);
         
         setPublishedPlan(true);

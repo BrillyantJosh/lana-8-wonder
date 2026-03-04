@@ -29,6 +29,15 @@ function isAllowedTable(table: string): table is AllowedTable {
   return ALLOWED_TABLES.includes(table as AllowedTable);
 }
 
+// Convert JavaScript booleans to SQLite-compatible integers (0/1)
+function sanitizeValues(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    result[key] = typeof val === 'boolean' ? (val ? 1 : 0) : val;
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -231,7 +240,8 @@ router.post('/:table', (req: Request, res: Response) => {
     const rows = Array.isArray(body) ? body : [body];
     const results: unknown[] = [];
 
-    const insertRow = (row: Record<string, unknown>) => {
+    const insertRow = (rawRow: Record<string, unknown>) => {
+      const row = sanitizeValues(rawRow);
       // Auto-inject domain_key for scoped tables
       if (isDomainScoped(table) && req.domainKey && !row.domain_key) {
         row.domain_key = req.domainKey;
@@ -299,13 +309,14 @@ router.put('/:table', (req: Request, res: Response) => {
       return respondError(res, 'UPDATE requires at least one filter condition');
     }
 
+    // Sanitize booleans to SQLite-compatible integers
+    const safeBody = sanitizeValues(body);
+
     // Build SET clause — always touch updated_at
-    const updateData: Record<string, unknown> = { ...body, updated_at: "datetime('now')" };
-    // We handle updated_at specially with a raw SQL expression
     const setCols: string[] = [];
     const setParams: unknown[] = [];
 
-    for (const [col, val] of Object.entries(body)) {
+    for (const [col, val] of Object.entries(safeBody)) {
       if (col === 'updated_at') continue; // we set it ourselves
       setCols.push(`"${col}" = ?`);
       setParams.push(val);
@@ -356,7 +367,8 @@ router.patch('/:table', (req: Request, res: Response) => {
 
     const results: unknown[] = [];
 
-    for (const row of rows) {
+    for (const rawRow of rows) {
+      const row = sanitizeValues(rawRow);
       // Auto-inject domain_key for scoped tables
       if (isDomainScoped(table) && req.domainKey && !row.domain_key) {
         row.domain_key = req.domainKey;
