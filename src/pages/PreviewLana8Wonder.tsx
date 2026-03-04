@@ -714,18 +714,14 @@ const PreviewLana8Wonder = () => {
       
       console.log('✅ Validated 8 wallet addresses before publish');
       
-      const relays = params?.relays || [
-        'wss://relay.lanavault.space',
-        'wss://relay.lanacoin-eternity.com'
-      ];
-      
       console.log('📝 Publishing Lana8Wonder plan...', {
         subject_hex: subjectHex,
         wallets: walletAddresses.length,
         currency: effectivePlanCurrency,
         exchange_rate: effectiveExchangeRate
       });
-      
+
+      // NOTE: relays are NOT sent — server fetches them from KIND 38888
       const { data, error } = await supabase.functions.invoke('publish-lana8wonder-plan', {
         body: {
           subject_hex: subjectHex,
@@ -733,8 +729,7 @@ const PreviewLana8Wonder = () => {
           amount_per_wallet: effectiveAmountPerWallet,
           currency: effectivePlanCurrency,
           exchange_rate: effectiveExchangeRate,
-          start_price: startPrice,
-          relays
+          start_price: startPrice
         }
       });
       

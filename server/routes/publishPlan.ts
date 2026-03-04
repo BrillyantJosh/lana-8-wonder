@@ -231,10 +231,65 @@ async function publishToNostr(
   }
 }
 
+// ============================================================================
+// KIND 38888 RELAY FETCHER — get authorized relay list from system params
+// ============================================================================
+
+const KIND_38888_AUTHORIZED_PUBKEY = '9eb71bf1e9c3189c78800e4c3831c1c1a93ab43b61118818c32e4490891a35b3';
+const BOOTSTRAP_RELAYS = [
+  'wss://relay.lanavault.space',
+  'wss://relay.lanacoin-eternity.com'
+];
+
+async function fetchRelaysFromKind38888(): Promise<string[]> {
+  console.log('Fetching relays from KIND 38888...');
+  const pool = new SimplePool();
+
+  try {
+    const events = await pool.querySync(BOOTSTRAP_RELAYS, {
+      kinds: [38888],
+      authors: [KIND_38888_AUTHORIZED_PUBKEY],
+      '#d': ['main'],
+      limit: 1
+    });
+
+    if (!events || events.length === 0) {
+      console.warn('No KIND 38888 event found, using bootstrap relays');
+      return BOOTSTRAP_RELAYS;
+    }
+
+    const latestEvent = events[0];
+    const relays = latestEvent.tags
+      .filter((t: string[]) => t[0] === 'relay')
+      .map((t: string[]) => t[1]);
+
+    if (relays.length === 0) {
+      console.warn('KIND 38888 has no relay tags, using bootstrap relays');
+      return BOOTSTRAP_RELAYS;
+    }
+
+    console.log(`Found ${relays.length} relays from KIND 38888:`, relays);
+    return relays;
+  } catch (error) {
+    console.error('Failed to fetch KIND 38888:', error);
+    return BOOTSTRAP_RELAYS;
+  } finally {
+    pool.close(BOOTSTRAP_RELAYS);
+  }
+}
+
 // POST /api/publish-lana8wonder-plan
 router.post('/', async (req: Request, res: Response) => {
   try {
     const db = getDb();
+
+    // Central authority keys from environment (shared across all domains)
+    const publisherPubkey = process.env.NOSTR_PUBLISHER_PUBKEY;
+    const publisherPrivateKey = process.env.NOSTR_PUBLISHER_PRIVATE_KEY;
+
+    if (!publisherPubkey || !publisherPrivateKey) {
+      throw new Error('NOSTR_PUBLISHER_PUBKEY and NOSTR_PUBLISHER_PRIVATE_KEY must be set in environment');
+    }
 
     const {
       subject_hex,
@@ -242,8 +297,8 @@ router.post('/', async (req: Request, res: Response) => {
       amount_per_wallet,
       currency,
       exchange_rate,
-      start_price,
-      relays
+      start_price
+      // NOTE: relays are NOT accepted from client — always fetched from KIND 38888
     } = req.body;
 
     console.log('Received publish request:', {
@@ -251,7 +306,8 @@ router.post('/', async (req: Request, res: Response) => {
       wallets_count: wallets?.length,
       wallets,
       currency,
-      start_price
+      start_price,
+      publisherPubkey
     });
 
     // VALIDATION: Ensure exactly 8 non-empty wallet addresses
@@ -267,17 +323,9 @@ router.post('/', async (req: Request, res: Response) => {
     console.log('Validated 8 wallet addresses');
     console.log('Creating Lana8Wonder plan for subject:', subject_hex);
 
-    // 1. Get main publisher private key from database
-    const settingRow = db.prepare(
-      `SELECT setting_value FROM app_settings WHERE setting_key = ?`
-    ).get('main_publisher_private_key') as { setting_value: string } | undefined;
-
-    if (!settingRow || !settingRow.setting_value) {
-      throw new Error('Failed to retrieve main publisher private key');
-    }
-
-    const mainPublisherPrivateKey = settingRow.setting_value;
-    console.log('Retrieved main publisher key');
+    // 1. Fetch relays from KIND 38888 (authoritative source)
+    const relays = await fetchRelaysFromKind38888();
+    console.log(`Will publish to ${relays.length} relays from KIND 38888`);
 
     // 2. Generate annuity plan (matching PreviewLana8Wonder.tsx logic)
     // NOTE: start_price is ALREADY adjusted (+8%) by frontend, don't adjust again!
@@ -341,7 +389,7 @@ router.post('/', async (req: Request, res: Response) => {
       tags: [
         ['d', `plan:${subject_hex}`],
         ['p', subject_hex],
-        ['mpub', 'REDACTED_PUBKEY'],
+        ['mpub', publisherPubkey],
         ['coin', 'LANA'],
         ['currency', currency],
         ['policy', 'v2'],
@@ -360,14 +408,14 @@ router.post('/', async (req: Request, res: Response) => {
       })
     };
 
-    // 4. Sign event with main publisher key
-    console.log('Signing event...');
-    const privateKeyBytes = hexToBytes(mainPublisherPrivateKey);
+    // 4. Sign event with central authority private key (from env)
+    console.log('Signing event with central authority key...');
+    const privateKeyBytes = hexToBytes(publisherPrivateKey);
     const signedEvent = finalizeEvent(eventTemplate, privateKeyBytes);
-    console.log('Event signed:', signedEvent.id);
+    console.log('Event signed:', signedEvent.id, 'by pubkey:', signedEvent.pubkey);
 
-    // 5. Publish to Nostr relays
-    console.log('Publishing to relays...');
+    // 5. Publish to KIND 38888 relays
+    console.log('Publishing to relays from KIND 38888...');
     const publishResults = await publishToNostr(signedEvent, relays);
 
     const successCount = publishResults.filter(r => r.success).length;
@@ -392,7 +440,9 @@ router.post('/', async (req: Request, res: Response) => {
     return res.json({
       success: true,
       event_id: signedEvent.id,
+      pubkey: signedEvent.pubkey,
       publish_results: publishResults,
+      relays_used: relays,
       plan: {
         subject_hex,
         accounts: accounts.length,

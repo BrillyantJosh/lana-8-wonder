@@ -14,6 +14,8 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - LANA_REGISTER_API_KEY=REDACTED_API_KEY
+      - NOSTR_PUBLISHER_PUBKEY=REDACTED_PUBKEY
+      - NOSTR_PUBLISHER_PRIVATE_KEY=REDACTED_PRIVATE_KEY
     networks:
       - webproxy
 
