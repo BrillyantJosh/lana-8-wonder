@@ -465,10 +465,17 @@ const BuyLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        {/* No, I'm new */}
+        {/* No, I'm new → redirect to 100million2everyone.com to create wallet */}
         <Card
           className="cursor-pointer transition-all hover:border-primary hover:bg-primary/5 border-2"
-          onClick={() => setCurrentStep(2)}
+          onClick={() => {
+            const returnUrl = encodeURIComponent(`${window.location.origin}/buy-lana8wonder`);
+            const siteName = encodeURIComponent('Lana8Wonder');
+            window.open(
+              `https://100million2everyone.com/?return_url=${returnUrl}&site_name=${siteName}`,
+              '_blank'
+            );
+          }}
         >
           <CardContent className="flex items-center gap-4 p-4 sm:p-6">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
