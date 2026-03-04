@@ -262,11 +262,21 @@ class QueryBuilder<T = unknown> implements PromiseLike<SupabaseResponse<T>> {
       fetchOptions.body = JSON.stringify(this._body);
     }
 
+    // Debug logging
+    console.log(`[API] ${method} ${url}`, {
+      operation: this._operation,
+      body: this._body,
+      domainKey,
+    });
+
     try {
       const res = await fetch(url, fetchOptions);
       const json = await res.json();
 
+      console.log(`[API] ${method} ${url} → ${res.status}`, json);
+
       if (!res.ok) {
+        console.error(`[API] ERROR ${res.status}:`, json);
         return {
           data: null,
           error: typeof json === "object" && json !== null
@@ -282,6 +292,7 @@ class QueryBuilder<T = unknown> implements PromiseLike<SupabaseResponse<T>> {
         ...(json.count !== undefined ? { count: json.count } : {}),
       };
     } catch (err) {
+      console.error(`[API] FETCH ERROR ${method} ${url}:`, err);
       return {
         data: null,
         error: {

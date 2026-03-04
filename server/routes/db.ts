@@ -157,6 +157,10 @@ router.get('/:table', (req: Request, res: Response) => {
     const { table } = req.params;
     const query = req.query as Record<string, string>;
 
+    if (table === 'profiles') {
+      console.log(`[DB GET] profiles, query=`, query, `domainKey=${req.domainKey}, isDomainScoped=${isDomainScoped(table)}`);
+    }
+
     const selectCols = buildSelect(query.select);
     const { conditions, params } = buildWhere(query);
 
@@ -216,7 +220,10 @@ router.post('/:table', (req: Request, res: Response) => {
     const query = req.query as Record<string, string>;
     const body = req.body;
 
+    console.log(`[DB POST] table=${table}, query=`, query, `body=`, JSON.stringify(body)?.slice(0, 500), `domainKey=${req.domainKey}`);
+
     if (!body || typeof body !== 'object') {
+      console.error(`[DB POST] ${table}: body is missing or not an object`);
       return respondError(res, 'Request body is required');
     }
 
@@ -241,6 +248,7 @@ router.post('/:table', (req: Request, res: Response) => {
       const values = columns.map((c) => row[c]);
 
       const sql = `INSERT INTO "${table}" (${colList}) VALUES (${placeholders})`;
+      console.log(`[DB POST] SQL: ${sql}, values:`, values);
       db.prepare(sql).run(...values);
 
       // If select is requested, fetch the inserted row back
@@ -267,6 +275,7 @@ router.post('/:table', (req: Request, res: Response) => {
     return respond(res, data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error(`[DB POST] ${req.params.table} ERROR:`, message);
     return respondError(res, message, 500);
   }
 });
