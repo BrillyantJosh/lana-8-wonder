@@ -185,21 +185,34 @@ const SendLana8WonderTransfer = () => {
       return;
     }
 
+    // Validate wallet amounts before proceeding
+    const invalidWallets = walletsWithAmounts.filter(w => !w.address || isNaN(w.amount) || w.amount <= 0);
+    if (invalidWallets.length > 0) {
+      toast.error(`Invalid wallet data: ${invalidWallets.length} wallet(s) have missing address or invalid amount`);
+      console.error('Invalid wallets:', invalidWallets);
+      return;
+    }
+
     setIsProcessing(true);
     setTransactionResult(null); // Reset result
 
     try {
-      // Prepare recipients: 8 wallets + donation wallet
+      // Prepare recipients: 8 wallets + donation wallet (if configured)
       const recipients = [
         ...walletsWithAmounts.map(w => ({
           address: w.address,
           amount: w.amount
         })),
-        {
+        // Only include donation if wallet address is configured
+        ...(donationWalletId && donationWalletId.trim() ? [{
           address: donationWalletId,
           amount: donationAmount
-        }
+        }] : [])
       ];
+
+      if (!donationWalletId || !donationWalletId.trim()) {
+        console.warn('⚠️ Donation wallet not configured — skipping PHI donation output');
+      }
 
       // Call the send-lana-multi-output edge function
       const { data, error } = await supabase.functions.invoke('send-lana-multi-output', {

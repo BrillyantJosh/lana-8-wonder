@@ -21,7 +21,8 @@ router.post('/', async (req: Request, res: Response) => {
     console.log('Transaction parameters:', {
       sender_address,
       recipient_count: recipients?.length || 0,
-      hasPrivateKey: !!private_key
+      hasPrivateKey: !!private_key,
+      recipients_raw: JSON.stringify(recipients)?.slice(0, 1000)
     });
 
     if (!sender_address || !recipients || !private_key || recipients.length === 0) {
@@ -29,14 +30,19 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Validate and convert recipients format (convert LANA to satoshis)
-    const recipientsInSatoshis = recipients.map((recipient: any) => {
-      if (!recipient.address || typeof recipient.amount !== 'number') {
-        throw new Error('Invalid recipient format: must have address and amount');
+    const recipientsInSatoshis = recipients.map((recipient: any, idx: number) => {
+      if (!recipient.address || (typeof recipient.amount !== 'number' && typeof recipient.amount !== 'string')) {
+        console.error(`Recipient ${idx} invalid:`, JSON.stringify(recipient));
+        throw new Error(`Invalid recipient format at index ${idx}: address=${recipient.address}, amount=${recipient.amount} (type: ${typeof recipient.amount})`);
+      }
+      const parsedAmount = typeof recipient.amount === 'string' ? parseFloat(recipient.amount) : recipient.amount;
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        throw new Error(`Invalid amount for recipient ${idx}: ${recipient.amount}`);
       }
       // Convert LANA to satoshis: 1 LANA = 100,000,000 satoshis
       return {
         address: recipient.address,
-        amount: Math.round(recipient.amount * 100000000)
+        amount: Math.round(parsedAmount * 100000000)
       };
     });
 
