@@ -55,7 +55,11 @@ class QueryBuilder<T = unknown> implements PromiseLike<SupabaseResponse<T>> {
   }
 
   select(columns: string = "*", options?: SelectOptions): this {
-    this._operation = "select";
+    // Only set operation to "select" if no other operation (insert/update/upsert/delete) is already set.
+    // When chained after .insert()/.update()/.upsert(), .select() just specifies which columns to return.
+    if (this._operation === "select") {
+      this._operation = "select";
+    }
     this._selectColumns = columns;
     if (options) {
       this._selectOptions = options;

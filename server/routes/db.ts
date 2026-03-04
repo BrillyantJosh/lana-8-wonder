@@ -340,7 +340,8 @@ router.patch('/:table', (req: Request, res: Response) => {
       return respondError(res, 'Request body is required');
     }
 
-    const onConflict = body.onConflict as string | undefined;
+    // onConflict can come from query params (client QueryBuilder) or body (legacy)
+    const onConflict = (query.onConflict || body.onConflict) as string | undefined;
     const rawData = body.data ?? body; // support {data, onConflict} or direct object
     const rows = Array.isArray(rawData) ? rawData : [rawData];
 
