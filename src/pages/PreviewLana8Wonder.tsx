@@ -237,15 +237,26 @@ const PreviewLana8Wonder = () => {
   // Fetch donation wallet ID and set nostr hex id
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch donation wallet
-      const { data: settingData } = await supabase
-        .from('app_settings')
-        .select('setting_value')
-        .eq('setting_key', 'donation_wallet_id')
+      // Fetch donation wallet from domain configuration
+      const { data: domainData } = await supabase
+        .from('domains')
+        .select('donation_wallet_id')
+        .eq('domain_key', window.location.hostname.split('.')[0])
         .single();
-      
-      if (settingData) {
-        setDonationWalletId(settingData.setting_value);
+
+      if (domainData?.donation_wallet_id) {
+        setDonationWalletId(domainData.donation_wallet_id);
+      } else {
+        // Fallback to app_settings (legacy)
+        const { data: settingData } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'donation_wallet_id')
+          .single();
+
+        if (settingData?.setting_value) {
+          setDonationWalletId(settingData.setting_value);
+        }
       }
 
       // Set nostr hex id from location state (passed from previous page)
