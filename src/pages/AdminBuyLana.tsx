@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -16,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
@@ -54,7 +53,6 @@ const AdminBuyLana = () => {
   const [processingRecords, setProcessingRecords] = useState<BuyLanaRecord[]>([]);
   const [completedRecords, setCompletedRecords] = useState<BuyLanaRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [txInputs, setTxInputs] = useState<Record<string, string>>({});
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<{ id: string; step: 1 | 2 } | null>(null);
 
@@ -269,42 +267,6 @@ const AdminBuyLana = () => {
       setProcessingIds((prev) => {
         const newSet = new Set(prev);
         ids.forEach(id => newSet.delete(id));
-        return newSet;
-      });
-    }
-  };
-
-  // Save TX manually (processing → transferred)
-  const handleSaveTx = async (id: string) => {
-    const txValue = txInputs[id];
-    if (!txValue?.trim()) {
-      toast.error('Please enter a transaction ID');
-      return;
-    }
-
-    setProcessingIds((prev) => new Set(prev).add(id));
-    try {
-      const { error } = await supabase
-        .from('buy_lana')
-        .update({ tx: txValue.trim(), status: 'transferred' })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success('Transaction ID saved');
-      setTxInputs((prev) => {
-        const newInputs = { ...prev };
-        delete newInputs[id];
-        return newInputs;
-      });
-      fetchRecords();
-    } catch (error) {
-      console.error('Error saving TX:', error);
-      toast.error('Failed to save transaction ID');
-    } finally {
-      setProcessingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
         return newSet;
       });
     }
@@ -752,9 +714,9 @@ const AdminBuyLana = () => {
 
             {/* ===================== TAB 3: PROCESSING (approved, heartbeat will handle) ===================== */}
             <TabsContent value="processing">
-              <div className="mb-3 p-3 bg-orange-500/10 rounded-lg text-sm text-muted-foreground">
-                Approved for LANA transfer. The heartbeat will automatically process these and fill in the TX ID.
-                You can also enter a TX ID manually.
+              <div className="mb-3 p-3 bg-orange-500/10 rounded-lg text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                Approved for LANA transfer. The heartbeat (every 30s) will automatically process these and fill in the TX ID.
               </div>
 
               {/* Desktop Table */}
@@ -769,7 +731,7 @@ const AdminBuyLana = () => {
                       <TableHead>LANA</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Currency</TableHead>
-                      <TableHead>Transaction ID</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -803,30 +765,9 @@ const AdminBuyLana = () => {
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Enter TX ID"
-                                value={txInputs[record.id] || ''}
-                                onChange={(e) =>
-                                  setTxInputs((prev) => ({
-                                    ...prev,
-                                    [record.id]: e.target.value,
-                                  }))
-                                }
-                                className="w-48"
-                                disabled={processingIds.has(record.id)}
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleSaveTx(record.id)}
-                                disabled={processingIds.has(record.id)}
-                              >
-                                {processingIds.has(record.id) ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  'Save'
-                                )}
-                              </Button>
+                            <div className="flex items-center gap-2 text-orange-500">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <span className="text-xs">Waiting for heartbeat...</span>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -848,31 +789,9 @@ const AdminBuyLana = () => {
                           Paid on: <span className="font-medium text-foreground">{new Date(record.paid_on_account).toLocaleDateString()}</span>
                         </div>
                       )}
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Transaction ID</div>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Enter TX ID"
-                            value={txInputs[record.id] || ''}
-                            onChange={(e) =>
-                              setTxInputs((prev) => ({
-                                ...prev,
-                                [record.id]: e.target.value,
-                              }))
-                            }
-                            disabled={processingIds.has(record.id)}
-                          />
-                          <Button
-                            onClick={() => handleSaveTx(record.id)}
-                            disabled={processingIds.has(record.id)}
-                          >
-                            {processingIds.has(record.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              'Save'
-                            )}
-                          </Button>
-                        </div>
+                      <div className="flex items-center gap-2 text-orange-500 p-3 bg-orange-500/10 rounded-lg">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Waiting for heartbeat to process...</span>
                       </div>
                     </RecordInfoCard>
                   ))
