@@ -7,15 +7,14 @@ services:
       - "3000"
     volumes:
       - ./data:/app/data
+    env_file:
+      - .env.production
     environment:
       - VIRTUAL_HOST=uk.lana8wonder.com,si.lana8wonder.com,hu.lana8wonder.com,at.lana8wonder.com
       - VIRTUAL_PORT=3000
       - LETSENCRYPT_HOST=uk.lana8wonder.com,si.lana8wonder.com,hu.lana8wonder.com,at.lana8wonder.com
       - NODE_ENV=production
       - PORT=3000
-      - LANA_REGISTER_API_KEY=REDACTED_API_KEY
-      - NOSTR_PUBLISHER_PUBKEY=REDACTED_PUBKEY
-      - NOSTR_PUBLISHER_PRIVATE_KEY=REDACTED_PRIVATE_KEY
     networks:
       - webproxy
 
