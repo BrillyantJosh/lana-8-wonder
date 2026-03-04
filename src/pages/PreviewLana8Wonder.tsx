@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { fetchKind30889 } from "@/lib/nostrClient";
 import { getCurrencySymbol } from "@/lib/utils";
 
 interface TradingLevel {
@@ -666,12 +667,60 @@ const PreviewLana8Wonder = () => {
       setWalletRegistered(true);
 
       if (isAlreadyRegistered) {
-        toast.success('✅ Wallets already registered — step marked as complete', { duration: 5000 });
+        toast.success('Wallets already registered — step marked as complete', { duration: 5000 });
       } else {
         toast.success(
-          `✅ Successfully registered ${result.data?.wallets_registered || effectiveWallets?.length} wallets`,
+          `Successfully registered ${result.data?.wallets_registered || effectiveWallets?.length} wallets`,
           { duration: 5000 }
         );
+      }
+
+      // === VERIFY KIND 30889 ON RELAYS ===
+      if (params?.relays && params.relays.length > 0) {
+        toast.loading(t('createLana8Wonder.verifyingOnRelays'), { id: 'relay-verify', duration: 15000 });
+
+        // Wait 10 seconds for registrar to publish
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+        try {
+          console.log('🔍 Verifying KIND 30889 on relays...');
+          const records = await fetchKind30889(nostrHexId, params.relays);
+
+          // Check if any record contains all 8 wallet addresses
+          const planAddresses = effectiveWallets.map((w: any) => w.address);
+          const verified = records.some(record => {
+            const recordAddresses = record.wallets.map(w => w.wallet_address);
+            return planAddresses.every((addr: string) => recordAddresses.includes(addr));
+          });
+
+          toast.dismiss('relay-verify');
+
+          if (verified) {
+            console.log('✅ KIND 30889 verified on relays');
+            toast.success(t('createLana8Wonder.walletsVerified'), { duration: 5000 });
+          } else {
+            console.warn('⚠️ KIND 30889 not found or wallets mismatch');
+            // Fetch contact details from domain config
+            let contactInfo = '';
+            try {
+              const domainKey = getDomainKey();
+              const res = await fetch('/api/domain-config', {
+                headers: domainKey ? { 'X-Domain-Key': domainKey } : {}
+              });
+              const json = await res.json();
+              contactInfo = json.data?.contact_details || '';
+            } catch { /* ignore */ }
+
+            const contactMsg = contactInfo
+              ? `${t('createLana8Wonder.walletsNotFound')} ${contactInfo}`
+              : t('createLana8Wonder.walletsNotFound');
+            toast.warning(contactMsg, { duration: 15000 });
+          }
+        } catch (verifyError) {
+          console.error('❌ Relay verification error:', verifyError);
+          toast.dismiss('relay-verify');
+          toast.warning(t('createLana8Wonder.walletsNotFound'), { duration: 10000 });
+        }
       }
 
     } catch (error: any) {
