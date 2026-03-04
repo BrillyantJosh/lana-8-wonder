@@ -16,8 +16,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
 interface BuyLanaRecord {
   id: string;
@@ -36,8 +37,17 @@ interface BuyLanaRecord {
   split: string | null;
 }
 
+// Helper: calculate LANA amount from exchange rates
+function calculateLanaAmount(currency: string | null, paymentAmount: number | null, exchangeRates: ExchangeRates): number {
+  if (!currency || !paymentAmount) return 0;
+  const rate = exchangeRates[currency as keyof ExchangeRates];
+  if (!rate || rate === 0) return 0;
+  return Math.floor(paymentAmount / rate);
+}
+
 const AdminBuyLana = () => {
   const navigate = useNavigate();
+  const { params: nostrParams, loading: nostrLoading } = useNostrLanaParams();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [pendingRecords, setPendingRecords] = useState<BuyLanaRecord[]>([]);
   const [waitingRecords, setWaitingRecords] = useState<BuyLanaRecord[]>([]);
@@ -175,17 +185,35 @@ const AdminBuyLana = () => {
   };
 
   // Approve for transfer (paid → approved) — single record
+  // Calculates LANA amount at THIS moment from KIND 38888 exchange rates
   const handleApproveForTransfer = async (id: string) => {
+    if (!nostrParams?.exchangeRates) {
+      toast.error('Cannot approve: KIND 38888 exchange rates not loaded yet');
+      return;
+    }
+
+    const record = waitingRecords.find(r => r.id === id);
+    if (!record) {
+      toast.error('Record not found');
+      return;
+    }
+
+    const lanaAmount = calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates);
+    if (lanaAmount <= 0) {
+      toast.error(`Cannot calculate LANA amount for ${record.currency} ${record.payment_amount}`);
+      return;
+    }
+
     setProcessingIds((prev) => new Set(prev).add(id));
     try {
       const { error } = await supabase
         .from('buy_lana')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', lana_amount: lanaAmount })
         .eq('id', id);
 
       if (error) throw error;
 
-      toast.success('Sent to processing — heartbeat will transfer LANA');
+      toast.success(`Approved: ${lanaAmount.toLocaleString()} LANA (Split ${nostrParams.split}) — heartbeat will transfer`);
       fetchRecords();
     } catch (error) {
       console.error('Error approving for transfer:', error);
@@ -200,8 +228,14 @@ const AdminBuyLana = () => {
   };
 
   // Approve ALL waiting records for transfer
+  // Calculates LANA amount for each record at THIS moment from KIND 38888
   const handleApproveAllForTransfer = async () => {
     if (waitingRecords.length === 0) return;
+
+    if (!nostrParams?.exchangeRates) {
+      toast.error('Cannot approve: KIND 38888 exchange rates not loaded yet');
+      return;
+    }
 
     const ids = waitingRecords.map(r => r.id);
     setProcessingIds((prev) => {
@@ -211,16 +245,22 @@ const AdminBuyLana = () => {
     });
 
     try {
-      // Update each record (API doesn't support bulk IN filter easily)
-      for (const id of ids) {
+      // Update each record with calculated LANA amount
+      for (const record of waitingRecords) {
+        const lanaAmount = calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates);
+        if (lanaAmount <= 0) {
+          console.warn(`Skipping record ${record.id}: cannot calculate LANA for ${record.currency} ${record.payment_amount}`);
+          continue;
+        }
+
         const { error } = await supabase
           .from('buy_lana')
-          .update({ status: 'approved' })
-          .eq('id', id);
+          .update({ status: 'approved', lana_amount: lanaAmount })
+          .eq('id', record.id);
         if (error) throw error;
       }
 
-      toast.success(`${ids.length} record(s) sent to processing`);
+      toast.success(`${ids.length} record(s) sent to processing with current exchange rates`);
       fetchRecords();
     } catch (error) {
       console.error('Error approving all:', error);
@@ -377,7 +417,7 @@ const AdminBuyLana = () => {
           <div>
             <div className="text-xs text-muted-foreground">LANA</div>
             <div className="font-semibold text-sm">
-              {record.lana_amount?.toLocaleString()}
+              {record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic">TBD</span>}
             </div>
           </div>
           <div>
@@ -494,7 +534,7 @@ const AdminBuyLana = () => {
                             </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
-                          <TableCell>{record.lana_amount?.toLocaleString()}</TableCell>
+                          <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell className="capitalize">{record.payment_method}</TableCell>
@@ -565,14 +605,31 @@ const AdminBuyLana = () => {
 
             {/* ===================== TAB 2: WAITING FOR SLOTS ===================== */}
             <TabsContent value="waiting">
+              {/* Current exchange rates from KIND 38888 */}
+              {nostrParams?.exchangeRates && (
+                <div className="mb-3 p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-semibold text-primary">Current rates (Split {nostrParams.split}):</span>
+                    <span>100 EUR = {Math.floor(100 / nostrParams.exchangeRates.EUR).toLocaleString()} LANA</span>
+                    <span>100 GBP = {Math.floor(100 / nostrParams.exchangeRates.GBP).toLocaleString()} LANA</span>
+                    <span>100 USD = {Math.floor(100 / nostrParams.exchangeRates.USD).toLocaleString()} LANA</span>
+                  </div>
+                </div>
+              )}
+              {nostrLoading && (
+                <div className="mb-3 p-3 bg-yellow-500/10 rounded-lg text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading exchange rates from KIND 38888...
+                </div>
+              )}
               <div className="mb-3 p-3 bg-blue-500/10 rounded-lg text-sm text-muted-foreground flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <span>Users who have paid and are waiting for available slots. Send them to processing when slots are ready.</span>
+                <span>Users who have paid and are waiting for available slots. LANA amount is calculated when you send to processing.</span>
                 {waitingRecords.length > 0 && (
                   <Button
                     size="sm"
                     variant="default"
                     onClick={handleApproveAllForTransfer}
-                    disabled={processingIds.size > 0}
+                    disabled={processingIds.size > 0 || !nostrParams?.exchangeRates}
                     className="whitespace-nowrap"
                   >
                     <Send className="mr-2 h-4 w-4" />
@@ -590,7 +647,7 @@ const AdminBuyLana = () => {
                       <TableHead>Paid On</TableHead>
                       <TableHead>Wallet ID</TableHead>
                       <TableHead>Payee</TableHead>
-                      <TableHead>LANA</TableHead>
+                      <TableHead>LANA (preview)</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Currency</TableHead>
                       <TableHead>Split</TableHead>
@@ -624,7 +681,12 @@ const AdminBuyLana = () => {
                             </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
-                          <TableCell>{record.lana_amount?.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {nostrParams?.exchangeRates && record.currency
+                              ? <span className="text-primary font-medium">{calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates).toLocaleString()}</span>
+                              : <span className="text-muted-foreground italic text-xs">Loading...</span>
+                            }
+                          </TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell>{record.split || '-'}</TableCell>
@@ -632,7 +694,7 @@ const AdminBuyLana = () => {
                             <Button
                               size="sm"
                               onClick={() => handleApproveForTransfer(record.id)}
-                              disabled={processingIds.has(record.id)}
+                              disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates}
                               className="gap-1"
                             >
                               {processingIds.has(record.id) ? (
@@ -664,10 +726,17 @@ const AdminBuyLana = () => {
                           Paid on: <span className="font-medium text-foreground">{new Date(record.paid_on_account).toLocaleDateString()}</span>
                         </div>
                       )}
+                      {nostrParams?.exchangeRates && record.currency && (
+                        <div className="text-xs text-muted-foreground">
+                          Will receive: <span className="font-medium text-foreground">
+                            {calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates).toLocaleString()} LANA
+                          </span> (at current rate)
+                        </div>
+                      )}
                       <Button
                         className="w-full"
                         onClick={() => handleApproveForTransfer(record.id)}
-                        disabled={processingIds.has(record.id)}
+                        disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates}
                       >
                         {processingIds.has(record.id) ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
@@ -730,7 +799,7 @@ const AdminBuyLana = () => {
                             </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
-                          <TableCell>{record.lana_amount?.toLocaleString()}</TableCell>
+                          <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell>
@@ -859,7 +928,7 @@ const AdminBuyLana = () => {
                             </div>
                           </TableCell>
                           <TableCell>{record.payee}</TableCell>
-                          <TableCell>{record.lana_amount?.toLocaleString()}</TableCell>
+                          <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell className="font-mono text-xs">

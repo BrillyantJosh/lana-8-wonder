@@ -60,11 +60,6 @@ const BuyLana8Wonder = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Calculated LANA amount
-  const calculatedLanaAmount = currency && params?.exchangeRates?.[currency as keyof typeof params.exchangeRates]
-    ? Math.floor(100 / params.exchangeRates[currency as keyof typeof params.exchangeRates])
-    : 0;
-
   // Generate 7-digit reference on step 4 mount
   useEffect(() => {
     if (currentStep === 4 && !reference) {
@@ -322,7 +317,7 @@ const BuyLana8Wonder = () => {
         .from('buy_lana')
         .insert({
           lana_wallet_id: walletId,
-          lana_amount: calculatedLanaAmount,
+          lana_amount: 0,
           payee: payee,
           reference: reference,
           payment_method: selectedPayment,
@@ -613,26 +608,6 @@ const BuyLana8Wonder = () => {
           </div>
         ) : (
           <>
-            {/* Exchange rate display */}
-            {currency && params?.exchangeRates?.[currency as keyof typeof params.exchangeRates] && (
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
-                  <div className="text-center space-y-1 sm:space-y-2">
-                    <p className="text-base sm:text-lg">
-                      <span className="font-bold">100 {currency}</span>
-                      {' = '}
-                      <span className="font-bold text-primary text-xl sm:text-2xl">
-                        {calculatedLanaAmount.toLocaleString()} LANA
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Exchange rate: {params.exchangeRates[currency as keyof typeof params.exchangeRates]} {currency} per LANA
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Payment method toggle */}
             <div className="space-y-3">
               <Label className="text-sm sm:text-base">{t('buyLana.step4PaymentMethod')}</Label>
@@ -862,7 +837,7 @@ const BuyLana8Wonder = () => {
             <Button
               className="w-full"
               size="lg"
-              disabled={!selectedPayment || !payee.trim() || !calculatedLanaAmount}
+              disabled={!selectedPayment || !payee.trim()}
               onClick={() => setCurrentStep(5)}
             >
               {t('buyLana.step4Continue')}
