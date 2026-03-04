@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
@@ -55,6 +55,12 @@ const AdminBuyLana = () => {
   const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<{ id: string; step: 1 | 2 } | null>(null);
+  const [domainWalletStatus, setDomainWalletStatus] = useState<{
+    configured: boolean;
+    has_wallet: boolean;
+    has_private_key: boolean;
+    missing: string[];
+  } | null>(null);
 
   // Check if user is admin
   useEffect(() => {
@@ -85,7 +91,25 @@ const AdminBuyLana = () => {
         });
         const json = await res.json();
 
-        setIsAdmin(json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false);
+        const isAdminResult = json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false;
+        setIsAdmin(isAdminResult);
+
+        // Fetch domain wallet status if admin
+        if (isAdminResult) {
+          try {
+            const statusRes = await fetch('/api/process-pending-payments/domain-status', {
+              headers: {
+                ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+              }
+            });
+            const statusJson = await statusRes.json();
+            if (statusJson.data) {
+              setDomainWalletStatus(statusJson.data);
+            }
+          } catch (e) {
+            console.error('Error fetching domain wallet status:', e);
+          }
+        }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
@@ -428,6 +452,31 @@ const AdminBuyLana = () => {
           </div>
           <AdminMenu />
         </div>
+
+        {/* Domain wallet configuration warning */}
+        {domainWalletStatus && !domainWalletStatus.configured && (
+          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-destructive">Wallet Not Configured — Automated Payments Disabled!</p>
+              <p className="text-sm text-muted-foreground">
+                {!domainWalletStatus.has_wallet && !domainWalletStatus.has_private_key
+                  ? 'This domain has no donation wallet address and no private key configured.'
+                  : !domainWalletStatus.has_wallet
+                    ? 'This domain has no donation wallet address configured.'
+                    : 'This domain has no private key configured.'}
+                {' '}Approved payments will NOT be processed by the heartbeat until this is fixed.
+              </p>
+              <Button
+                variant="link"
+                className="p-0 h-auto text-sm text-destructive underline"
+                onClick={() => navigate('/admin-domain-settings')}
+              >
+                Go to Domain Settings →
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <Card className="p-4 md:p-6">
