@@ -172,12 +172,12 @@
     "cancel": "Mégsem"
   },
   "buyLana": {
-    "title": "LANA vásárlás",
+    "title": "LANA8Wonder vásárlás",
     "step1Title": "Van regisztrált pénztárcája?",
     "step1HasWallet": "Igen, van regisztrált pénztárcám",
     "step1NoWallet": "Nem, új felhasználó vagyok",
     "step2Title": "Fontos értesítés",
-    "step2Notice": "Az új LANA vásárlást egy splittel a belépés előtt kell bejelenteni, hogy az új LANA-t biztosítani lehessen. A meglévő LANA nagy része jelenleg kereskedésre van felhasználva.",
+    "step2Notice": "Az új regisztrált LANA vásárlást egy splittel a belépés előtt kell bejelenteni, hogy az új LANA-t biztosítani lehessen. A meglévő LANA nagy része jelenleg fogyasztásra van felhasználva.",
     "step2Agree": "Megértettem, tovább",
     "step3Title": "Adja meg a pénztárcáját",
     "step3WalletLabel": "LANA pénztárca cím",
@@ -211,7 +211,8 @@
     "step6BackHome": "Vissza a kezdőlapra",
     "step6Login": "Bejelentkezés",
     "step6Questions": "Kérdése van?",
-    "indexBuyButton": "LANA vásárlás"
+    "indexBuyButton": "LANA8Wonder vásárlás",
+    "currentSplitInfo": "Jelenleg a Split {{currentSplit}}-ben vagyunk. Az Ön belépése a Split {{nextSplit}}-ben várható."
   },
   "index": {
     "connecting": "Csatlakozás...",

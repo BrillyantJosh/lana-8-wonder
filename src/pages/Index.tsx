@@ -212,7 +212,7 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Buy LANA CTA Section */}
+      {/* Buy LANA8Wonder CTA Section */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
         <div className="max-w-5xl mx-auto">
           <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background">
@@ -223,6 +223,14 @@ const Index = () => {
               <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
                 {t('buyLana.step2Notice')}
               </p>
+              {params?.split && (
+                <p className="text-sm sm:text-base font-semibold text-primary/80">
+                  {t('buyLana.currentSplitInfo', {
+                    currentSplit: params.split,
+                    nextSplit: String(parseInt(params.split) + 1)
+                  })}
+                </p>
+              )}
               <Button size="lg" className="text-lg px-8 py-6" asChild>
                 <Link to="/buy-lana8wonder">
                   {t('buyLana.indexBuyButton')}

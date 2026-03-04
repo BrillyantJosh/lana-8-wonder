@@ -172,12 +172,12 @@
     "cancel": "Prekliči"
   },
   "buyLana": {
-    "title": "Kupi LANA",
+    "title": "Kupi LANA8Wonder",
     "step1Title": "Ali imate registrirano denarnico?",
     "step1HasWallet": "Da, imam registrirano denarnico",
     "step1NoWallet": "Ne, sem nov uporabnik",
     "step2Title": "Pomembno obvestilo",
-    "step2Notice": "Nakup novih LANA je potrebno napovedati en split pred vstopom, da se nove Lane lahko zagotovijo. Večina obstoječih Lan se trenutno uporablja za trgovanje.",
+    "step2Notice": "Nakup novih registriranih LAN je potrebno napovedati en split pred vstopom, da se nove Lane lahko zagotovijo. Večina obstoječih Lan se trenutno uporablja za potrošnjo.",
     "step2Agree": "Razumem, nadaljuj",
     "step3Title": "Vnesite svojo denarnico",
     "step3WalletLabel": "LANA naslov denarnice",
@@ -211,7 +211,8 @@
     "step6BackHome": "Nazaj na začetek",
     "step6Login": "Pojdi na prijavo",
     "step6Questions": "Imate vprašanja?",
-    "indexBuyButton": "Kupi LANA"
+    "indexBuyButton": "Kupi LANA8Wonder",
+    "currentSplitInfo": "Trenutno smo v Splitu {{currentSplit}}. Vaš vstop bo predvidoma v Splitu {{nextSplit}}."
   },
   "index": {
     "connecting": "Povezovanje...",

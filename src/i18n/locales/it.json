@@ -172,12 +172,12 @@
     "cancel": "Annulla"
   },
   "buyLana": {
-    "title": "Acquista LANA",
+    "title": "Acquista LANA8Wonder",
     "step1Title": "Hai un portafoglio registrato?",
     "step1HasWallet": "Sì, ho un portafoglio registrato",
     "step1NoWallet": "No, sono nuovo",
     "step2Title": "Avviso importante",
-    "step2Notice": "L'acquisto di nuovi LANA deve essere annunciato uno split prima dell'ingresso affinché i nuovi LANA possano essere forniti. La maggior parte dei LANA esistenti è attualmente utilizzata per il trading.",
+    "step2Notice": "L'acquisto di nuovi LANA registrati deve essere annunciato uno split prima dell'ingresso affinché i nuovi LANA possano essere forniti. La maggior parte dei LANA esistenti è attualmente utilizzata per il consumo.",
     "step2Agree": "Ho capito, continua",
     "step3Title": "Inserisci il tuo portafoglio",
     "step3WalletLabel": "Indirizzo portafoglio LANA",
@@ -211,7 +211,8 @@
     "step6BackHome": "Torna alla home",
     "step6Login": "Vai al login",
     "step6Questions": "Hai domande?",
-    "indexBuyButton": "Acquista LANA"
+    "indexBuyButton": "Acquista LANA8Wonder",
+    "currentSplitInfo": "Siamo attualmente nello Split {{currentSplit}}. Il vostro ingresso è previsto nello Split {{nextSplit}}."
   },
   "index": {
     "connecting": "Connessione...",
