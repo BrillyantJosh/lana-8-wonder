@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Globe, Loader2, Save, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Globe, Loader2, Save, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminMenu } from '@/components/AdminMenu';
 
@@ -13,12 +13,12 @@ interface DomainConfig {
   domain_key: string | null;
   display_name?: string;
   donation_wallet_id: string;
-  donation_wallet_private_key?: string;
   contact_details: string;
   payment_link: string;
   nostr_hex_id_buying_lanas: string;
   currency_default: string;
   show_slots_on_landing_page: string;
+  has_private_key?: number; // 0 or 1 from SQLite
 }
 
 interface DomainAdmin {
@@ -42,6 +42,8 @@ const AdminDomainSettings = () => {
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [removingAdminId, setRemovingAdminId] = useState<string | null>(null);
   const [userNostrHexId, setUserNostrHexId] = useState<string>('');
+  const [privateKeyInput, setPrivateKeyInput] = useState('');
+  const [privateKeyModified, setPrivateKeyModified] = useState(false);
 
   const domainKey = getDomainKey();
 
@@ -139,7 +141,7 @@ const AdminDomainSettings = () => {
           body: JSON.stringify({
             nostr_hex_id: userNostrHexId,
             donation_wallet_id: config.donation_wallet_id,
-            donation_wallet_private_key: config.donation_wallet_private_key || '',
+            ...(privateKeyModified && privateKeyInput.trim() ? { donation_wallet_private_key: privateKeyInput.trim() } : {}),
             contact_details: config.contact_details,
             payment_link: config.payment_link,
             nostr_hex_id_buying_lanas: config.nostr_hex_id_buying_lanas,
@@ -156,6 +158,10 @@ const AdminDomainSettings = () => {
         if (json.data) {
           setConfig(json.data);
         }
+
+        // Reset private key input state after save
+        setPrivateKeyInput('');
+        setPrivateKeyModified(false);
 
         toast.success('Domain settings saved');
       } else {
@@ -293,18 +299,37 @@ const AdminDomainSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="donation_wallet_private_key">Donation Wallet Private Key</Label>
+                  <Label htmlFor="donation_wallet_private_key">
+                    Donation Wallet Private Key <span className="text-destructive">*</span>
+                  </Label>
+                  {/* Status indicator */}
+                  {config.has_private_key ? (
+                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Private key is set</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-destructive text-sm">
+                      <XCircle className="h-4 w-4" />
+                      <span>No private key — required for automated payments!</span>
+                    </div>
+                  )}
                   <Input
                     id="donation_wallet_private_key"
                     type="password"
-                    value={config.donation_wallet_private_key || ''}
-                    onChange={(e) => updateField('donation_wallet_private_key', e.target.value)}
-                    placeholder="Enter private key (stored encrypted)..."
+                    value={privateKeyInput}
+                    onChange={(e) => {
+                      setPrivateKeyInput(e.target.value);
+                      setPrivateKeyModified(true);
+                    }}
+                    placeholder={config.has_private_key ? 'Enter new key to replace existing...' : 'Enter private key (WIF format)...'}
                     disabled={!domainKey}
                     className="font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Used for automated wallet operations. Keep this secure.
+                    {config.has_private_key
+                      ? 'Leave empty to keep the current key. Only enter a value to replace it.'
+                      : 'Required for automated LANA payments. Enter the WIF private key.'}
                   </p>
                 </div>
 

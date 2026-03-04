@@ -13,7 +13,8 @@ router.get('/', (req: Request, res: Response) => {
       const domain = db.prepare(`
         SELECT domain_key, hostname, display_name, donation_wallet_id,
                contact_details, payment_link, nostr_hex_id_buying_lanas,
-               currency_default, show_slots_on_landing_page, active
+               currency_default, show_slots_on_landing_page, active,
+               CASE WHEN donation_wallet_private_key IS NOT NULL AND donation_wallet_private_key != '' THEN 1 ELSE 0 END as has_private_key
         FROM domains WHERE domain_key = ?
       `).get(domainKey);
 
@@ -92,6 +93,10 @@ router.put('/', (req: Request, res: Response) => {
 
     for (const [key, value] of Object.entries(updates)) {
       if (allowedFields.includes(key)) {
+        // Skip empty private key to preserve existing value
+        if (key === 'donation_wallet_private_key' && (!value || (value as string).trim() === '')) {
+          continue;
+        }
         setCols.push(`"${key}" = ?`);
         setParams.push(value);
       }
@@ -106,11 +111,12 @@ router.put('/', (req: Request, res: Response) => {
     const sql = `UPDATE domains SET ${setCols.join(', ')} WHERE domain_key = ?`;
     db.prepare(sql).run(...setParams, domainKey);
 
-    // Return updated config (without private key)
+    // Return updated config (without private key, but with has_private_key flag)
     const updated = db.prepare(`
       SELECT domain_key, hostname, display_name, donation_wallet_id,
              contact_details, payment_link, nostr_hex_id_buying_lanas,
-             currency_default, show_slots_on_landing_page, active
+             currency_default, show_slots_on_landing_page, active,
+             CASE WHEN donation_wallet_private_key IS NOT NULL AND donation_wallet_private_key != '' THEN 1 ELSE 0 END as has_private_key
       FROM domains WHERE domain_key = ?
     `).get(domainKey);
 
