@@ -34,7 +34,7 @@ const BuyLana8Wonder = () => {
   const navigate = useNavigate();
   const { params } = useNostrLanaParams();
 
-  // Check if buy LANA is enabled for this domain
+  // Check if buy LANA is enabled and pre-load currency from domain config
   useEffect(() => {
     const checkBuyEnabled = async () => {
       try {
@@ -46,6 +46,13 @@ const BuyLana8Wonder = () => {
         if (json.data?.enable_buy_lana === 0) {
           toast.error(t('buyLana.buyDisabled') || 'Buying LANA is not available for this domain.');
           navigate('/', { replace: true });
+        }
+        // Pre-load currency and contact details early (not just on step 4)
+        if (json.data?.currency_default) {
+          setCurrency(json.data.currency_default);
+        }
+        if (json.data?.contact_details) {
+          setContactDetails(json.data.contact_details);
         }
       } catch { /* ignore */ }
     };
@@ -328,6 +335,22 @@ const BuyLana8Wonder = () => {
       return;
     }
 
+    // Ensure currency is set — fallback to domain default if somehow empty
+    let effectiveCurrency = currency;
+    if (!effectiveCurrency) {
+      try {
+        const domainKey = getDomainKey();
+        const res = await fetch('/api/domain-config', {
+          headers: domainKey ? { 'X-Domain-Key': domainKey } : {}
+        });
+        const json = await res.json();
+        effectiveCurrency = json.data?.currency_default || 'EUR';
+        setCurrency(effectiveCurrency);
+      } catch {
+        effectiveCurrency = 'EUR';
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -341,7 +364,7 @@ const BuyLana8Wonder = () => {
           payment_method: selectedPayment,
           phone_number: phone,
           email: email,
-          currency: currency,
+          currency: effectiveCurrency,
           payment_amount: 100,
           split: params?.split || '',
           status: 'pending'
