@@ -48,6 +48,7 @@ const Index = () => {
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [domainCurrency, setDomainCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
+  const [enableBuyLana, setEnableBuyLana] = useState(true);
 
   // Dynamic content state
   const [dynamicFaq, setDynamicFaq] = useState<DynamicFaqItem[] | null>(null);
@@ -73,6 +74,10 @@ const Index = () => {
           if (cur === 'EUR' || cur === 'USD' || cur === 'GBP') {
             setDomainCurrency(cur);
           }
+        }
+        // Check if buy LANA is enabled for this domain
+        if (json.data?.enable_buy_lana !== undefined) {
+          setEnableBuyLana(json.data.enable_buy_lana === 1);
         }
       } catch (error) {
         console.error('Error fetching domain config:', error);
@@ -212,34 +217,36 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Buy LANA8Wonder CTA Section */}
-      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
-        <div className="max-w-5xl mx-auto">
-          <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background">
-            <CardContent className="p-6 sm:p-10 text-center space-y-4">
-              <h2 className="text-2xl sm:text-3xl font-bold text-primary">
-                {t('buyLana.title')}
-              </h2>
-              <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-                {t('buyLana.step2Notice')}
-              </p>
-              {params?.split && (
-                <p className="text-sm sm:text-base font-semibold text-primary/80">
-                  {t('buyLana.currentSplitInfo', {
-                    currentSplit: params.split,
-                    nextSplit: String(parseInt(params.split) + 1)
-                  })}
+      {/* Buy LANA8Wonder CTA Section — only shown when enabled for this domain */}
+      {enableBuyLana && (
+        <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+          <div className="max-w-5xl mx-auto">
+            <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background">
+              <CardContent className="p-6 sm:p-10 text-center space-y-4">
+                <h2 className="text-2xl sm:text-3xl font-bold text-primary">
+                  {t('buyLana.title')}
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
+                  {t('buyLana.step2Notice')}
                 </p>
-              )}
-              <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link to="/buy-lana8wonder">
-                  {t('buyLana.indexBuyButton')}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+                {params?.split && (
+                  <p className="text-sm sm:text-base font-semibold text-primary/80">
+                    {t('buyLana.currentSplitInfo', {
+                      currentSplit: params.split,
+                      nextSplit: String(parseInt(params.split) + 1)
+                    })}
+                  </p>
+                )}
+                <Button size="lg" className="text-lg px-8 py-6" asChild>
+                  <Link to="/buy-lana8wonder">
+                    {t('buyLana.indexBuyButton')}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* FAQ Section — dynamic from DB with i18n fallback */}
       <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">

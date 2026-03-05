@@ -34,6 +34,24 @@ const BuyLana8Wonder = () => {
   const navigate = useNavigate();
   const { params } = useNostrLanaParams();
 
+  // Check if buy LANA is enabled for this domain
+  useEffect(() => {
+    const checkBuyEnabled = async () => {
+      try {
+        const domainKey = getDomainKey();
+        const res = await fetch('/api/domain-config', {
+          headers: domainKey ? { 'X-Domain-Key': domainKey } : {}
+        });
+        const json = await res.json();
+        if (json.data?.enable_buy_lana === 0) {
+          toast.error(t('buyLana.buyDisabled') || 'Buying LANA is not available for this domain.');
+          navigate('/', { replace: true });
+        }
+      } catch { /* ignore */ }
+    };
+    checkBuyEnabled();
+  }, [navigate, t]);
+
   // Wizard step
   const [currentStep, setCurrentStep] = useState<Step>(1);
 

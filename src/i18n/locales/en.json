@@ -216,6 +216,7 @@
     "step6Login": "Go to login",
     "step6Questions": "Have questions?",
     "indexBuyButton": "Buy LANA8Wonder",
+    "buyDisabled": "Buying LANA is not available for this domain.",
     "currentSplitInfo": "We are currently in Split {{currentSplit}}. Your entry is expected in Split {{nextSplit}}."
   },
   "index": {

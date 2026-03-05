@@ -18,6 +18,7 @@ interface DomainConfig {
   nostr_hex_id_buying_lanas: string;
   currency_default: string;
   show_slots_on_landing_page: string;
+  enable_buy_lana: number; // 0 or 1 from SQLite
   has_private_key?: number; // 0 or 1 from SQLite
 }
 
@@ -146,7 +147,8 @@ const AdminDomainSettings = () => {
             payment_link: config.payment_link,
             nostr_hex_id_buying_lanas: config.nostr_hex_id_buying_lanas,
             currency_default: config.currency_default,
-            show_slots_on_landing_page: config.show_slots_on_landing_page
+            show_slots_on_landing_page: config.show_slots_on_landing_page,
+            enable_buy_lana: config.enable_buy_lana
           })
         });
         const json = await res.json();
@@ -365,6 +367,29 @@ const AdminDomainSettings = () => {
                     disabled={!domainKey}
                     className="max-w-[200px]"
                   />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enable_buy_lana" className="text-base font-medium">Enable Buy LANA</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow users to buy LANA through this domain. When disabled, users can only create plans (deposit only).
+                    </p>
+                  </div>
+                  <button
+                    id="enable_buy_lana"
+                    role="switch"
+                    aria-checked={config.enable_buy_lana === 1}
+                    disabled={!domainKey}
+                    onClick={() => updateField('enable_buy_lana', config.enable_buy_lana === 1 ? 0 : 1)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      config.enable_buy_lana === 1 ? 'bg-primary' : 'bg-gray-300'
+                    } ${!domainKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.enable_buy_lana === 1 ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
                 </div>
 
                 <div className="space-y-2">

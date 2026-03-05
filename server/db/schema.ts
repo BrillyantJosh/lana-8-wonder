@@ -84,6 +84,7 @@ export function initializeSchema(db: Database.Database): void {
       nostr_hex_id_buying_lanas TEXT,
       currency_default TEXT DEFAULT 'EUR',
       show_slots_on_landing_page TEXT DEFAULT 'true',
+      enable_buy_lana INTEGER DEFAULT 1,
       active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))

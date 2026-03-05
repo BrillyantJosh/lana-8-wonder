@@ -216,6 +216,7 @@
     "step6Login": "Bejelentkezés",
     "step6Questions": "Kérdése van?",
     "indexBuyButton": "LANA8Wonder vásárlás",
+    "buyDisabled": "A LANA vásárlás nem elérhető ezen a domainen.",
     "currentSplitInfo": "Jelenleg a Split {{currentSplit}}-ben vagyunk. Az Ön belépése a Split {{nextSplit}}-ben várható."
   },
   "index": {

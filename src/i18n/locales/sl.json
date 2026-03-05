@@ -216,6 +216,7 @@
     "step6Login": "Pojdi na prijavo",
     "step6Questions": "Imate vprašanja?",
     "indexBuyButton": "Kupi LANA8Wonder",
+    "buyDisabled": "Nakup LANA ni na voljo za to domeno.",
     "currentSplitInfo": "Trenutno smo v Splitu {{currentSplit}}. Vaš vstop bo predvidoma v Splitu {{nextSplit}}."
   },
   "index": {
