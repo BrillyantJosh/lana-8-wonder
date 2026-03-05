@@ -1113,10 +1113,21 @@ const PreviewLana8Wonder = () => {
                         nostrHexId
                       }
                     })}
-                    disabled={!effectiveSourceBalance || effectiveSourceBalance < effectiveMinRequiredLana}
+                    disabled={!effectiveSourceBalance || effectiveSourceBalance < effectiveMinRequiredLana || relayVerifyStatus !== 'verified'}
                     className="w-full"
                   >
-                    Transfer Assets to 8 Wallets
+                    {relayVerifyStatus === 'verifying' ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t('createLana8Wonder.verifyingWait')}
+                      </>
+                    ) : relayVerifyStatus !== 'verified' && relayVerifyStatus !== 'idle' ? (
+                      '⚠️ Wallet verification required'
+                    ) : relayVerifyStatus === 'idle' ? (
+                      'Transfer Assets to 8 Wallets'
+                    ) : (
+                      'Transfer Assets to 8 Wallets'
+                    )}
                   </Button>
                 ) : (
                   <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground">
