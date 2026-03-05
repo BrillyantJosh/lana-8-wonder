@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, Radio } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
@@ -194,6 +194,8 @@ const PreviewLana8Wonder = () => {
   const [txHash, setTxHash] = useState<string>('');
   const [publishedPlan, setPublishedPlan] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [relayVerifyStatus, setRelayVerifyStatus] = useState<'idle' | 'verifying' | 'verified' | 'not_found'>('idle');
+  const [relayVerifyContact, setRelayVerifyContact] = useState<string>('');
 
   // State for data loaded from database (when location.state is empty)
   const [loadedPlanCurrency, setLoadedPlanCurrency] = useState<string>("");
@@ -677,14 +679,16 @@ const PreviewLana8Wonder = () => {
 
       // === VERIFY KIND 30889 ON RELAYS ===
       if (params?.relays && params.relays.length > 0) {
+        setRelayVerifyStatus('verifying');
         toast.loading(t('createLana8Wonder.verifyingOnRelays'), { id: 'relay-verify', duration: 15000 });
 
         // Wait 10 seconds for registrar to publish
         await new Promise(resolve => setTimeout(resolve, 10000));
 
         try {
-          console.log('🔍 Verifying KIND 30889 on relays...');
+          console.log('🔍 Verifying KIND 30889 on relays:', params.relays);
           const records = await fetchKind30889(nostrHexId, params.relays);
+          console.log('📋 KIND 30889 records found:', records.length, records);
 
           // Check if any record contains all 8 wallet addresses
           const planAddresses = effectiveWallets.map((w: any) => w.address);
@@ -697,6 +701,7 @@ const PreviewLana8Wonder = () => {
 
           if (verified) {
             console.log('✅ KIND 30889 verified on relays');
+            setRelayVerifyStatus('verified');
             toast.success(t('createLana8Wonder.walletsVerified'), { duration: 5000 });
           } else {
             console.warn('⚠️ KIND 30889 not found or wallets mismatch');
@@ -711,16 +716,18 @@ const PreviewLana8Wonder = () => {
               contactInfo = json.data?.contact_details || '';
             } catch { /* ignore */ }
 
-            const contactMsg = contactInfo
-              ? `${t('createLana8Wonder.walletsNotFound')} ${contactInfo}`
-              : t('createLana8Wonder.walletsNotFound');
-            toast.warning(contactMsg, { duration: 15000 });
+            setRelayVerifyStatus('not_found');
+            setRelayVerifyContact(contactInfo);
+            toast.warning(t('createLana8Wonder.walletsNotFound'), { duration: 10000 });
           }
         } catch (verifyError) {
           console.error('❌ Relay verification error:', verifyError);
           toast.dismiss('relay-verify');
+          setRelayVerifyStatus('not_found');
           toast.warning(t('createLana8Wonder.walletsNotFound'), { duration: 10000 });
         }
+      } else {
+        console.warn('⚠️ No relays available in params for KIND 30889 verification');
       }
 
     } catch (error: any) {
@@ -916,21 +923,74 @@ const PreviewLana8Wonder = () => {
                 
                 {(() => { console.log('🔍 RENDER DEBUG: walletRegistered =', walletRegistered, ', nostrHexId =', nostrHexId, ', effectiveWallets =', effectiveWallets?.length); return null; })()}
                 {walletRegistered ? (
-                  <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                      <p className="font-semibold text-green-800 dark:text-green-200">
-                        Wallets have been successfully registered!
-                      </p>
-                    </div>
-                    {registrationResult && (
-                      <div className="text-center text-sm text-green-700 dark:text-green-300">
-                        <p>
-                          {registrationResult.data?.wallets_registered || effectiveWallets?.length} wallets registered as Lana8Wonder type
+                  <>
+                    <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <p className="font-semibold text-green-800 dark:text-green-200">
+                          Wallets have been successfully registered!
                         </p>
                       </div>
+                      {registrationResult && (
+                        <div className="text-center text-sm text-green-700 dark:text-green-300">
+                          <p>
+                            {registrationResult.data?.wallets_registered || effectiveWallets?.length} wallets registered as Lana8Wonder type
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* === RELAY VERIFICATION STATUS BANNER === */}
+                    {relayVerifyStatus === 'verifying' && (
+                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center justify-center gap-3">
+                          <Radio className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                          <div>
+                            <p className="font-semibold text-blue-800 dark:text-blue-200">
+                              {t('createLana8Wonder.verifyingOnRelays')}
+                            </p>
+                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                              {t('createLana8Wonder.verifyingWait') || 'Checking Nostr relays for wallet records (KIND 30889)...'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </div>
+
+                    {relayVerifyStatus === 'verified' && (
+                      <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-950 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg">
+                        <div className="flex items-center justify-center gap-3">
+                          <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                          <div>
+                            <p className="font-bold text-emerald-800 dark:text-emerald-200 text-lg">
+                              {t('createLana8Wonder.walletsVerified')}
+                            </p>
+                            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+                              {t('createLana8Wonder.walletsVerifiedDetail') || 'All 8 wallet addresses have been confirmed on Nostr relays (KIND 30889).'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {relayVerifyStatus === 'not_found' && (
+                      <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+                        <div className="flex items-center justify-center gap-3">
+                          <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                          <div>
+                            <p className="font-bold text-amber-800 dark:text-amber-200">
+                              {t('createLana8Wonder.walletsNotFound')}
+                            </p>
+                            {relayVerifyContact && (
+                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                {relayVerifyContact}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col items-center gap-3 mt-6">
                     <Button
