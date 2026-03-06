@@ -135,6 +135,8 @@ export function initializeSchema(db: Database.Database): void {
   `);
   insertAdmin.run('56e8670aa65491f8595dc3a71c94aa7445dcdca755ca5f77c07218498a362061', 'Admin 1');
   insertAdmin.run('4f8735cf707b3980ff2ed284cda7c0fb4150cd1b137fc170a30aafd9d93e84d6', 'Admin 2');
+  insertAdmin.run('ba8500d89a4e8ae475314079365f995ca221fb668ee7c63d147aa28f49838ff1', 'Global Admin AT');
+  insertAdmin.run('e01368761feeb32a8fbc5b85502847ecdbbbcb1256ae35da268416c755982ca0', 'Global Admin UK/HU');
 
   // Seed default app_settings keys
   const insertSetting = db.prepare(`
