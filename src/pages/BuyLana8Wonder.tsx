@@ -148,6 +148,11 @@ const BuyLana8Wonder = () => {
           return;
         }
 
+        // Use domain config payment_link as fallback if Nostr profile doesn't have one
+        if (!profile.payment_link && json.data.payment_link) {
+          profile.payment_link = json.data.payment_link;
+        }
+
         setBuyerProfile(profile);
         console.log('Buyer profile loaded:', profile);
       } catch (error) {
