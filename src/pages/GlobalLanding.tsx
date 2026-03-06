@@ -1,21 +1,20 @@
 import { useMemo } from 'react';
-import lanaCoin from '@/assets/lana-coin.png';
-import { Sparkles, Globe, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface CountryOption {
   key: string;
   name: string;
-  flag: string;
+  flagCode: string; // ISO 3166-1 alpha-2 for flagcdn.com
   currency: string;
   hostname: string;
 }
 
 const countries: CountryOption[] = [
-  { key: 'si', name: 'Slovenija', flag: '🇸🇮', currency: 'EUR', hostname: 'si.lana8wonder.com' },
-  { key: 'at', name: 'Österreich', flag: '🇦🇹', currency: 'EUR', hostname: 'at.lana8wonder.com' },
-  { key: 'uk', name: 'United Kingdom', flag: '🇬🇧', currency: 'GBP', hostname: 'uk.lana8wonder.com' },
-  { key: 'hu', name: 'Magyarország', flag: '🇭🇺', currency: 'EUR', hostname: 'hu.lana8wonder.com' },
+  { key: 'si', name: 'Slovenija', flagCode: 'si', currency: 'EUR', hostname: 'si.lana8wonder.com' },
+  { key: 'at', name: 'Österreich', flagCode: 'at', currency: 'EUR', hostname: 'at.lana8wonder.com' },
+  { key: 'uk', name: 'United Kingdom', flagCode: 'gb', currency: 'GBP', hostname: 'uk.lana8wonder.com' },
+  { key: 'hu', name: 'Magyarország', flagCode: 'hu', currency: 'EUR', hostname: 'hu.lana8wonder.com' },
 ];
 
 function detectCountry(): string | null {
@@ -39,27 +38,9 @@ const GlobalLanding = () => {
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(270_60%_95%)] to-background pointer-events-none" />
 
-      <div className="relative z-10">
-        {/* Header bar */}
-        <header className="w-full py-4 px-6 flex items-center justify-center">
-          <div className="flex items-center gap-2 text-primary">
-            <Globe className="h-5 w-5" />
-            <span className="font-semibold text-lg tracking-wide">Lana8Wonder</span>
-          </div>
-        </header>
-
+      <div className="relative z-10 flex flex-col min-h-screen">
         {/* Hero section */}
-        <section className="flex flex-col items-center justify-center px-4 pt-6 pb-10 md:pt-10 md:pb-16">
-          {/* Coin image */}
-          <div className="relative mb-6 md:mb-8">
-            <div className="absolute inset-0 bg-[hsl(var(--mystical-purple)/0.15)] rounded-full blur-3xl scale-110" />
-            <img
-              src={lanaCoin}
-              alt="LanaCoin"
-              className="relative w-40 h-40 md:w-56 md:h-56 object-contain drop-shadow-2xl animate-in fade-in zoom-in duration-700"
-            />
-          </div>
-
+        <section className="flex flex-col items-center justify-center px-4 pt-16 pb-10 md:pt-24 md:pb-16">
           {/* Title */}
           <h1 className="text-3xl md:text-5xl font-bold text-center mb-3 bg-gradient-to-r from-[hsl(var(--mystical-purple))] via-[hsl(var(--gold-accent))] to-[hsl(var(--cyan-tech))] bg-clip-text text-transparent">
             <Sparkles className="inline h-6 w-6 md:h-8 md:w-8 text-[hsl(var(--gold-accent))] mr-2" />
@@ -67,16 +48,13 @@ const GlobalLanding = () => {
             <Sparkles className="inline h-6 w-6 md:h-8 md:w-8 text-[hsl(var(--gold-accent))] ml-2" />
           </h1>
 
-          <p className="text-muted-foreground text-center text-base md:text-lg max-w-md mb-2">
+          <p className="text-muted-foreground text-center text-base md:text-lg max-w-md">
             Your gateway to the LanaCoin universe
-          </p>
-          <p className="text-muted-foreground/70 text-center text-sm max-w-sm">
-            88 LANA &middot; 8 Wallets &middot; 8 Levels of Growth
           </p>
         </section>
 
         {/* Country selection */}
-        <section className="px-4 pb-16 md:pb-24 max-w-2xl mx-auto">
+        <section className="px-4 pb-16 md:pb-24 max-w-2xl mx-auto flex-1">
           <h2 className="text-center text-lg md:text-xl font-semibold text-foreground mb-6">
             Choose your country to get started
           </h2>
@@ -103,9 +81,13 @@ const GlobalLanding = () => {
                     </div>
                   )}
                   <CardContent className="flex items-center gap-4 p-5">
-                    <span className="text-4xl md:text-5xl" role="img" aria-label={country.name}>
-                      {country.flag}
-                    </span>
+                    <img
+                      src={`https://flagcdn.com/w80/${country.flagCode}.png`}
+                      srcSet={`https://flagcdn.com/w160/${country.flagCode}.png 2x`}
+                      alt={country.name}
+                      className="w-12 h-8 md:w-14 md:h-10 object-cover rounded shadow-sm"
+                      loading="eager"
+                    />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-base md:text-lg text-foreground">
                         {country.name}
