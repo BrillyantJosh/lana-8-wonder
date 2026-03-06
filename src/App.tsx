@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import GlobalLanding from "./pages/GlobalLanding";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BuyLana8Wonder from "./pages/BuyLana8Wonder";
@@ -18,8 +19,12 @@ import SendLanaConfirm from "./pages/SendLanaConfirm";
 import SendLanaResult from "./pages/SendLanaResult";
 import SendLana8WonderTransfer from "./pages/SendLana8WonderTransfer";
 import NotFound from "./pages/NotFound";
+import { getDomainKey } from "./integrations/api/client";
 
 const queryClient = new QueryClient();
+
+// Show GlobalLanding when no country subdomain is detected (www or root domain)
+const isGlobalDomain = !getDomainKey();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -28,7 +33,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={isGlobalDomain ? <GlobalLanding /> : <Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />

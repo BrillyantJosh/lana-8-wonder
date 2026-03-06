@@ -3,8 +3,11 @@ export function getDomainKey(): string | null {
   const hostname = window.location.hostname;
   const parts = hostname.split('.');
   // e.g., "uk.lana8wonder.com" -> "uk", "localhost" -> null
+  // "www.lana8wonder.com" -> null (global landing, not a country domain)
   if (parts.length >= 3) {
-    return parts[0];
+    const subdomain = parts[0];
+    if (subdomain === 'www') return null;
+    return subdomain;
   }
   return null;
 }
