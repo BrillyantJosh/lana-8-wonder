@@ -46,7 +46,7 @@ const AdminDomainSettings = () => {
   const [privateKeyInput, setPrivateKeyInput] = useState('');
   const [privateKeyModified, setPrivateKeyModified] = useState(false);
 
-  const domainKey = getDomainKey();
+  const [domainKey, setDomainKey] = useState<string | null>(getDomainKey());
 
   // Check admin status and load config
   useEffect(() => {
@@ -82,8 +82,9 @@ const AdminDomainSettings = () => {
 
         const globalAdmin = adminJson.data?.isGlobalAdmin || false;
         const domAdmin = adminJson.data?.isDomainAdmin || false;
+        const userDomainKeys: string[] = adminJson.data?.domainKeys || [];
 
-        if (!globalAdmin && !domAdmin) {
+        if (!globalAdmin && !domAdmin && userDomainKeys.length === 0) {
           navigate('/dashboard');
           return;
         }
@@ -91,10 +92,17 @@ const AdminDomainSettings = () => {
         setIsAdmin(true);
         setIsGlobalAdmin(globalAdmin);
 
+        // Determine effective domain key: current URL domain if admin there, otherwise first assigned domain
+        let effectiveDk = domainKey;
+        if (!globalAdmin && !domAdmin && userDomainKeys.length > 0) {
+          effectiveDk = userDomainKeys[0];
+          setDomainKey(effectiveDk);
+        }
+
         // Fetch domain config
         const configRes = await fetch('/api/domain-config', {
           headers: {
-            ...(domainKey ? { 'X-Domain-Key': domainKey } : {})
+            ...(effectiveDk ? { 'X-Domain-Key': effectiveDk } : {})
           }
         });
         const configJson = await configRes.json();
@@ -103,12 +111,12 @@ const AdminDomainSettings = () => {
           setConfig(configJson.data);
         }
 
-        // Fetch domain admins if domain key exists
-        if (domainKey) {
+        // Fetch domain admins if effective domain exists
+        if (effectiveDk) {
           const { data: admins } = await supabase
             .from('domain_admins')
             .select('*')
-            .eq('domain_key', domainKey);
+            .eq('domain_key', effectiveDk);
 
           if (admins) {
             setDomainAdmins(admins as DomainAdmin[]);
@@ -123,7 +131,8 @@ const AdminDomainSettings = () => {
     };
 
     init();
-  }, [navigate, domainKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   // Save domain config
   const handleSave = async () => {

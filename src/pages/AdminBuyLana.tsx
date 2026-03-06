@@ -91,7 +91,7 @@ const AdminBuyLana = () => {
         });
         const json = await res.json();
 
-        const isAdminResult = json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false;
+        const isAdminResult = json.data?.isGlobalAdmin || json.data?.isDomainAdmin || (json.data?.domainKeys?.length > 0) || false;
         setIsAdmin(isAdminResult);
 
         // Fetch domain wallet status if admin

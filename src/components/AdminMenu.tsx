@@ -46,7 +46,7 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         });
         const json = await res.json();
 
-        setIsAdmin(json.data?.isGlobalAdmin || json.data?.isDomainAdmin || false);
+        setIsAdmin(json.data?.isGlobalAdmin || json.data?.isDomainAdmin || (json.data?.domainKeys?.length > 0) || false);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);

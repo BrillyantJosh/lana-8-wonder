@@ -64,7 +64,7 @@ const AdminContent = () => {
   const [whatIsLana, setWhatIsLana] = useState<WhatIsLanaContent>(emptyWhatIsLana);
   const [savingVideo, setSavingVideo] = useState(false);
 
-  const domainKey = getDomainKey();
+  const [domainKey, setDomainKey] = useState<string | null>(getDomainKey());
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -91,8 +91,16 @@ const AdminContent = () => {
         });
         const json = await res.json();
 
-        if (json.data?.isGlobalAdmin || json.data?.isDomainAdmin) {
+        const globalAdmin = json.data?.isGlobalAdmin || false;
+        const domAdmin = json.data?.isDomainAdmin || false;
+        const userDomainKeys: string[] = json.data?.domainKeys || [];
+
+        if (globalAdmin || domAdmin || userDomainKeys.length > 0) {
           setIsAdmin(true);
+          // If user is domain admin for a different domain, switch to their first assigned domain
+          if (!globalAdmin && !domAdmin && userDomainKeys.length > 0) {
+            setDomainKey(userDomainKeys[0]);
+          }
         } else {
           toast.error('Not authorized');
           navigate('/dashboard');
