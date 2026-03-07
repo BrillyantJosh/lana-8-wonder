@@ -369,4 +369,47 @@ router.get('/domain-status', (req: Request, res: Response) => {
   }
 });
 
+// GET /api/process-pending-payments/wallet-balance
+// Returns the current UTXO-based balance of the domain's donation wallet (used by admin panel)
+router.get('/wallet-balance', async (req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const domainKey = req.domainKey;
+
+    if (!domainKey) {
+      return res.json({ data: null, error: { message: 'No domain context' } });
+    }
+
+    const domain = db.prepare(
+      `SELECT donation_wallet_id FROM domains WHERE domain_key = ? AND active = 1`
+    ).get(domainKey) as { donation_wallet_id: string } | undefined;
+
+    if (!domain || !domain.donation_wallet_id) {
+      return res.json({ data: null, error: { message: 'No wallet configured for this domain' } });
+    }
+
+    const walletAddress = domain.donation_wallet_id;
+
+    // Fetch UTXOs via Electrum
+    const utxos = await electrumCall('blockchain.address.listunspent', [walletAddress], servers);
+    const utxoList = utxos || [];
+    const balanceSatoshis = utxoList.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
+    const balanceLana = balanceSatoshis / 100000000;
+
+    return res.json({
+      data: {
+        wallet_address: walletAddress,
+        balance_lana: Math.round(balanceLana * 100000000) / 100000000,
+        balance_satoshis: balanceSatoshis,
+        utxo_count: utxoList.length
+      },
+      error: null
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Error fetching wallet balance:', message);
+    return res.status(500).json({ data: null, error: { message } });
+  }
+});
+
 export default router;

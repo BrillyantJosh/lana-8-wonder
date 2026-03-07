@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { Card } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle, Wallet, RefreshCw } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
@@ -61,6 +61,13 @@ const AdminBuyLana = () => {
     has_private_key: boolean;
     missing: string[];
   } | null>(null);
+  const [walletBalance, setWalletBalance] = useState<{
+    balance_lana: number;
+    balance_satoshis: number;
+    utxo_count: number;
+    wallet_address: string;
+  } | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -109,6 +116,9 @@ const AdminBuyLana = () => {
           } catch (e) {
             console.error('Error fetching domain wallet status:', e);
           }
+
+          // Fetch wallet balance
+          fetchWalletBalance();
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
@@ -118,6 +128,26 @@ const AdminBuyLana = () => {
 
     checkAdminStatus();
   }, []);
+
+  // Fetch wallet balance from Electrum via server
+  const fetchWalletBalance = async () => {
+    setBalanceLoading(true);
+    try {
+      const res = await fetch('/api/process-pending-payments/wallet-balance', {
+        headers: {
+          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+        }
+      });
+      const json = await res.json();
+      if (json.data) {
+        setWalletBalance(json.data);
+      }
+    } catch (e) {
+      console.error('Error fetching wallet balance:', e);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   // Fetch records and categorize by status
   const fetchRecords = async () => {
@@ -180,6 +210,65 @@ const AdminBuyLana = () => {
       navigate('/');
     }
   }, [isAdmin, navigate]);
+
+  // Balance breakdown: calculate which waiting records can be afforded
+  const balanceBreakdown = useMemo(() => {
+    if (!walletBalance || !nostrParams?.exchangeRates) {
+      return null;
+    }
+
+    const availableSatoshis = walletBalance.balance_satoshis;
+    const utxoCount = walletBalance.utxo_count;
+    let cumulativeSatoshis = 0;
+    const affordableIds = new Set<string>();
+    let totalNeededSatoshis = 0;
+
+    // Process records in order — same logic as server's processPaymentBatch
+    for (const record of waitingRecords) {
+      const lanaAmount = calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates);
+      if (lanaAmount <= 0) continue;
+
+      const amountSatoshis = Math.round(lanaAmount * 100000000);
+      totalNeededSatoshis += amountSatoshis;
+      const newCumulative = cumulativeSatoshis + amountSatoshis;
+
+      // Conservative fee estimate (matches server formula)
+      const estInputs = Math.min(utxoCount, 500);
+      const estOutputs = affordableIds.size + 1 + 1; // +1 for this record, +1 for change
+      const estFee = Math.floor((estInputs * 180 + estOutputs * 34 + 10) * 100 * 1.5);
+
+      if (newCumulative + estFee <= availableSatoshis) {
+        affordableIds.add(record.id);
+        cumulativeSatoshis = newCumulative;
+      }
+    }
+
+    // Final fee estimate for all affordable records
+    const finalInputs = Math.min(utxoCount, 500);
+    const finalOutputs = affordableIds.size + 1; // affordable records + change
+    const estimatedFeeSatoshis = affordableIds.size > 0
+      ? Math.floor((finalInputs * 180 + finalOutputs * 34 + 10) * 100 * 1.5)
+      : 0;
+
+    const totalNeededLana = totalNeededSatoshis / 100000000;
+    const estimatedFeeLana = estimatedFeeSatoshis / 100000000;
+    const affordableCount = affordableIds.size;
+    const insufficientCount = waitingRecords.length - affordableCount;
+    const deficit = totalNeededSatoshis + estimatedFeeSatoshis > availableSatoshis
+      ? (totalNeededSatoshis + estimatedFeeSatoshis - availableSatoshis) / 100000000
+      : 0;
+
+    return {
+      affordableIds,
+      affordableCount,
+      insufficientCount,
+      totalNeededLana,
+      estimatedFeeLana,
+      deficit,
+      allAffordable: insufficientCount === 0 && waitingRecords.length > 0,
+      noneAffordable: affordableCount === 0 && waitingRecords.length > 0,
+    };
+  }, [walletBalance, waitingRecords, nostrParams?.exchangeRates]);
 
   // Mark as paid (pending → paid)
   const handleMarkAsPaid = async (id: string) => {
@@ -478,6 +567,107 @@ const AdminBuyLana = () => {
           </div>
         )}
 
+        {/* Wallet Balance Card */}
+        {walletBalance && (
+          <Card className={`p-4 border ${
+            !balanceBreakdown || walletBalance.balance_lana === 0
+              ? 'border-destructive/30 bg-destructive/5'
+              : balanceBreakdown.allAffordable
+                ? 'border-green-500/30 bg-green-500/5'
+                : balanceBreakdown.noneAffordable
+                  ? 'border-destructive/30 bg-destructive/5'
+                  : 'border-yellow-500/30 bg-yellow-500/5'
+          }`}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-sm md:text-base">Domain Wallet Balance</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchWalletBalance}
+                disabled={balanceLoading}
+                className="h-8 gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${balanceLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden md:inline">Refresh</span>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {/* Balance */}
+              <div>
+                <div className="text-xs text-muted-foreground">Balance</div>
+                <div className="font-bold text-lg text-foreground">
+                  {walletBalance.balance_lana.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-muted-foreground">LANA</span>
+                </div>
+                <div className="text-xs text-muted-foreground">{walletBalance.utxo_count} UTXOs</div>
+              </div>
+
+              {/* Needed */}
+              {balanceBreakdown && waitingRecords.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground">Needed for {waitingRecords.length} payment(s)</div>
+                  <div className="font-semibold">
+                    {balanceBreakdown.totalNeededLana.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-muted-foreground">LANA</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">+ ~{balanceBreakdown.estimatedFeeLana.toLocaleString(undefined, { maximumFractionDigits: 4 })} fee</div>
+                </div>
+              )}
+
+              {/* Affordable */}
+              {balanceBreakdown && waitingRecords.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground">Can afford</div>
+                  <div className={`font-semibold ${
+                    balanceBreakdown.allAffordable ? 'text-green-600' :
+                    balanceBreakdown.noneAffordable ? 'text-destructive' : 'text-yellow-600'
+                  }`}>
+                    {balanceBreakdown.affordableCount} / {waitingRecords.length}
+                    <span className="text-xs font-normal ml-1">
+                      {balanceBreakdown.allAffordable ? 'All covered' :
+                       balanceBreakdown.noneAffordable ? 'None covered' : 'Partial'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Deficit */}
+              {balanceBreakdown && balanceBreakdown.deficit > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground">Deficit</div>
+                  <div className="font-semibold text-destructive">
+                    -{balanceBreakdown.deficit.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-normal">LANA</span>
+                  </div>
+                  <div className="text-xs text-destructive/80">Top up wallet!</div>
+                </div>
+              )}
+            </div>
+
+            {/* Wallet address */}
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-mono">{walletBalance.wallet_address}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={() => handleCopyWalletId(walletBalance.wallet_address)}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Balance loading indicator */}
+        {balanceLoading && !walletBalance && (
+          <Card className="p-4 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Loading wallet balance...</span>
+          </Card>
+        )}
+
         {/* Tabs */}
         <Card className="p-4 md:p-6">
           <Tabs defaultValue="pending">
@@ -640,8 +830,15 @@ const AdminBuyLana = () => {
                     size="sm"
                     variant="default"
                     onClick={handleApproveAllForTransfer}
-                    disabled={processingIds.size > 0 || !nostrParams?.exchangeRates}
+                    disabled={
+                      processingIds.size > 0 ||
+                      !nostrParams?.exchangeRates ||
+                      (balanceBreakdown ? !balanceBreakdown.allAffordable : false)
+                    }
                     className="whitespace-nowrap"
+                    title={balanceBreakdown && !balanceBreakdown.allAffordable
+                      ? `Insufficient balance: can only cover ${balanceBreakdown.affordableCount} of ${waitingRecords.length}`
+                      : undefined}
                   >
                     <Send className="mr-2 h-4 w-4" />
                     Send All ({waitingRecords.length})
@@ -702,21 +899,32 @@ const AdminBuyLana = () => {
                           <TableCell>{record.currency || '-'}</TableCell>
                           <TableCell>{record.split || '-'}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveForTransfer(record.id)}
-                              disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates}
-                              className="gap-1"
-                            >
-                              {processingIds.has(record.id) ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <Send className="h-3 w-3" />
-                                  Send
-                                </>
-                              )}
-                            </Button>
+                            {(() => {
+                              const isUnaffordable = balanceBreakdown && !balanceBreakdown.affordableIds.has(record.id);
+                              return (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApproveForTransfer(record.id)}
+                                  disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates || !!isUnaffordable}
+                                  className="gap-1"
+                                  title={isUnaffordable ? 'Insufficient wallet balance' : undefined}
+                                >
+                                  {processingIds.has(record.id) ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : isUnaffordable ? (
+                                    <>
+                                      <AlertTriangle className="h-3 w-3 text-destructive" />
+                                      <span className="text-destructive">No funds</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send className="h-3 w-3" />
+                                      Send
+                                    </>
+                                  )}
+                                </Button>
+                              );
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))
@@ -730,33 +938,44 @@ const AdminBuyLana = () => {
                 {waitingRecords.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">No records waiting for slots</div>
                 ) : (
-                  waitingRecords.map((record) => (
-                    <RecordInfoCard key={record.id} record={record}>
-                      {record.paid_on_account && (
-                        <div className="text-xs text-muted-foreground">
-                          Paid on: <span className="font-medium text-foreground">{new Date(record.paid_on_account).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                      {nostrParams?.exchangeRates && record.currency && (
-                        <div className="text-xs text-muted-foreground">
-                          Will receive: <span className="font-medium text-foreground">
-                            {calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates).toLocaleString()} LANA
-                          </span> (at current rate)
-                        </div>
-                      )}
-                      <Button
-                        className="w-full"
-                        onClick={() => handleApproveForTransfer(record.id)}
-                        disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates}
-                      >
-                        {processingIds.has(record.id) ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                        ) : (
-                          <><Send className="mr-2 h-4 w-4" /> Send to Processing</>
+                  waitingRecords.map((record) => {
+                    const isUnaffordable = balanceBreakdown && !balanceBreakdown.affordableIds.has(record.id);
+                    return (
+                      <RecordInfoCard key={record.id} record={record}>
+                        {record.paid_on_account && (
+                          <div className="text-xs text-muted-foreground">
+                            Paid on: <span className="font-medium text-foreground">{new Date(record.paid_on_account).toLocaleDateString()}</span>
+                          </div>
                         )}
-                      </Button>
-                    </RecordInfoCard>
-                  ))
+                        {nostrParams?.exchangeRates && record.currency && (
+                          <div className="text-xs text-muted-foreground">
+                            Will receive: <span className="font-medium text-foreground">
+                              {calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates).toLocaleString()} LANA
+                            </span> (at current rate)
+                          </div>
+                        )}
+                        {isUnaffordable && (
+                          <div className="flex items-center gap-2 text-xs text-destructive p-2 bg-destructive/10 rounded">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Insufficient wallet balance for this payment
+                          </div>
+                        )}
+                        <Button
+                          className="w-full"
+                          onClick={() => handleApproveForTransfer(record.id)}
+                          disabled={processingIds.has(record.id) || !nostrParams?.exchangeRates || !!isUnaffordable}
+                        >
+                          {processingIds.has(record.id) ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                          ) : isUnaffordable ? (
+                            <><AlertTriangle className="mr-2 h-4 w-4" /> Insufficient Balance</>
+                          ) : (
+                            <><Send className="mr-2 h-4 w-4" /> Send to Processing</>
+                          )}
+                        </Button>
+                      </RecordInfoCard>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>
