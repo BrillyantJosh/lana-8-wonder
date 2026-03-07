@@ -321,6 +321,55 @@ const PreviewLana8Wonder = () => {
     checkWalletRegistration();
   }, [nostrHexId]);
 
+  // Auto-verify KIND 30889 on page load when wallet is already registered
+  useEffect(() => {
+    const autoVerifyKind30889 = async () => {
+      // Only run when wallet is registered, we have nostrHexId, relays, wallets, and haven't verified yet
+      if (!walletRegistered || !nostrHexId || !params?.relays || params.relays.length === 0) return;
+      if (relayVerifyStatus !== 'idle') return; // Don't re-run if already verifying/verified
+      if (!effectiveWallets || effectiveWallets.length === 0) return;
+
+      console.log('🔄 Auto-verifying KIND 30889 (wallet already registered)...');
+      setRelayVerifyStatus('verifying');
+
+      try {
+        const records = await fetchKind30889(nostrHexId, params.relays);
+        console.log('📋 Auto-verify KIND 30889 records:', records.length);
+
+        // Check if any record contains all plan wallet addresses
+        const planAddresses = effectiveWallets.map((w: any) => w.address);
+        const verified = records.some(record => {
+          const recordAddresses = record.wallets.map(w => w.wallet_address);
+          return planAddresses.every((addr: string) => recordAddresses.includes(addr));
+        });
+
+        if (verified) {
+          console.log('✅ Auto-verify: KIND 30889 confirmed on relays');
+          setRelayVerifyStatus('verified');
+        } else {
+          console.warn('⚠️ Auto-verify: KIND 30889 not found or wallets mismatch');
+          // Fetch contact details
+          let contactInfo = '';
+          try {
+            const domainKey = getDomainKey();
+            const res = await fetch('/api/domain-config', {
+              headers: domainKey ? { 'X-Domain-Key': domainKey } : {}
+            });
+            const json = await res.json();
+            contactInfo = json.data?.contact_details || '';
+          } catch { /* ignore */ }
+          setRelayVerifyStatus('not_found');
+          setRelayVerifyContact(contactInfo);
+        }
+      } catch (error) {
+        console.error('❌ Auto-verify error:', error);
+        setRelayVerifyStatus('not_found');
+      }
+    };
+
+    autoVerifyKind30889();
+  }, [walletRegistered, nostrHexId, params?.relays, effectiveWallets, relayVerifyStatus]);
+
   // Load plan data from database if not in location.state
   useEffect(() => {
     const loadPlanDataFromDB = async () => {
