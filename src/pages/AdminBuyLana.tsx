@@ -258,6 +258,30 @@ const AdminBuyLana = () => {
       ? (totalNeededSatoshis + estimatedFeeSatoshis - availableSatoshis) / 100000000
       : 0;
 
+    // Slot capacity: how many standard payments (per currency) the balance can cover
+    // Uses a reference payment of 100 units per currency
+    const slotCapacity: { currency: string; lanaPerSlot: number; slots: number }[] = [];
+    for (const [currency, rate] of Object.entries(nostrParams.exchangeRates)) {
+      if (!rate || rate === 0) continue;
+      const lanaPerSlot = Math.floor(100 / rate); // 100 units of currency → LANA
+      if (lanaPerSlot <= 0) continue;
+      const lanaPerSlotSatoshis = lanaPerSlot * 100000000;
+      // Iteratively calculate how many slots fit with fees
+      let slots = 0;
+      let cumSatoshis = 0;
+      while (true) {
+        const nextCum = cumSatoshis + lanaPerSlotSatoshis;
+        const estFeeInputs = Math.min(utxoCount, 500);
+        const estFeeOutputs = slots + 1 + 1; // +1 for next slot, +1 for change
+        const estFee = Math.floor((estFeeInputs * 180 + estFeeOutputs * 34 + 10) * 100 * 1.5);
+        if (nextCum + estFee > availableSatoshis) break;
+        slots++;
+        cumSatoshis = nextCum;
+        if (slots > 999) break; // safety limit
+      }
+      slotCapacity.push({ currency, lanaPerSlot, slots });
+    }
+
     return {
       affordableIds,
       affordableCount,
@@ -267,6 +291,7 @@ const AdminBuyLana = () => {
       deficit,
       allAffordable: insufficientCount === 0 && waitingRecords.length > 0,
       noneAffordable: affordableCount === 0 && waitingRecords.length > 0,
+      slotCapacity,
     };
   }, [walletBalance, waitingRecords, nostrParams?.exchangeRates]);
 
@@ -570,13 +595,15 @@ const AdminBuyLana = () => {
         {/* Wallet Balance Card */}
         {walletBalance && (
           <Card className={`p-4 border ${
-            !balanceBreakdown || walletBalance.balance_lana === 0
+            walletBalance.balance_lana === 0
               ? 'border-destructive/30 bg-destructive/5'
-              : balanceBreakdown.allAffordable
-                ? 'border-green-500/30 bg-green-500/5'
-                : balanceBreakdown.noneAffordable
-                  ? 'border-destructive/30 bg-destructive/5'
-                  : 'border-yellow-500/30 bg-yellow-500/5'
+              : !balanceBreakdown || waitingRecords.length === 0
+                ? 'border-primary/30 bg-primary/5'
+                : balanceBreakdown.allAffordable
+                  ? 'border-green-500/30 bg-green-500/5'
+                  : balanceBreakdown.noneAffordable
+                    ? 'border-destructive/30 bg-destructive/5'
+                    : 'border-yellow-500/30 bg-yellow-500/5'
           }`}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -644,6 +671,24 @@ const AdminBuyLana = () => {
                 </div>
               )}
             </div>
+
+            {/* Slot capacity — always visible */}
+            {balanceBreakdown && balanceBreakdown.slotCapacity.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <div className="text-xs text-muted-foreground mb-1.5 font-medium">
+                  Available slots (per 100 {nostrParams?.split ? `· Split ${nostrParams.split}` : ''}):
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {balanceBreakdown.slotCapacity.map(({ currency, lanaPerSlot, slots }) => (
+                    <div key={currency} className="flex items-center gap-1.5 text-sm bg-muted/50 rounded-md px-2.5 py-1.5">
+                      <span className="font-semibold text-foreground">{slots}</span>
+                      <span className="text-muted-foreground">× 100 {currency}</span>
+                      <span className="text-xs text-muted-foreground/70">({lanaPerSlot.toLocaleString()} LANA)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Wallet address */}
             <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
