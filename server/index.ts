@@ -15,6 +15,7 @@ import { domainKeyMiddleware } from './middleware/domainKey.js';
 import domainConfigRouter from './routes/domainConfig.js';
 import adminAuthRouter from './routes/adminAuth.js';
 import contentManagementRouter from './routes/contentManagement.js';
+import registerVirginWalletsRouter from './routes/registerVirginWallets.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,7 @@ app.use('/api/send-lana-multi-output', sendLanaMultiOutputRouter);
 app.use('/api/publish-lana8wonder-plan', publishPlanRouter);
 app.use('/api/process-pending-payments', processPendingPaymentsRouter);
 app.use('/api/check-wallet-registration', checkWalletRegistrationRouter);
+app.use('/api/register-virgin-wallets', registerVirginWalletsRouter);
 app.use('/api/domain-config', domainConfigRouter);
 app.use('/api/check-admin', adminAuthRouter);
 app.use('/api/content', contentManagementRouter);

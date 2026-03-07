@@ -609,23 +609,18 @@ const PreviewLana8Wonder = () => {
       }));
 
       console.log('=== WALLET REGISTRATION START ===');
-      console.log('URL:', 'https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets');
       console.log('Nostr Hex ID:', nostrHexId);
       console.log('Wallets:', JSON.stringify(walletsData, null, 2));
 
-      // Call external API
-      const response = await fetch('https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets', {
+      // Call server-side proxy (API key is stored securely on server)
+      const response = await fetch('/api/register-virgin-wallets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          method: 'register_virgin_wallets_for_existing_user',
-          api_key: 'ak_11nxrkztcptoefn7gypg4cj',
-          data: {
-            nostr_id_hex: nostrHexId,
-            wallets: walletsData
-          }
+          nostr_id_hex: nostrHexId,
+          wallets: walletsData
         })
       });
 

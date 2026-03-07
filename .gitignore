@@ -13,7 +13,8 @@ dist-ssr
 *.local
 data/
 
-# Production secrets (NEVER commit!)
+# Environment files (NEVER commit secrets!)
+.env
 .env.production
 .env.prod
 
