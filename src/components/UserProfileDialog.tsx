@@ -213,7 +213,11 @@ export function UserProfileDialog({ open, onOpenChange, walletAddress }: UserPro
                 <AvatarFallback className="text-lg">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-lg truncate">{displayName}</h3>
+                <h3 className="font-bold text-lg truncate">{profile.display_name || profile.name || 'Unknown User'}</h3>
+                {profile.display_name && profile.name && profile.name !== profile.display_name && (
+                  <p className="text-sm text-muted-foreground">@{profile.name}</p>
+                )}
+                {!profile.display_name && !profile.name && null}
                 {profile.about && (
                   <p className="text-sm text-muted-foreground line-clamp-2">{profile.about}</p>
                 )}
