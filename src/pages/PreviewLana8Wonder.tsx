@@ -183,6 +183,7 @@ const PreviewLana8Wonder = () => {
   const { params } = useNostrLanaParams();
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [walletBalances, setWalletBalances] = useState<{ [address: string]: number }>({});
   const [loadingBalances, setLoadingBalances] = useState(true);
@@ -901,28 +902,28 @@ const PreviewLana8Wonder = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate("/assign-lana8wonder")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+        <div className="mb-3 md:mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/assign-lana8wonder")}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
             Back
           </Button>
         </div>
 
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Review Lana 8 Wonder Plan</h2>
-          <p className="text-muted-foreground">
+        <div className="mb-4 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold mb-1 md:mb-2">Review Lana 8 Wonder Plan</h2>
+          <p className="hidden md:block text-muted-foreground">
             Review the plan details before publishing to Nostr
           </p>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Annuity Wallet Accounts</CardTitle>
-            <CardDescription>
+        <Card className="mb-4 md:mb-6">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-base md:text-lg">Annuity Wallet Accounts</CardTitle>
+            <CardDescription className="hidden md:block">
               8 empty wallets that will receive the annuity payments
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             {loadingBalances ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
@@ -930,14 +931,31 @@ const PreviewLana8Wonder = () => {
               </div>
             ) : (
               <>
-                <div className="space-y-4 mb-6">
+                {/* Mobile: Compact wallet list */}
+                <div className="md:hidden mb-4">
+                  <div className="space-y-1.5">
+                    {effectiveWallets?.map((wallet: any, index: number) => {
+                      const walletAddress = typeof wallet === 'string' ? wallet : wallet.address;
+                      return (
+                        <div key={index} className="flex items-center gap-2 py-1.5 px-2 border rounded text-sm">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                          <span className="font-medium">W{index + 1}</span>
+                          <span className="font-mono text-xs text-muted-foreground truncate">
+                            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Desktop: Full wallet cards */}
+                <div className="hidden md:block space-y-4 mb-6">
                   {effectiveWallets?.map((wallet: any, index: number) => {
-                    // Handle both { address: "..." } and plain string formats
                     const walletAddress = typeof wallet === 'string' ? wallet : wallet.address;
                     const currentBalance = walletBalances[walletAddress] || 0;
-                    // After transaction should just show the amountPerWallet, not added to current
                     const afterBalance = effectiveAmountPerWallet || 0;
-                    
+
                     return (
                       <div key={index} className="p-3 border rounded-lg">
                         <div className="flex items-center justify-between mb-2">
@@ -965,18 +983,17 @@ const PreviewLana8Wonder = () => {
                   })}
                 </div>
                 
-                {(() => { console.log('🔍 RENDER DEBUG: walletRegistered =', walletRegistered, ', nostrHexId =', nostrHexId, ', effectiveWallets =', effectiveWallets?.length); return null; })()}
                 {walletRegistered ? (
                   <>
-                    <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        <p className="font-semibold text-green-800 dark:text-green-200">
-                          Wallets have been successfully registered!
+                    <div className="mt-4 md:mt-6 p-2 md:p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <p className="font-semibold text-sm md:text-base text-green-800 dark:text-green-200">
+                          Wallets registered!
                         </p>
                       </div>
                       {registrationResult && (
-                        <div className="text-center text-sm text-green-700 dark:text-green-300">
+                        <div className="hidden md:block text-center text-sm text-green-700 dark:text-green-300 mt-2">
                           <p>
                             {registrationResult.data?.wallets_registered || effectiveWallets?.length} wallets registered as Lana8Wonder type
                           </p>
@@ -986,14 +1003,14 @@ const PreviewLana8Wonder = () => {
 
                     {/* === RELAY VERIFICATION STATUS BANNER === */}
                     {relayVerifyStatus === 'verifying' && (
-                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-center justify-center gap-3">
-                          <Radio className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                      <div className="mt-2 md:mt-4 p-2 md:p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center justify-center gap-2 md:gap-3">
+                          <Radio className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 animate-pulse shrink-0" />
                           <div>
-                            <p className="font-semibold text-blue-800 dark:text-blue-200">
+                            <p className="font-semibold text-sm md:text-base text-blue-800 dark:text-blue-200">
                               {t('createLana8Wonder.verifyingOnRelays')}
                             </p>
-                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                            <p className="hidden md:block text-sm text-blue-600 dark:text-blue-400 mt-1">
                               {t('createLana8Wonder.verifyingWait') || 'Checking Nostr relays for wallet records (KIND 30889)...'}
                             </p>
                           </div>
@@ -1002,14 +1019,14 @@ const PreviewLana8Wonder = () => {
                     )}
 
                     {relayVerifyStatus === 'verified' && (
-                      <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-950 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg">
-                        <div className="flex items-center justify-center gap-3">
-                          <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                      <div className="mt-2 md:mt-4 p-2 md:p-4 bg-emerald-50 dark:bg-emerald-950 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg">
+                        <div className="flex items-center justify-center gap-2 md:gap-3">
+                          <ShieldCheck className="h-4 w-4 md:h-6 md:w-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <div>
-                            <p className="font-bold text-emerald-800 dark:text-emerald-200 text-lg">
+                            <p className="font-bold text-emerald-800 dark:text-emerald-200 text-sm md:text-lg">
                               {t('createLana8Wonder.walletsVerified')}
                             </p>
-                            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+                            <p className="hidden md:block text-sm text-emerald-600 dark:text-emerald-400 mt-1">
                               {t('createLana8Wonder.walletsVerifiedDetail') || 'All 8 wallet addresses have been confirmed on Nostr relays (KIND 30889).'}
                             </p>
                           </div>
@@ -1018,15 +1035,15 @@ const PreviewLana8Wonder = () => {
                     )}
 
                     {relayVerifyStatus === 'not_found' && (
-                      <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
-                        <div className="flex items-center justify-center gap-3">
-                          <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                      <div className="mt-2 md:mt-4 p-2 md:p-4 bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+                        <div className="flex items-center justify-center gap-2 md:gap-3">
+                          <AlertTriangle className="h-4 w-4 md:h-6 md:w-6 text-amber-600 dark:text-amber-400 shrink-0" />
                           <div>
-                            <p className="font-bold text-amber-800 dark:text-amber-200">
+                            <p className="font-bold text-sm md:text-base text-amber-800 dark:text-amber-200">
                               {t('createLana8Wonder.walletsNotFound')}
                             </p>
                             {relayVerifyContact && (
-                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                              <p className="hidden md:block text-sm text-amber-700 dark:text-amber-300 mt-1">
                                 {relayVerifyContact}
                               </p>
                             )}
@@ -1036,7 +1053,7 @@ const PreviewLana8Wonder = () => {
                     )}
                   </>
                 ) : (
-                  <div className="flex flex-col items-center gap-3 mt-6">
+                  <div className="flex flex-col items-center gap-2 mt-4 md:gap-3 md:mt-6">
                     <Button
                       onClick={handleRegisterWallets}
                       disabled={isRegistering}
@@ -1058,27 +1075,79 @@ const PreviewLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Source Wallet</CardTitle>
+        <Card className="mb-4 md:mb-6">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-base md:text-lg">Source Wallet</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+            <div className="space-y-3 md:space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Wallet Address</p>
-                <p className="font-mono text-sm break-all">{effectiveSourceWallet}</p>
+                <p className="font-mono text-sm md:hidden">{effectiveSourceWallet.slice(0, 8)}...{effectiveSourceWallet.slice(-6)}</p>
+                <p className="font-mono text-sm hidden md:block break-all">{effectiveSourceWallet}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <p className="font-semibold">
-                  {(walletBalances[effectiveSourceWallet] !== undefined 
-                    ? walletBalances[effectiveSourceWallet] 
-                    : effectiveSourceBalance
-                  )?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA
+                  <span className="md:hidden">
+                    {(walletBalances[effectiveSourceWallet] !== undefined
+                      ? walletBalances[effectiveSourceWallet]
+                      : effectiveSourceBalance
+                    )?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || "0.00"} LANA
+                  </span>
+                  <span className="hidden md:inline">
+                    {(walletBalances[effectiveSourceWallet] !== undefined
+                      ? walletBalances[effectiveSourceWallet]
+                      : effectiveSourceBalance
+                    )?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 }) || "0.00000000"} LANA
+                  </span>
                 </p>
               </div>
-              
-              <div className="pt-4 border-t">
+
+              {/* Mobile: Compact summary + expandable breakdown */}
+              <div className="md:hidden pt-3 border-t">
+                <div className="flex justify-between items-center font-semibold text-sm">
+                  <span>Total to Transfer:</span>
+                  <span className="font-mono">{effectiveTotalTransferred?.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</span>
+                </div>
+                <button
+                  onClick={() => setShowBreakdown(!showBreakdown)}
+                  className="text-xs text-primary mt-1.5 flex items-center gap-1"
+                >
+                  {showBreakdown ? 'Hide' : 'Show'} details
+                  {showBreakdown ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+                {showBreakdown && (
+                  <div className="space-y-1.5 text-xs mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Required Deposit:</span>
+                      <span className="font-mono">{effectiveMinRequiredLana?.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">PHI Donation:</span>
+                      <span className="font-mono">{effectivePhiDonation?.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Per Wallet (×8):</span>
+                      <span className="font-mono">{effectiveAmountPerWallet?.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</span>
+                    </div>
+                    {!txHash && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Remaining:</span>
+                        <span className="font-mono">
+                          {((walletBalances[effectiveSourceWallet] !== undefined
+                            ? walletBalances[effectiveSourceWallet]
+                            : effectiveSourceBalance
+                          ) - effectiveTotalTransferred)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop: Full breakdown always visible */}
+              <div className="hidden md:block pt-4 border-t">
                 <p className="text-sm font-semibold mb-3">Transaction Breakdown</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -1111,8 +1180,8 @@ const PreviewLana8Wonder = () => {
                     <div className="flex justify-between text-muted-foreground">
                       <span>Remaining in Wallet:</span>
                       <span className="font-mono">
-                        {((walletBalances[effectiveSourceWallet] !== undefined 
-                          ? walletBalances[effectiveSourceWallet] 
+                        {((walletBalances[effectiveSourceWallet] !== undefined
+                          ? walletBalances[effectiveSourceWallet]
                           : effectiveSourceBalance
                         ) - effectiveTotalTransferred)?.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })} LANA
                       </span>
@@ -1122,12 +1191,12 @@ const PreviewLana8Wonder = () => {
               </div>
 
               {/* Transfer Button or Status */}
-              <div className="mt-6 pt-4 border-t">
+              <div className="mt-3 pt-3 md:mt-6 md:pt-4 border-t">
                 {txHash ? (
-                  <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                      <p className="font-semibold text-green-800 dark:text-green-200">
+                  <div className="p-2 md:p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1 md:mb-2">
+                      <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400 shrink-0" />
+                      <p className="font-semibold text-sm md:text-base text-green-800 dark:text-green-200">
                         LANAs have been transferred
                       </p>
                     </div>
@@ -1183,8 +1252,8 @@ const PreviewLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        {/* Trading Plan Details - All 8 Accounts */}
-        <Card className="mb-6">
+        {/* Trading Plan Details - All 8 Accounts (hidden on mobile) */}
+        <Card className="mb-6 hidden md:block">
           <CardHeader>
             <CardTitle>Trading Plan Breakdown</CardTitle>
             <CardDescription>
