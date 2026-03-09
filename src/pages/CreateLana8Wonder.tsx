@@ -188,7 +188,7 @@ const CreateLana8Wonder = () => {
   const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
-    <div className="min-h-screen bg-background p-2 sm:p-4">
+    <div className="min-h-screen bg-background p-2 sm:p-4 pb-24">
       <div className="max-w-4xl mx-auto">
         {greeting && (
           <div className="mb-4 sm:mb-6">

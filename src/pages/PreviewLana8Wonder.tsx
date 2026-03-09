@@ -900,7 +900,7 @@ const PreviewLana8Wonder = () => {
   const currencySymbol = getCurrencySymbol(effectivePlanCurrency as 'EUR' | 'USD' | 'GBP');
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4 pb-24">
       <div className="max-w-4xl mx-auto">
         <div className="mb-3 md:mb-6">
           <Button variant="ghost" size="sm" onClick={() => navigate("/assign-lana8wonder")}>
