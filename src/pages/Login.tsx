@@ -229,23 +229,23 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
         <LanguageSelector />
       </div>
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2 px-4 sm:px-6">
-          <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-            <KeyRound className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+        <CardHeader className="text-center space-y-1 sm:space-y-2 px-4 sm:px-6 py-3 sm:py-6">
+          <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+            <KeyRound className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
           </div>
-          <CardTitle className="text-xl sm:text-2xl">{t('login.title')}</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
+          <CardTitle className="text-lg sm:text-2xl">{t('login.title')}</CardTitle>
+          <CardDescription className="text-xs sm:text-sm hidden sm:block">
             {t('login.wifPlaceholder')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
-          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="wif" className="text-sm">{t('login.wifLabel')}</Label>
+        <CardContent className="space-y-3 sm:space-y-6 px-4 sm:px-6">
+          <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="wif" className="text-xs sm:text-sm">{t('login.wifLabel')}</Label>
               <div className="relative">
                 <Input
                   id="wif"
@@ -289,17 +289,17 @@ const Login = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full text-sm"
+                  className="w-full text-xs sm:text-sm h-9 sm:h-10"
                   onClick={startScanning}
                 >
-                  <QrCode className="mr-2 h-4 w-4" />
+                  <QrCode className="mr-1.5 sm:mr-2 h-4 w-4" />
                   {t('login.scanQR')}
                 </Button>
 
-                <Button type="submit" className="w-full text-sm" disabled={!wif.trim() || isProcessing || !wifValidation?.valid}>
+                <Button type="submit" className="w-full text-xs sm:text-sm h-9 sm:h-10" disabled={!wif.trim() || isProcessing || !wifValidation?.valid}>
                   {isProcessing ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1.5 sm:mr-2 h-4 w-4 animate-spin" />
                       {t('login.processing')}
                     </>
                   ) : (
@@ -308,7 +308,7 @@ const Login = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 <div
                   id="qr-reader-login"
                   ref={scannerDivRef}
@@ -317,7 +317,7 @@ const Login = () => {
                 <Button
                   type="button"
                   variant="destructive"
-                  className="w-full text-sm"
+                  className="w-full text-xs sm:text-sm h-9 sm:h-10"
                   onClick={stopScanning}
                 >
                   {t('login.stopScanning')}
@@ -326,8 +326,8 @@ const Login = () => {
             )}
           </form>
 
-          <div className="pt-3 sm:pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
+          <div className="pt-2 sm:pt-4 border-t border-border">
+            <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
               Your WIF key is secure and stored locally in your browser
             </p>
           </div>

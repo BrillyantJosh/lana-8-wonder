@@ -174,8 +174,8 @@ const Index = () => {
       <header className="relative overflow-hidden bg-gradient-hero">
         <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
           <div className="flex flex-col items-center text-center space-y-4 sm:space-y-8">
-            {/* LANA Coin Image - Full width */}
-            <div className="w-full max-w-6xl px-2">
+            {/* LANA Coin Image - Smaller on mobile */}
+            <div className="w-full max-w-xs sm:max-w-2xl md:max-w-4xl lg:max-w-6xl px-2">
               <img
                 src={lanaCoin}
                 alt="LANA Crypto Coin"
@@ -187,18 +187,25 @@ const Index = () => {
             <div className="space-y-3 sm:space-y-6 animate-in fade-in slide-in-from-bottom duration-700 px-2">
               <div className="flex items-center justify-center gap-2 sm:gap-3">
                 <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-primary animate-pulse flex-shrink-0" />
-                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                   {t('index.title')}
                 </h1>
                 <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-accent animate-pulse flex-shrink-0" />
               </div>
 
-              <p className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-foreground max-w-4xl mx-auto px-2">
+              <p className="text-sm sm:text-xl md:text-2xl lg:text-3xl font-semibold text-foreground max-w-4xl mx-auto px-2">
                 {t('index.tagline', { currency: currencySymbol })}
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-4 sm:pt-8 max-w-4xl mx-auto">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
+              {/* Prominent Log In button for mobile */}
+              <div className="sm:hidden flex justify-center pt-2">
+                <Button size="lg" className="text-base px-10 py-5 shadow-lg" asChild>
+                  <Link to="/login">{t('index.logIn')}</Link>
+                </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 pt-2 sm:pt-8 max-w-4xl mx-auto">
+                <div className="w-16 h-16 sm:w-32 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
                   <img
                     src={einsteinImg}
                     alt="Albert Einstein"
@@ -206,10 +213,10 @@ const Index = () => {
                   />
                 </div>
                 <blockquote className="text-left px-2">
-                  <p className="text-sm sm:text-base md:text-lg lg:text-xl font-medium text-foreground italic">
+                  <p className="text-xs sm:text-base md:text-lg lg:text-xl font-medium text-foreground italic">
                     "{t('index.quote')}"
                   </p>
-                  <cite className="block mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground not-italic">— {t('index.quoteAuthor')}</cite>
+                  <cite className="block mt-1 sm:mt-3 text-[10px] sm:text-sm text-muted-foreground not-italic">— {t('index.quoteAuthor')}</cite>
                 </blockquote>
               </div>
             </div>
