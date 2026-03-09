@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle, Wallet, RefreshCw } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import { UserProfileDialog } from '@/components/UserProfileDialog';
 import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
 interface BuyLanaRecord {
@@ -68,6 +69,7 @@ const AdminBuyLana = () => {
     wallet_address: string;
   } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [profileWallet, setProfileWallet] = useState<string | null>(null);
 
   // Check if user is admin
   useEffect(() => {
@@ -483,7 +485,12 @@ const AdminBuyLana = () => {
         <div>
           <div className="text-sm text-muted-foreground">Wallet ID</div>
           <div className="flex items-center gap-2">
-            <div className="font-mono text-xs break-all flex-1">{record.lana_wallet_id}</div>
+            <button
+              className="font-mono text-xs break-all flex-1 text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+              onClick={() => setProfileWallet(record.lana_wallet_id)}
+            >
+              {record.lana_wallet_id}
+            </button>
             <Button
               variant="ghost"
               size="icon"
@@ -498,7 +505,12 @@ const AdminBuyLana = () => {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <div className="text-sm text-muted-foreground">Payee</div>
-            <div className="font-medium">{record.payee}</div>
+            <button
+              className="font-medium text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+              onClick={() => setProfileWallet(record.lana_wallet_id)}
+            >
+              {record.payee}
+            </button>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Phone</div>
@@ -773,13 +785,19 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-1">
-                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                                {record.lana_wallet_id.slice(0, 12)}...
+                              </button>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyWalletId(record.lana_wallet_id)}>
                                 <Copy className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell>{record.payee}</TableCell>
+                          <TableCell>
+                            <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                              {record.payee}
+                            </button>
+                          </TableCell>
                           <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
@@ -927,13 +945,19 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-1">
-                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                                {record.lana_wallet_id.slice(0, 12)}...
+                              </button>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyWalletId(record.lana_wallet_id)}>
                                 <Copy className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell>{record.payee}</TableCell>
+                          <TableCell>
+                            <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                              {record.payee}
+                            </button>
+                          </TableCell>
                           <TableCell>
                             {nostrParams?.exchangeRates && record.currency
                               ? <span className="text-primary font-medium">{calculateLanaAmount(record.currency, record.payment_amount, nostrParams.exchangeRates).toLocaleString()}</span>
@@ -1067,13 +1091,19 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-1">
-                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                                {record.lana_wallet_id.slice(0, 12)}...
+                              </button>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyWalletId(record.lana_wallet_id)}>
                                 <Copy className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell>{record.payee}</TableCell>
+                          <TableCell>
+                            <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                              {record.payee}
+                            </button>
+                          </TableCell>
                           <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
@@ -1153,13 +1183,19 @@ const AdminBuyLana = () => {
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-1">
-                              <span>{record.lana_wallet_id.slice(0, 12)}...</span>
+                              <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                                {record.lana_wallet_id.slice(0, 12)}...
+                              </button>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyWalletId(record.lana_wallet_id)}>
                                 <Copy className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell>{record.payee}</TableCell>
+                          <TableCell>
+                            <button className="hover:text-primary hover:underline cursor-pointer transition-colors" onClick={() => setProfileWallet(record.lana_wallet_id)}>
+                              {record.payee}
+                            </button>
+                          </TableCell>
                           <TableCell>{record.lana_amount && record.lana_amount > 0 ? record.lana_amount.toLocaleString() : <span className="text-muted-foreground italic text-xs">TBD</span>}</TableCell>
                           <TableCell className="font-semibold">{record.payment_amount || '-'}</TableCell>
                           <TableCell>{record.currency || '-'}</TableCell>
@@ -1194,6 +1230,13 @@ const AdminBuyLana = () => {
           </Tabs>
         </Card>
       </div>
+
+      {/* User Profile Dialog */}
+      <UserProfileDialog
+        open={!!profileWallet}
+        onOpenChange={(open) => !open && setProfileWallet(null)}
+        walletAddress={profileWallet}
+      />
 
       {/* First Confirmation Dialog */}
       <AlertDialog open={deleteConfirmStep?.step === 1} onOpenChange={(open) => !open && handleCancelDelete()}>
