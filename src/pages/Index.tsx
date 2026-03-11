@@ -16,6 +16,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getDomainKey } from "@/integrations/api/client";
 
+// Convert any YouTube URL to embed format
+const toEmbedUrl = (url: string): string => {
+  if (!url) return '';
+  // Already embed format
+  if (url.includes('/embed/')) return url;
+  // youtube.com/watch?v=ID or youtube.com/watch?v=ID&...
+  const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([^&\s]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  // youtu.be/ID
+  const shortMatch = url.match(/youtu\.be\/([^?\s]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  // youtube.com/v/ID
+  const vMatch = url.match(/youtube\.com\/v\/([^?\s]+)/);
+  if (vMatch) return `https://www.youtube.com/embed/${vMatch[1]}`;
+  return url;
+};
+
 // Video URLs - prepared for multi-language support
 const getVideoUrl = (language: string): string => {
   const videoUrls: Record<string, string> = {
@@ -342,7 +359,7 @@ const Index = () => {
                     <div className="w-full md:basis-1/4 md:flex-none md:max-w-[320px]">
                       <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
                         <iframe
-                          src={dynamicWhatIsLana.video_url}
+                          src={toEmbedUrl(dynamicWhatIsLana.video_url)}
                           title={dynamicWhatIsLana.title}
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen

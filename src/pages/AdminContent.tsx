@@ -12,6 +12,19 @@ import { ArrowLeft, Loader2, Save, Plus, Trash2, ChevronUp, ChevronDown, FileTex
 import { toast } from 'sonner';
 import { AdminMenu } from '@/components/AdminMenu';
 
+// Convert any YouTube URL to embed format
+const toEmbedUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.includes('/embed/')) return url;
+  const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([^&\s]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = url.match(/youtu\.be\/([^?\s]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  const vMatch = url.match(/youtube\.com\/v\/([^?\s]+)/);
+  if (vMatch) return `https://www.youtube.com/embed/${vMatch[1]}`;
+  return url;
+};
+
 interface FaqItem {
   id: string;
   domain_key: string;
@@ -452,7 +465,7 @@ const AdminContent = () => {
               <Input
                 value={whatIsLana.video_url}
                 onChange={(e) => setWhatIsLana({ ...whatIsLana, video_url: e.target.value })}
-                placeholder="e.g. https://www.youtube.com/embed/VIDEO_ID"
+                placeholder="e.g. https://www.youtube.com/watch?v=VIDEO_ID"
               />
             </div>
 
@@ -460,7 +473,7 @@ const AdminContent = () => {
               <div className="rounded-lg overflow-hidden border border-border">
                 <div className="aspect-video max-w-sm">
                   <iframe
-                    src={whatIsLana.video_url}
+                    src={toEmbedUrl(whatIsLana.video_url)}
                     title="Preview"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
