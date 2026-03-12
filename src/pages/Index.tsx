@@ -33,16 +33,16 @@ const toEmbedUrl = (url: string): string => {
   return url;
 };
 
-// Video URLs - prepared for multi-language support
+// Video URLs per language (domain→language: si→sl, uk→en, at→de, hu→hu)
 const getVideoUrl = (language: string): string => {
   const videoUrls: Record<string, string> = {
     sl: "https://www.youtube.com/embed/cP-MNpeo6gw",
-    // When English version is available, add here:
     // en: "https://www.youtube.com/embed/ENGLISH_VIDEO_ID",
-    default: "https://www.youtube.com/embed/cP-MNpeo6gw"
+    // de: "https://www.youtube.com/embed/GERMAN_VIDEO_ID",
+    // hu: "https://www.youtube.com/embed/HUNGARIAN_VIDEO_ID",
   };
 
-  return videoUrls[language] || videoUrls.default;
+  return videoUrls[language] || "https://www.youtube.com/embed/DLbpzJ78YOY";
 };
 
 interface DynamicFaqItem {
