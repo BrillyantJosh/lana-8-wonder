@@ -44,7 +44,7 @@ const GlobalLanding = () => {
         src={lanaCoin}
         alt=""
         aria-hidden="true"
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] md:w-[800px] opacity-[0.08] pointer-events-none select-none z-[1]"
+        className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none select-none z-[1]"
       />
 
       <div className="relative z-10 flex flex-col min-h-screen">
