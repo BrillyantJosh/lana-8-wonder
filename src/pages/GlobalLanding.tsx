@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import lanaCoin from '@/assets/lana-coin.png';
 
 interface CountryOption {
   key: string;
@@ -37,6 +38,14 @@ const GlobalLanding = () => {
     <div className="min-h-screen bg-[hsl(var(--gradient-hero))] relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(270_60%_95%)] to-background pointer-events-none" />
+
+      {/* LANA coin background */}
+      <img
+        src={lanaCoin}
+        alt=""
+        aria-hidden="true"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] md:w-[700px] opacity-[0.04] pointer-events-none select-none"
+      />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Hero section */}
