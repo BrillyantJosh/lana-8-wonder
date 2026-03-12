@@ -236,6 +236,31 @@ const Index = () => {
                   <cite className="block mt-1 sm:mt-3 text-[10px] sm:text-sm text-muted-foreground not-italic">— {t('index.quoteAuthor')}</cite>
                 </blockquote>
               </div>
+
+              {/* What is Lana8Wonder — video + description, Einstein-style layout */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 pt-4 sm:pt-8 max-w-4xl mx-auto">
+                <div className="w-48 sm:w-64 md:w-80 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
+                  <div className="aspect-video">
+                    <iframe
+                      src={dynamicWhatIsLana?.video_url ? toEmbedUrl(dynamicWhatIsLana.video_url) : getVideoUrl(i18n.language)}
+                      title={dynamicWhatIsLana?.title || t('index.whatIsLana.title')}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+                </div>
+                <div className="text-left px-2 space-y-1 sm:space-y-2">
+                  <h2 className="text-sm sm:text-xl md:text-2xl font-bold text-primary">
+                    {dynamicWhatIsLana?.title || t('index.whatIsLana.title')}
+                  </h2>
+                  <p className="text-xs sm:text-base md:text-lg text-foreground">
+                    {dynamicWhatIsLana?.description
+                      ? <span dangerouslySetInnerHTML={{ __html: dynamicWhatIsLana.description }} />
+                      : t('index.whatIsLana.description')}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
