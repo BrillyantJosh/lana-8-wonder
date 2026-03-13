@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import lanaCoin from '@/assets/lana-coin.png';
@@ -18,6 +18,11 @@ const countries: CountryOption[] = [
   { key: 'hu', name: 'Magyarország', flagCode: 'hu', currency: 'EUR', hostname: 'hu.lana8wonder.com' },
 ];
 
+interface SlotData {
+  slots: number;
+  currency: string;
+}
+
 function detectCountry(): string | null {
   const lang = (navigator.language || '').toLowerCase();
   if (lang.startsWith('sl')) return 'si';
@@ -29,6 +34,23 @@ function detectCountry(): string | null {
 
 const GlobalLanding = () => {
   const detected = useMemo(() => detectCountry(), []);
+  const [slotsMap, setSlotsMap] = useState<Record<string, SlotData> | null>(null);
+
+  // Fetch slot availability for all domains
+  useEffect(() => {
+    const fetchSlots = async () => {
+      try {
+        const res = await fetch('/api/global-slots');
+        const json = await res.json();
+        if (json.data) {
+          setSlotsMap(json.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch slot availability:', err);
+      }
+    };
+    fetchSlots();
+  }, []);
 
   const handleSelect = (hostname: string) => {
     window.location.href = `https://${hostname}`;
@@ -70,7 +92,11 @@ const GlobalLanding = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {countries.map((country) => {
-              const isDetected = detected === country.key;
+              const slotInfo = slotsMap?.[country.key];
+              const hasSlots = slotInfo ? slotInfo.slots > 1 : null; // null = loading
+              const isRecommended = hasSlots === true;
+              const isSoldOut = hasSlots === false;
+
               return (
                 <Card
                   key={country.key}
@@ -78,15 +104,22 @@ const GlobalLanding = () => {
                   className={`
                     cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:shadow-[var(--shadow-mystical)]
                     group relative overflow-hidden
-                    ${isDetected
+                    ${isRecommended
                       ? 'ring-2 ring-primary shadow-[var(--shadow-mystical)]'
-                      : 'hover:ring-1 hover:ring-primary/40'
+                      : isSoldOut
+                        ? 'ring-1 ring-orange-400/50 opacity-80'
+                        : 'hover:ring-1 hover:ring-primary/40'
                     }
                   `}
                 >
-                  {isDetected && (
+                  {isRecommended && (
                     <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-bl-lg">
                       Recommended
+                    </div>
+                  )}
+                  {isSoldOut && (
+                    <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-bl-lg">
+                      Sold Out — Waiting list
                     </div>
                   )}
                   <CardContent className="flex items-center gap-4 p-5">

@@ -16,6 +16,7 @@ import domainConfigRouter from './routes/domainConfig.js';
 import adminAuthRouter from './routes/adminAuth.js';
 import contentManagementRouter from './routes/contentManagement.js';
 import registerVirginWalletsRouter from './routes/registerVirginWallets.js';
+import globalSlotsRouter from './routes/globalSlots.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,7 @@ app.use('/api/register-virgin-wallets', registerVirginWalletsRouter);
 app.use('/api/domain-config', domainConfigRouter);
 app.use('/api/check-admin', adminAuthRouter);
 app.use('/api/content', contentManagementRouter);
+app.use('/api/global-slots', globalSlotsRouter);
 
 // API Routes - Generic DB CRUD
 app.use('/api/db', dbRouter);
