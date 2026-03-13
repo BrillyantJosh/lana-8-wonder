@@ -99,7 +99,20 @@ router.get('/', async (_req: Request, res: Response) => {
       }
     }
 
-    // 4. Calculate slots per domain
+    // 4. Get reserved LANA per domain (pending + paid + approved = not yet transferred)
+    const reservedRows = db.prepare(`
+      SELECT domain_key, COALESCE(SUM(lana_amount), 0) as reserved_lana
+      FROM buy_lana
+      WHERE status IN ('pending', 'paid', 'approved')
+      GROUP BY domain_key
+    `).all() as Array<{ domain_key: string; reserved_lana: number }>;
+
+    const reservedMap: Record<string, number> = {};
+    for (const row of reservedRows) {
+      reservedMap[row.domain_key] = Math.round(row.reserved_lana * 100000000); // to satoshis
+    }
+
+    // 5. Calculate slots per domain (balance minus reserved)
     const result: Record<string, { slots: number; currency: string }> = {};
 
     for (const domain of domains) {
@@ -117,6 +130,10 @@ router.get('/', async (_req: Request, res: Response) => {
         continue;
       }
 
+      // Subtract already reserved LANA from available balance
+      const reservedSatoshis = reservedMap[domain.domain_key] || 0;
+      const availableSatoshis = Math.max(0, balance.satoshis - reservedSatoshis);
+
       // Same slot calculation as AdminBuyLana
       const lanaPerSlot = Math.floor(100 / rate);
       if (lanaPerSlot <= 0) {
@@ -133,7 +150,7 @@ router.get('/', async (_req: Request, res: Response) => {
         const estFeeInputs = Math.min(balance.utxos, 500);
         const estFeeOutputs = slots + 1 + 1;
         const estFee = Math.floor((estFeeInputs * 180 + estFeeOutputs * 34 + 10) * 100 * 1.5);
-        if (nextCum + estFee > balance.satoshis) break;
+        if (nextCum + estFee > availableSatoshis) break;
         slots++;
         cumSatoshis = nextCum;
         if (slots > 999) break;
