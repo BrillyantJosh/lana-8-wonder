@@ -46,7 +46,8 @@ function base58Encode(bytes: Uint8Array): string {
 }
 
 async function encodeWIF(privateKeyHex: string): Promise<string> {
-  const extendedKey = "b0" + privateKeyHex;
+  // Staking format: 0xB0 prefix + private key + 0x01 compression flag → WIF starts with 'T'
+  const extendedKey = "b0" + privateKeyHex + "01";
   const checksum = await sha256(await sha256(extendedKey));
   const wifHex = extendedKey + checksum.substring(0, 8);
   return base58Encode(new Uint8Array(hexToBytes(wifHex)));
@@ -55,7 +56,9 @@ async function encodeWIF(privateKeyHex: string): Promise<string> {
 async function generatePublicKey(privateKeyHex: string): Promise<string> {
   const keyPair = ec.keyFromPrivate(privateKeyHex);
   const pubKeyPoint = keyPair.getPublic();
-  return "04" + pubKeyPoint.getX().toString(16).padStart(64, '0') + pubKeyPoint.getY().toString(16).padStart(64, '0');
+  // Compressed public key: 02/03 prefix + x coordinate
+  const prefix = pubKeyPoint.getY().isEven() ? "02" : "03";
+  return prefix + pubKeyPoint.getX().toString(16).padStart(64, '0');
 }
 
 async function generateLanaAddress(publicKeyHex: string): Promise<string> {
