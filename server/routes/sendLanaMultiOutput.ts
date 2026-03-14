@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { electrumCall, ElectrumServer } from '../lib/electrum.js';
 import {
-  normalizeWif,
-  base58CheckDecode,
-  uint8ArrayToHex,
+  decodeWif,
   privateKeyToPublicKey,
+  privateKeyToCompressedPublicKey,
   publicKeyToAddress,
   UTXOSelector,
   buildSignedTx
@@ -51,13 +50,13 @@ router.post('/', async (req: Request, res: Response) => {
       console.log(`  ${i + 1}. ${r.address}: ${(r.amount / 100000000).toFixed(8)} LANA`);
     });
 
-    // Validate private key matches sender address
+    // Validate private key matches sender address (supports both WIF formats)
     try {
-      const normalizedPrivateKey = normalizeWif(private_key);
-      console.log(`Validating private key: length=${normalizedPrivateKey.length}`);
-      const privateKeyBytes = base58CheckDecode(normalizedPrivateKey);
-      const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
-      const generatedPubKey = privateKeyToPublicKey(privateKeyHex);
+      const { privateKeyHex, isCompressed } = decodeWif(private_key);
+      console.log(`Validating private key: isCompressed=${isCompressed}`);
+      const generatedPubKey = isCompressed
+        ? privateKeyToCompressedPublicKey(privateKeyHex)
+        : privateKeyToPublicKey(privateKeyHex);
       const expectedAddress = publicKeyToAddress(generatedPubKey);
 
       if (expectedAddress !== sender_address) {

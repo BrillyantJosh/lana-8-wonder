@@ -75,52 +75,64 @@ function base58Decode(encoded: string): Uint8Array {
   return bytes;
 }
 
-// Convert WIF to private key hex
-async function wifToPrivateKey(wif: string): Promise<string> {
+// Convert WIF to private key hex — supports both Dominate (0xB0) and Staking (0x41) formats
+async function wifToPrivateKey(wif: string): Promise<{ privateKeyHex: string; isCompressed: boolean }> {
   try {
     // CRITICAL: Normalize WIF to remove invisible characters (spaces, zero-width chars)
     const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
-    
+
     const decoded = base58Decode(normalizedWif);
     const payload = decoded.slice(0, -4);
     const checksum = decoded.slice(-4);
-    
+
     const hash = await sha256d(payload);
     const expectedChecksum = hash.slice(0, 4);
-    
+
     for (let i = 0; i < 4; i++) {
       if (checksum[i] !== expectedChecksum[i]) {
         throw new Error('Invalid WIF checksum');
       }
     }
-    
-    if (payload[0] !== 0xb0) {
+
+    // Accept both: 0xB0 = Dominate (uncompressed), 0x41 = Staking (compressed, preferred)
+    if (payload[0] !== 0xb0 && payload[0] !== 0x41) {
       throw new Error('Invalid WIF prefix');
     }
-    
+
+    // Detect compression: 34 bytes with 0x01 flag = compressed (Staking)
+    const isCompressed = payload.length === 34 && payload[33] === 0x01;
+
     const privateKey = payload.slice(1, 33);
-    return bytesToHex(privateKey);
-    
+    return { privateKeyHex: bytesToHex(privateKey), isCompressed };
+
   } catch (error) {
     throw new Error(`Invalid WIF format: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-// Generate uncompressed public key from private key
+// Generate uncompressed public key from private key (04 + x + y)
 function generatePublicKey(privateKeyHex: string): string {
   const keyPair = ec.keyFromPrivate(privateKeyHex);
   const pubKeyPoint = keyPair.getPublic();
-  
-  return "04" + 
-         pubKeyPoint.getX().toString(16).padStart(64, '0') + 
+
+  return "04" +
+         pubKeyPoint.getX().toString(16).padStart(64, '0') +
          pubKeyPoint.getY().toString(16).padStart(64, '0');
 }
 
-// Generate compressed public key for Nostr (x-only)
+// Generate compressed public key (02/03 + x)
+function generateCompressedPublicKey(privateKeyHex: string): string {
+  const keyPair = ec.keyFromPrivate(privateKeyHex);
+  const pubKeyPoint = keyPair.getPublic();
+  const prefix = pubKeyPoint.getY().isEven() ? "02" : "03";
+  return prefix + pubKeyPoint.getX().toString(16).padStart(64, '0');
+}
+
+// Generate Nostr x-only public key (just x coordinate)
 function deriveNostrPublicKey(privateKeyHex: string): string {
   const keyPair = ec.keyFromPrivate(privateKeyHex);
   const pubKeyPoint = keyPair.getPublic();
-  
+
   return pubKeyPoint.getX().toString(16).padStart(64, '0');
 }
 
@@ -146,20 +158,33 @@ function hexToNpub(hexPubKey: string): string {
 // Main function to convert WIF to all derived identifiers
 export async function convertWifToIds(wif: string) {
   try {
-    const privateKeyHex = await wifToPrivateKey(wif);
-    const publicKeyHex = generatePublicKey(privateKeyHex);
+    const { privateKeyHex, isCompressed } = await wifToPrivateKey(wif);
+
+    // Generate BOTH public key types
+    const uncompressedPublicKeyHex = generatePublicKey(privateKeyHex);
+    const compressedPublicKeyHex = generateCompressedPublicKey(privateKeyHex);
+
+    // Generate BOTH wallet addresses
+    const walletIdCompressed = await generateLanaAddress(compressedPublicKeyHex);
+    const walletIdUncompressed = await generateLanaAddress(uncompressedPublicKeyHex);
+
+    // Primary address matches the WIF format
+    const walletId = isCompressed ? walletIdCompressed : walletIdUncompressed;
+
     const nostrHexId = deriveNostrPublicKey(privateKeyHex);
-    const walletId = await generateLanaAddress(publicKeyHex);
     const nostrNpubId = hexToNpub(nostrHexId);
-    
+
     return {
       walletId,
+      walletIdCompressed,
+      walletIdUncompressed,
+      isCompressed,
       nostrHexId,
       nostrNpubId,
       privateKeyHex,
       wif
     };
-    
+
   } catch (error) {
     throw new Error(`Conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -167,6 +192,9 @@ export async function convertWifToIds(wif: string) {
 
 export interface LanaSession {
   walletId: string;
+  walletIdCompressed?: string;
+  walletIdUncompressed?: string;
+  isCompressed?: boolean;
   nostrHexId: string;
   nostrNpubId: string;
   privateKeyHex: string;

@@ -74,53 +74,64 @@ function base58Decode(encoded: string): Uint8Array {
   return bytes;
 }
 
-// Convert WIF to raw private key hex
-async function wifToPrivateKey(wif: string): Promise<string> {
+// Convert WIF to raw private key hex — supports both Dominate (0xB0) and Staking (0x41) formats
+async function wifToPrivateKey(wif: string): Promise<{ privateKeyHex: string; isCompressed: boolean }> {
   try {
     // CRITICAL: Normalize WIF to remove invisible characters (spaces, zero-width chars)
     const normalizedWif = wif.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
-    
+
     // Decode Base58
     const decoded = base58Decode(normalizedWif);
-    
+
     // Extract components
     const payload = decoded.slice(0, -4);
     const checksum = decoded.slice(-4);
-    
+
     // Verify checksum
     const hash = await sha256d(payload);
     const expectedChecksum = hash.slice(0, 4);
-    
+
     for (let i = 0; i < 4; i++) {
       if (checksum[i] !== expectedChecksum[i]) {
         throw new Error('Invalid WIF checksum');
       }
     }
-    
-    // Verify prefix (0xb0 for LanaCoin)
-    if (payload[0] !== 0xb0) {
+
+    // Accept both: 0xB0 = Dominate (uncompressed), 0x41 = Staking (compressed, preferred)
+    if (payload[0] !== 0xb0 && payload[0] !== 0x41) {
       throw new Error('Invalid WIF prefix for LanaCoin');
     }
-    
+
+    // Detect compression: 34 bytes with 0x01 flag = compressed (Staking)
+    const isCompressed = payload.length === 34 && payload[33] === 0x01;
+
     // Extract private key (32 bytes after prefix)
     const privateKey = payload.slice(1, 33);
-    return bytesToHex(privateKey);
-    
+    return { privateKeyHex: bytesToHex(privateKey), isCompressed };
+
   } catch (error) {
     throw new Error(`Invalid WIF format: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-// Generate uncompressed public key from private key
-function generatePublicKey(privateKeyHex: string): string {
+// Generate uncompressed public key from private key (04 + x + y)
+function generateUncompressedPublicKey(privateKeyHex: string): string {
   const ec = new EC('secp256k1');
   const keyPair = ec.keyFromPrivate(privateKeyHex);
   const pubKeyPoint = keyPair.getPublic();
-  
-  // Return uncompressed format (04 + x + y coordinates)
-  return "04" + 
-         pubKeyPoint.getX().toString(16).padStart(64, '0') + 
+
+  return "04" +
+         pubKeyPoint.getX().toString(16).padStart(64, '0') +
          pubKeyPoint.getY().toString(16).padStart(64, '0');
+}
+
+// Generate compressed public key (02/03 + x)
+function generateCompressedPublicKey(privateKeyHex: string): string {
+  const ec = new EC('secp256k1');
+  const keyPair = ec.keyFromPrivate(privateKeyHex);
+  const pubKeyPoint = keyPair.getPublic();
+  const prefix = pubKeyPoint.getY().isEven() ? "02" : "03";
+  return prefix + pubKeyPoint.getX().toString(16).padStart(64, '0');
 }
 
 // Generate LanaCoin wallet address from public key
@@ -149,23 +160,32 @@ async function generateLanaAddress(publicKeyHex: string): Promise<string> {
 export async function validateWifAndGetAddress(wif: string): Promise<{
   valid: boolean;
   walletId?: string;
+  walletIdCompressed?: string;
+  walletIdUncompressed?: string;
+  isCompressed?: boolean;
   error?: string;
 }> {
   try {
-    // Step 1: Extract private key from WIF
-    const privateKeyHex = await wifToPrivateKey(wif);
-    
-    // Step 2: Generate public key
-    const publicKeyHex = generatePublicKey(privateKeyHex);
-    
-    // Step 3: Generate LanaCoin address
-    const walletId = await generateLanaAddress(publicKeyHex);
-    
+    const { privateKeyHex, isCompressed } = await wifToPrivateKey(wif);
+
+    // Generate BOTH address types
+    const compressedPubKey = generateCompressedPublicKey(privateKeyHex);
+    const uncompressedPubKey = generateUncompressedPublicKey(privateKeyHex);
+
+    const walletIdCompressed = await generateLanaAddress(compressedPubKey);
+    const walletIdUncompressed = await generateLanaAddress(uncompressedPubKey);
+
+    // Primary matches WIF format
+    const walletId = isCompressed ? walletIdCompressed : walletIdUncompressed;
+
     return {
       valid: true,
-      walletId
+      walletId,
+      walletIdCompressed,
+      walletIdUncompressed,
+      isCompressed
     };
-    
+
   } catch (error) {
     return {
       valid: false,
@@ -174,33 +194,36 @@ export async function validateWifAndGetAddress(wif: string): Promise<{
   }
 }
 
-// Check if WIF matches expected wallet address
+// Check if WIF matches expected wallet address (checks BOTH compressed and uncompressed)
 export async function verifyWifMatchesWallet(wif: string, expectedWalletId: string): Promise<{
   matches: boolean;
   derivedWalletId?: string;
   error?: string;
 }> {
   try {
-    // CRITICAL: Normalize both the WIF and expected wallet ID to remove invisible characters
     const normalizedExpectedWalletId = expectedWalletId.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
-    
+
     const result = await validateWifAndGetAddress(wif);
-    
+
     if (!result.valid || !result.walletId) {
       return {
         matches: false,
         error: result.error || 'Failed to derive wallet address'
       };
     }
-    
-    // CRITICAL: Compare normalized wallet IDs
-    const normalizedDerivedWalletId = result.walletId.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
-    
+
+    // Check against BOTH address types (user might have registered with either format)
+    const normalizedCompressed = result.walletIdCompressed?.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+    const normalizedUncompressed = result.walletIdUncompressed?.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+
+    const matchesCompressed = normalizedCompressed === normalizedExpectedWalletId;
+    const matchesUncompressed = normalizedUncompressed === normalizedExpectedWalletId;
+
     return {
-      matches: normalizedDerivedWalletId === normalizedExpectedWalletId,
+      matches: matchesCompressed || matchesUncompressed,
       derivedWalletId: result.walletId
     };
-    
+
   } catch (error) {
     return {
       matches: false,

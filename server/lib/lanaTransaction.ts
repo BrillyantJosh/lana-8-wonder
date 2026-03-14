@@ -211,6 +211,19 @@ export function normalizeWif(wif: string): string {
 
 // ─── Key operations ──────────────────────────────────────────────────────────
 
+// Detect WIF format: returns { privateKeyHex, isCompressed }
+export function decodeWif(wif: string): { privateKeyHex: string; isCompressed: boolean } {
+  const normalized = normalizeWif(wif);
+  const payload = base58CheckDecode(normalized);
+  // 0xB0 = Dominate (uncompressed), 0x41 = Staking (compressed, preferred)
+  if (payload[0] !== 0xb0 && payload[0] !== 0x41) {
+    throw new Error('Invalid LANA WIF prefix');
+  }
+  const isCompressed = payload.length === 34 && payload[33] === 0x01;
+  const privateKeyHex = uint8ArrayToHex(payload.slice(1, 33));
+  return { privateKeyHex, isCompressed };
+}
+
 export function privateKeyToPublicKey(privateKeyHex: string): Uint8Array {
   const privateKeyBigInt = BigInt('0x' + privateKeyHex);
   const publicKeyPoint = Point.G.multiply(privateKeyBigInt);
@@ -221,6 +234,17 @@ export function privateKeyToPublicKey(privateKeyHex: string): Uint8Array {
   result[0] = 0x04;
   result.set(hexToUint8Array(x), 1);
   result.set(hexToUint8Array(y), 33);
+  return result;
+}
+
+export function privateKeyToCompressedPublicKey(privateKeyHex: string): Uint8Array {
+  const privateKeyBigInt = BigInt('0x' + privateKeyHex);
+  const publicKeyPoint = Point.G.multiply(privateKeyBigInt);
+  const x = publicKeyPoint.x.toString(16).padStart(64, '0');
+  const prefix = publicKeyPoint.y % 2n === 0n ? 0x02 : 0x03;
+  const result = new Uint8Array(33);
+  result[0] = prefix;
+  result.set(hexToUint8Array(x), 1);
   return result;
 }
 
@@ -448,16 +472,15 @@ export async function buildSignedTx(
     console.log(`Total input value from ${selectedUTXOs.length} UTXOs: ${totalValue} satoshis (${(totalValue / 100000000).toFixed(8)} LANA)`);
     console.log(`Transaction breakdown: Amount=${totalAmount}, Fee=${fee}, Change=${totalValue - totalAmount - fee}`);
 
-    // Decode private key
-    const normalizedPrivateKey = normalizeWif(privateKeyWIF);
-    console.log(`Private key normalized: length=${normalizedPrivateKey.length}`);
-    const privateKeyBytes = base58CheckDecode(normalizedPrivateKey);
-    const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
-    console.log('Private key decoded successfully');
+    // Decode private key (supports both Dominate and Staking WIF)
+    const { privateKeyHex, isCompressed } = decodeWif(privateKeyWIF);
+    console.log(`Private key decoded: isCompressed=${isCompressed}`);
 
-    // Generate public key
-    const publicKey = privateKeyToPublicKey(privateKeyHex);
-    console.log('Public key generated successfully');
+    // Generate public key matching WIF format
+    const publicKey = isCompressed
+      ? privateKeyToCompressedPublicKey(privateKeyHex)
+      : privateKeyToPublicKey(privateKeyHex);
+    console.log(`Public key generated: ${isCompressed ? 'compressed (33 bytes)' : 'uncompressed (65 bytes)'}`);
 
     // Build recipient outputs
     const outputs: Uint8Array[] = [];

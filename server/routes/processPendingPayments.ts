@@ -2,10 +2,9 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { electrumCall, ElectrumServer } from '../lib/electrum.js';
 import {
-  normalizeWif,
-  base58CheckDecode,
-  uint8ArrayToHex,
+  decodeWif,
   privateKeyToPublicKey,
+  privateKeyToCompressedPublicKey,
   publicKeyToAddress,
   UTXOSelector,
   buildSignedTx
@@ -28,14 +27,14 @@ async function processPaymentBatch(
 ): Promise<any> {
   const db = getDb();
 
-  // 1. Derive sender address from WIF
+  // 1. Derive sender address from WIF (supports both Dominate and Staking formats)
   console.log(`[${label}] Deriving sender wallet address from WIF...`);
-  const normalizedKey = normalizeWif(privateKeyWIF);
-  const privateKeyBytes = base58CheckDecode(normalizedKey);
-  const privateKeyHex = uint8ArrayToHex(privateKeyBytes.slice(1));
-  const publicKey = privateKeyToPublicKey(privateKeyHex);
+  const { privateKeyHex, isCompressed } = decodeWif(privateKeyWIF);
+  const publicKey = isCompressed
+    ? privateKeyToCompressedPublicKey(privateKeyHex)
+    : privateKeyToPublicKey(privateKeyHex);
   const senderAddress = publicKeyToAddress(publicKey);
-  console.log(`[${label}] Sender address: ${senderAddress}`);
+  console.log(`[${label}] Sender address: ${senderAddress} (${isCompressed ? 'Staking/compressed' : 'Dominate/uncompressed'})`);
 
   // 2. Fetch UTXOs and check available balance FIRST
   console.log(`[${label}] Fetching UTXOs for balance check...`);

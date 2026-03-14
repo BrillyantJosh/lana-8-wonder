@@ -170,6 +170,7 @@ const Login = () => {
       
       console.log("Derived identifiers:", {
         walletId: ids.walletId,
+        isCompressed: ids.isCompressed,
         nostrHexId: ids.nostrHexId,
         nostrNpubId: ids.nostrNpubId
       });
