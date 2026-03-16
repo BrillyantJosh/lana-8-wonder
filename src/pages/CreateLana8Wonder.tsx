@@ -305,7 +305,7 @@ const CreateLana8Wonder = () => {
                             <div className="flex items-center justify-between gap-3 pt-2 border-t">
                               <div>
                                 {!balancesLoading && minimumRequired > 0 && (
-                                  isUpgradeEligible && !(currentBalance >= minimumRequired) ? (
+                                  isUpgradeEligible ? (
                                     <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs">
                                       ✓ Split {currentSplit - 1} Upgrade
                                     </Badge>
@@ -356,9 +356,8 @@ const CreateLana8Wonder = () => {
                                         }
                                       }
 
-                                      // Use previous split rate if upgrade eligible and doesn't qualify for current split
-                                      const useUpgrade = isUpgradeEligible && !(currentBalance >= minimumRequired);
-                                      const effectiveRate = useUpgrade ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
+                                      // Use previous split rate when upgrade eligible
+                                      const effectiveRate = isUpgradeEligible ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
                                       const effectiveDeposit = 100 / effectiveRate;
 
                                       navigate('/assign-lana8wonder', {
@@ -368,8 +367,8 @@ const CreateLana8Wonder = () => {
                                           minRequiredLana: effectiveDeposit,
                                           planCurrency: planCurrency,
                                           exchangeRate: effectiveRate,
-                                          isPreviousSplitUpgrade: useUpgrade,
-                                          upgradeSplit: useUpgrade ? currentSplit - 1 : currentSplit
+                                          isPreviousSplitUpgrade: isUpgradeEligible,
+                                          upgradeSplit: isUpgradeEligible ? currentSplit - 1 : currentSplit
                                         }
                                       });
                                     } catch (error) {
@@ -430,7 +429,7 @@ const CreateLana8Wonder = () => {
                               <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{wallet.note || "—"}</TableCell>
                               <TableCell>
                                 {!balancesLoading && minimumRequired > 0 && (
-                                  isUpgradeEligible && !(currentBalance >= minimumRequired) ? (
+                                  isUpgradeEligible ? (
                                     <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs whitespace-nowrap">
                                       ✓ Split {currentSplit - 1} Upgrade
                                     </Badge>
@@ -481,9 +480,8 @@ const CreateLana8Wonder = () => {
                                           }
                                         }
 
-                                        // Use previous split rate if upgrade eligible and doesn't qualify for current split
-                                        const useUpgrade = isUpgradeEligible && !(currentBalance >= minimumRequired);
-                                        const effectiveRate = useUpgrade ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
+                                        // Use previous split rate when upgrade eligible
+                                        const effectiveRate = isUpgradeEligible ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
                                         const effectiveDeposit = 100 / effectiveRate;
 
                                         navigate('/assign-lana8wonder', {
@@ -493,8 +491,8 @@ const CreateLana8Wonder = () => {
                                             minRequiredLana: effectiveDeposit,
                                             planCurrency: planCurrency,
                                             exchangeRate: effectiveRate,
-                                            isPreviousSplitUpgrade: useUpgrade,
-                                            upgradeSplit: useUpgrade ? currentSplit - 1 : currentSplit
+                                            isPreviousSplitUpgrade: isUpgradeEligible,
+                                            upgradeSplit: isUpgradeEligible ? currentSplit - 1 : currentSplit
                                           }
                                         });
                                       } catch (error) {
