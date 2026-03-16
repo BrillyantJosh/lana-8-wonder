@@ -437,8 +437,88 @@ const PreviewLana8Wonder = () => {
         
         // Use stored enrollment exchange rate if available, fall back to current system rate
         const systemRate = params.exchangeRates[currency as keyof typeof params.exchangeRates];
-        const rate = profile.enrollment_exchange_rate || systemRate;
-        const effectiveCurrency = profile.enrollment_currency || currency;
+        let rate = profile.enrollment_exchange_rate || systemRate;
+        let effectiveCurrency = profile.enrollment_currency || currency;
+        let detectedIsPreviousSplitUpgrade = !!profile.is_previous_split_upgrade;
+        let detectedUpgradeSplit: number | null = profile.enrollment_split || null;
+
+        // Retroactive detection: derive enrollment rate from actual wallet balance
+        // when enrollment_exchange_rate is NULL (pre-fix enrollments)
+        if (!profile.enrollment_exchange_rate && dbWallets.length === 8) {
+          try {
+            const retroElectrumServers = params.electrum.map(e => ({
+              host: e.host,
+              port: parseInt(e.port)
+            }));
+
+            // Fetch balance of first annuity wallet
+            const firstAnnuityAddress = dbWallets[0].wallet_address;
+            const { data: balData } = await supabase.functions.invoke('check-wallet-balance', {
+              body: {
+                wallet_addresses: [firstAnnuityAddress],
+                electrum_servers: retroElectrumServers
+              }
+            });
+
+            const firstWalletBalance = balData?.wallets?.[0]?.balance || 0;
+
+            if (firstWalletBalance > 0) {
+              // Derive enrollment rate: rate = 11 / walletBalance (11 = 88/8)
+              const derivedRate = 11 / firstWalletBalance;
+
+              // Validate: derived rate should be a reasonable LANA exchange rate
+              // and should be close to systemRate or systemRate/2
+              const ratioToSystem = systemRate / derivedRate;
+
+              if (ratioToSystem > 1.5 && ratioToSystem < 2.5) {
+                // Derived rate ≈ systemRate/2 → this is an upgrade enrollment
+                rate = derivedRate;
+                detectedIsPreviousSplitUpgrade = true;
+                // Derive split from rate: splitPrice = 2^(split-1) * 0.001
+                // split = log2(rate / 0.001) + 1
+                detectedUpgradeSplit = Math.round(Math.log2(derivedRate / 0.001)) + 1;
+
+                console.log('🔍 Retroactive detection: upgrade enrollment detected', {
+                  firstWalletBalance,
+                  derivedRate,
+                  systemRate,
+                  ratioToSystem,
+                  detectedUpgradeSplit
+                });
+              } else if (ratioToSystem > 0.8 && ratioToSystem < 1.2) {
+                // Derived rate ≈ systemRate → normal enrollment at current split
+                rate = derivedRate;
+                console.log('🔍 Retroactive detection: normal enrollment', {
+                  firstWalletBalance,
+                  derivedRate,
+                  systemRate
+                });
+              }
+
+              // Persist derived enrollment data back to DB for future loads
+              try {
+                await supabase
+                  .from("profiles")
+                  .update({
+                    enrollment_exchange_rate: rate,
+                    enrollment_currency: currency,
+                    enrollment_split: detectedUpgradeSplit,
+                    is_previous_split_upgrade: detectedIsPreviousSplitUpgrade ? 1 : 0
+                  })
+                  .eq("nostr_hex_id", nostrHexId);
+
+                console.log('💾 Persisted retroactive enrollment data to DB');
+              } catch (persistError) {
+                console.error('Failed to persist retroactive enrollment data:', persistError);
+                // Non-fatal — still use derived rate for this session
+              }
+            }
+          } catch (retroError) {
+            console.error('Retroactive rate detection failed:', retroError);
+            // Fall through to use systemRate (same as before)
+          }
+        }
+
         if (!rate) {
           toast.error("Exchange rate not available");
           return;
@@ -449,13 +529,13 @@ const PreviewLana8Wonder = () => {
         const phi = 12 / rate;
         const minLana = total;                // matches state path where minRequiredLana = 100/rate
         const perWallet = (total - phi) / 8;  // = 88 / (8 * rate) = 11 / rate
-        
+
         // Fetch source wallet balance
         const electrumServers = params.electrum.map(e => ({
           host: e.host,
           port: parseInt(e.port)
         }));
-        
+
         let sourceBalanceValue = 0;
         try {
           const { data: balanceData } = await supabase.functions.invoke('check-wallet-balance', {
@@ -464,14 +544,14 @@ const PreviewLana8Wonder = () => {
               electrum_servers: electrumServers
             }
           });
-          
-          if (balanceData?.balances && balanceData.balances.length > 0) {
-            sourceBalanceValue = balanceData.balances[0].balance || 0;
+
+          if (balanceData?.wallets && balanceData.wallets.length > 0) {
+            sourceBalanceValue = balanceData.wallets[0].balance || 0;
           }
         } catch (balanceError) {
           console.error('Error fetching source balance:', balanceError);
         }
-        
+
         // Set all loaded state
         setLoadedSourceWallet(profile.selected_wallet);
         setLoadedPlanCurrency(effectiveCurrency);
@@ -483,16 +563,16 @@ const PreviewLana8Wonder = () => {
         setLoadedTotalTransferred(total);
         setLoadedSourceBalance(sourceBalanceValue);
         setTxHash(profile.tx || '');
-        setLoadedIsPreviousSplitUpgrade(!!profile.is_previous_split_upgrade);
-        setLoadedUpgradeSplit(profile.enrollment_split || null);
-        
+        setLoadedIsPreviousSplitUpgrade(detectedIsPreviousSplitUpgrade);
+        setLoadedUpgradeSplit(detectedUpgradeSplit);
+
         console.log('✅ Plan data loaded from database:', {
           sourceWallet: profile.selected_wallet,
           currency: effectiveCurrency,
           exchangeRate: rate,
-          rateSource: profile.enrollment_exchange_rate ? 'enrollment (stored)' : 'system (current)',
-          isPreviousSplitUpgrade: !!profile.is_previous_split_upgrade,
-          enrollmentSplit: profile.enrollment_split,
+          rateSource: profile.enrollment_exchange_rate ? 'enrollment (stored)' : 'retroactive/system',
+          isPreviousSplitUpgrade: detectedIsPreviousSplitUpgrade,
+          enrollmentSplit: detectedUpgradeSplit,
           wallets: dbWallets.length,
           minRequiredLana: minLana,
           amountPerWallet: perWallet
