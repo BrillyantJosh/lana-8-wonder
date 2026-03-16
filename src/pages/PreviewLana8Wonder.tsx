@@ -220,7 +220,9 @@ const PreviewLana8Wonder = () => {
     phiDonation,
     totalTransferred,
     remainingBalance,
-    nostrHexId: stateNostrHexId
+    nostrHexId: stateNostrHexId,
+    isPreviousSplitUpgrade,
+    upgradeSplit
   } = location.state || {};
 
   // Use effective values (from state or loaded from DB)
@@ -915,6 +917,14 @@ const PreviewLana8Wonder = () => {
             Review the plan details before publishing to Nostr
           </p>
         </div>
+
+        {isPreviousSplitUpgrade && (
+          <div className="mb-4 md:mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 md:p-4">
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              Split {upgradeSplit} Upgrade — Plan created at previous split exchange rate
+            </p>
+          </div>
+        )}
 
         <Card className="mb-4 md:mb-6">
           <CardHeader className="p-4 md:p-6">

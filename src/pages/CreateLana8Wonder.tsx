@@ -182,10 +182,17 @@ const CreateLana8Wonder = () => {
   };
 
   const minimumRequired = getMinimumRequiredBalance(planCurrency);
-  const depositAmount = exchangeRates && exchangeRates[planCurrency as keyof typeof exchangeRates] 
-    ? 100 / exchangeRates[planCurrency as keyof typeof exchangeRates] 
+  const depositAmount = exchangeRates && exchangeRates[planCurrency as keyof typeof exchangeRates]
+    ? 100 / exchangeRates[planCurrency as keyof typeof exchangeRates]
     : 0;
   const currencySymbol = getCurrencySymbol(planCurrency as 'EUR' | 'USD' | 'GBP');
+
+  // Previous split upgrade detection: check if user has enough for previous split (2x current minimum)
+  const currentRate = exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 0;
+  const previousSplitRate = currentRate / 2;
+  const previousSplitMinimum = previousSplitRate > 0 ? (100 / previousSplitRate) + 0.5 : 0;
+  const previousSplitDeposit = previousSplitRate > 0 ? 100 / previousSplitRate : 0;
+  const currentSplit = params?.split ? parseInt(params.split) : 0;
 
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4 pb-24">
@@ -259,8 +266,9 @@ const CreateLana8Wonder = () => {
                   <div className="md:hidden space-y-4">
                     {allWalletsDeduped.map((wallet, idx) => {
                       const currentBalance = walletBalances[wallet.wallet_address] || 0;
-                      const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
-                      
+                      const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && currentBalance >= previousSplitMinimum;
+                      const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired || isUpgradeEligible;
+
                       return (
                         <Card key={idx} className="overflow-hidden">
                           <CardContent className="p-4 space-y-3">
@@ -273,7 +281,7 @@ const CreateLana8Wonder = () => {
                                 {wallet.wallet_type}
                               </span>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <p className="text-xs text-muted-foreground mb-1">{t('createLana8Wonder.balance')}</p>
@@ -287,17 +295,21 @@ const CreateLana8Wonder = () => {
                                   )}
                                 </div>
                               </div>
-                              
+
                               <div>
                                 <p className="text-xs text-muted-foreground mb-1">{t('createLana8Wonder.note')}</p>
                                 <p className="text-sm text-muted-foreground truncate">{wallet.note || "—"}</p>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center justify-between gap-3 pt-2 border-t">
                               <div>
                                 {!balancesLoading && minimumRequired > 0 && (
-                                  hasEnoughBalance ? (
+                                  isUpgradeEligible && !(currentBalance >= minimumRequired) ? (
+                                    <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs">
+                                      ✓ Split {currentSplit - 1} Upgrade
+                                    </Badge>
+                                  ) : hasEnoughBalance ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs">
                                       ✓ {t('createLana8Wonder.sufficient')}
                                     </Badge>
@@ -314,9 +326,9 @@ const CreateLana8Wonder = () => {
                                   )
                                 )}
                               </div>
-                              
+
                               {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
-                                <Button 
+                                <Button
                                   size="sm"
                                   onClick={async () => {
                                     try {
@@ -325,33 +337,40 @@ const CreateLana8Wonder = () => {
                                         .select("id, selected_wallet")
                                         .eq("nostr_hex_id", session.nostrHexId)
                                         .maybeSingle();
-                                      
+
                                       if (existingProfile?.selected_wallet) {
                                         const { data: existingWallets, error: walletsError } = await supabase
                                           .from("wallets")
                                           .select("wallet_address")
                                           .eq("profile_id", existingProfile.id)
                                           .eq("wallet_type", "annuity");
-                                        
+
                                         if (walletsError) {
                                           console.error("Error checking wallets:", walletsError);
                                         }
-                                        
+
                                         if (existingWallets && existingWallets.length === 8) {
                                           toast.success(t('createLana8Wonder.existingPlanFound'));
                                           navigate("/preview-lana8wonder");
                                           return;
                                         }
                                       }
-                                      
-                                      navigate('/assign-lana8wonder', { 
-                                        state: { 
+
+                                      // Use previous split rate if upgrade eligible and doesn't qualify for current split
+                                      const useUpgrade = isUpgradeEligible && !(currentBalance >= minimumRequired);
+                                      const effectiveRate = useUpgrade ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
+                                      const effectiveDeposit = 100 / effectiveRate;
+
+                                      navigate('/assign-lana8wonder', {
+                                        state: {
                                           sourceWallet: wallet.wallet_address,
                                           balance: currentBalance,
-                                          minRequiredLana: depositAmount,
+                                          minRequiredLana: effectiveDeposit,
                                           planCurrency: planCurrency,
-                                          exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
-                                        } 
+                                          exchangeRate: effectiveRate,
+                                          isPreviousSplitUpgrade: useUpgrade,
+                                          upgradeSplit: useUpgrade ? currentSplit - 1 : currentSplit
+                                        }
                                       });
                                     } catch (error) {
                                       console.error("Error checking existing wallets:", error);
@@ -386,8 +405,9 @@ const CreateLana8Wonder = () => {
                       <TableBody>
                         {allWalletsDeduped.map((wallet, idx) => {
                           const currentBalance = walletBalances[wallet.wallet_address] || 0;
-                          const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired;
-                          
+                          const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && currentBalance >= previousSplitMinimum;
+                          const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired || isUpgradeEligible;
+
                           return (
                             <TableRow key={idx}>
                               <TableCell className="font-mono text-sm max-w-xs truncate">{wallet.wallet_address}</TableCell>
@@ -410,7 +430,11 @@ const CreateLana8Wonder = () => {
                               <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{wallet.note || "—"}</TableCell>
                               <TableCell>
                                 {!balancesLoading && minimumRequired > 0 && (
-                                  hasEnoughBalance ? (
+                                  isUpgradeEligible && !(currentBalance >= minimumRequired) ? (
+                                    <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs whitespace-nowrap">
+                                      ✓ Split {currentSplit - 1} Upgrade
+                                    </Badge>
+                                  ) : hasEnoughBalance ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-xs whitespace-nowrap">
                                       ✓ {t('createLana8Wonder.sufficient')}
                                     </Badge>
@@ -429,7 +453,7 @@ const CreateLana8Wonder = () => {
                               </TableCell>
                               <TableCell>
                                 {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
-                                  <Button 
+                                  <Button
                                     size="sm"
                                     onClick={async () => {
                                       try {
@@ -438,33 +462,40 @@ const CreateLana8Wonder = () => {
                                           .select("id, selected_wallet")
                                           .eq("nostr_hex_id", session.nostrHexId)
                                           .maybeSingle();
-                                        
+
                                         if (existingProfile?.selected_wallet) {
                                           const { data: existingWallets, error: walletsError } = await supabase
                                             .from("wallets")
                                             .select("wallet_address")
                                             .eq("profile_id", existingProfile.id)
                                             .eq("wallet_type", "annuity");
-                                          
+
                                           if (walletsError) {
                                             console.error("Error checking wallets:", walletsError);
                                           }
-                                          
-                                        if (existingWallets && existingWallets.length === 8) {
-                                          toast.success(t('createLana8Wonder.existingPlanFound'));
-                                          navigate("/preview-lana8wonder");
-                                          return;
+
+                                          if (existingWallets && existingWallets.length === 8) {
+                                            toast.success(t('createLana8Wonder.existingPlanFound'));
+                                            navigate("/preview-lana8wonder");
+                                            return;
+                                          }
                                         }
-                                      }
-                                        
-                                        navigate('/assign-lana8wonder', { 
-                                          state: { 
+
+                                        // Use previous split rate if upgrade eligible and doesn't qualify for current split
+                                        const useUpgrade = isUpgradeEligible && !(currentBalance >= minimumRequired);
+                                        const effectiveRate = useUpgrade ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
+                                        const effectiveDeposit = 100 / effectiveRate;
+
+                                        navigate('/assign-lana8wonder', {
+                                          state: {
                                             sourceWallet: wallet.wallet_address,
                                             balance: currentBalance,
-                                            minRequiredLana: depositAmount,
+                                            minRequiredLana: effectiveDeposit,
                                             planCurrency: planCurrency,
-                                            exchangeRate: exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1
-                                          } 
+                                            exchangeRate: effectiveRate,
+                                            isPreviousSplitUpgrade: useUpgrade,
+                                            upgradeSplit: useUpgrade ? currentSplit - 1 : currentSplit
+                                          }
                                         });
                                       } catch (error) {
                                         console.error("Error checking existing wallets:", error);

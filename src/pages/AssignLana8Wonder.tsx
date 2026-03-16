@@ -53,6 +53,8 @@ const AssignLana8Wonder = () => {
   const minRequiredLana = location.state?.minRequiredLana || 0;
   const planCurrency = location.state?.planCurrency || "EUR";
   const exchangeRate = location.state?.exchangeRate || 300000000;
+  const isPreviousSplitUpgrade = location.state?.isPreviousSplitUpgrade || false;
+  const upgradeSplit = location.state?.upgradeSplit || null;
 
   useEffect(() => {
     if (!sourceWallet) {
@@ -399,7 +401,9 @@ const AssignLana8Wonder = () => {
           phiDonation,
           totalTransferred,
           remainingBalance,
-          nostrHexId
+          nostrHexId,
+          isPreviousSplitUpgrade,
+          upgradeSplit
         }
       });
     } catch (error) {
@@ -438,6 +442,14 @@ const AssignLana8Wonder = () => {
             {t('assignLana8Wonder.description')}
           </p>
         </div>
+
+        {isPreviousSplitUpgrade && (
+          <Alert className="mb-6 bg-amber-500/10 border-amber-500/30">
+            <AlertDescription className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              Split {upgradeSplit} Upgrade — Enrolling at previous split exchange rate
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6">
           <CardHeader>
