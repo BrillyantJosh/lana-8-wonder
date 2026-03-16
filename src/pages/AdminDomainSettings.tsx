@@ -20,6 +20,13 @@ interface DomainConfig {
   show_slots_on_landing_page: string;
   enable_buy_lana: number; // 0 or 1 from SQLite
   has_private_key?: number; // 0 or 1 from SQLite
+  // International payments
+  enable_international_payments: number;
+  intl_recipient_name: string;
+  intl_bank_name: string;
+  intl_bank_address: string;
+  intl_iban: string;
+  intl_swift: string;
 }
 
 interface DomainAdmin {
@@ -157,7 +164,13 @@ const AdminDomainSettings = () => {
             nostr_hex_id_buying_lanas: config.nostr_hex_id_buying_lanas,
             currency_default: config.currency_default,
             show_slots_on_landing_page: config.show_slots_on_landing_page,
-            enable_buy_lana: config.enable_buy_lana
+            enable_buy_lana: config.enable_buy_lana,
+            enable_international_payments: config.enable_international_payments,
+            intl_recipient_name: config.intl_recipient_name,
+            intl_bank_name: config.intl_bank_name,
+            intl_bank_address: config.intl_bank_address,
+            intl_iban: config.intl_iban,
+            intl_swift: config.intl_swift
           })
         });
         const json = await res.json();
@@ -400,6 +413,88 @@ const AdminDomainSettings = () => {
                     }`} />
                   </button>
                 </div>
+
+                {/* International Payments Toggle */}
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enable_international_payments" className="text-base font-medium">Enable International Payments</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow users to pay via international bank transfer (SWIFT/IBAN). When enabled, a third payment option appears.
+                    </p>
+                  </div>
+                  <button
+                    id="enable_international_payments"
+                    role="switch"
+                    aria-checked={config.enable_international_payments === 1}
+                    disabled={!domainKey}
+                    onClick={() => updateField('enable_international_payments', config.enable_international_payments === 1 ? 0 : 1)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      config.enable_international_payments === 1 ? 'bg-primary' : 'bg-gray-300'
+                    } ${!domainKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.enable_international_payments === 1 ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* International Payment Bank Details (conditional) */}
+                {config.enable_international_payments === 1 && (
+                  <div className="space-y-4 pl-4 border-l-2 border-primary/30">
+                    <div className="space-y-2">
+                      <Label htmlFor="intl_recipient_name">Recipient Name</Label>
+                      <Input
+                        id="intl_recipient_name"
+                        value={config.intl_recipient_name || ''}
+                        onChange={(e) => updateField('intl_recipient_name', e.target.value)}
+                        placeholder="Account holder / recipient name..."
+                        disabled={!domainKey}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intl_iban">IBAN</Label>
+                      <Input
+                        id="intl_iban"
+                        value={config.intl_iban || ''}
+                        onChange={(e) => updateField('intl_iban', e.target.value)}
+                        placeholder="e.g. GB29 NWBK 6016 1331 9268 19"
+                        disabled={!domainKey}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intl_swift">SWIFT / BIC Code</Label>
+                      <Input
+                        id="intl_swift"
+                        value={config.intl_swift || ''}
+                        onChange={(e) => updateField('intl_swift', e.target.value)}
+                        placeholder="e.g. NWBKGB2L"
+                        disabled={!domainKey}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intl_bank_name">Bank Name</Label>
+                      <Input
+                        id="intl_bank_name"
+                        value={config.intl_bank_name || ''}
+                        onChange={(e) => updateField('intl_bank_name', e.target.value)}
+                        placeholder="Name of the bank..."
+                        disabled={!domainKey}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intl_bank_address">Bank Address</Label>
+                      <Input
+                        id="intl_bank_address"
+                        value={config.intl_bank_address || ''}
+                        onChange={(e) => updateField('intl_bank_address', e.target.value)}
+                        placeholder="Bank branch address..."
+                        disabled={!domainKey}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="nostr_hex_id_buying_lanas">Nostr Hex ID (Buying LANAs)</Label>

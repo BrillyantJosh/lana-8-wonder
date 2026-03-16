@@ -176,6 +176,14 @@ export function initializeSchema(db: Database.Database): void {
   // Records with no paid_on_account → ensure 'pending'
   db.exec(`UPDATE buy_lana SET status = 'pending' WHERE (paid_on_account IS NULL OR paid_on_account = '') AND (status IS NULL OR status = '')`);
 
+  // International payments columns on domains (safe migration)
+  try { db.exec("ALTER TABLE domains ADD COLUMN enable_international_payments INTEGER DEFAULT 0"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE domains ADD COLUMN intl_recipient_name TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE domains ADD COLUMN intl_bank_name TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE domains ADD COLUMN intl_bank_address TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE domains ADD COLUMN intl_iban TEXT"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE domains ADD COLUMN intl_swift TEXT"); } catch(e) { /* column already exists */ }
+
   // Seed domains
   const insertDomain = db.prepare(`
     INSERT OR IGNORE INTO domains (domain_key, hostname, display_name, currency_default)

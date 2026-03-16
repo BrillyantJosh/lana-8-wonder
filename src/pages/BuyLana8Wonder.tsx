@@ -8,6 +8,7 @@ import {
   Wallet,
   CreditCard,
   Building2,
+  Globe,
   ArrowLeft,
   QrCode,
   Loader2,
@@ -54,6 +55,17 @@ const BuyLana8Wonder = () => {
         if (json.data?.contact_details) {
           setContactDetails(json.data.contact_details);
         }
+        // Load international payment config
+        if (json.data) {
+          setIntlPaymentConfig({
+            enable_international_payments: json.data.enable_international_payments || 0,
+            intl_recipient_name: json.data.intl_recipient_name || '',
+            intl_bank_name: json.data.intl_bank_name || '',
+            intl_bank_address: json.data.intl_bank_address || '',
+            intl_iban: json.data.intl_iban || '',
+            intl_swift: json.data.intl_swift || '',
+          });
+        }
       } catch { /* ignore */ }
     };
     checkBuyEnabled();
@@ -76,9 +88,17 @@ const BuyLana8Wonder = () => {
   const [contactDetails, setContactDetails] = useState<string>('');
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | 'international' | null>(null);
   const [payee, setPayee] = useState('');
   const [reference, setReference] = useState<string>('');
+  const [intlPaymentConfig, setIntlPaymentConfig] = useState<{
+    enable_international_payments: number;
+    intl_recipient_name: string;
+    intl_bank_name: string;
+    intl_bank_address: string;
+    intl_iban: string;
+    intl_swift: string;
+  } | null>(null);
 
   // Step 5: Contact
   const [phone, setPhone] = useState('');
@@ -109,6 +129,15 @@ const BuyLana8Wonder = () => {
           if (json.data.currency_default && !currency) {
             setCurrency(json.data.currency_default);
           }
+          // Refresh international payment config
+          setIntlPaymentConfig({
+            enable_international_payments: json.data.enable_international_payments || 0,
+            intl_recipient_name: json.data.intl_recipient_name || '',
+            intl_bank_name: json.data.intl_bank_name || '',
+            intl_bank_address: json.data.intl_bank_address || '',
+            intl_iban: json.data.intl_iban || '',
+            intl_swift: json.data.intl_swift || '',
+          });
         }
       } catch (error) {
         console.error('Error fetching domain config:', error);
@@ -879,6 +908,98 @@ const BuyLana8Wonder = () => {
                     )}
                   </CardContent>
                 </Card>
+              )}
+
+              {/* International Payment - only shown when enabled by admin */}
+              {intlPaymentConfig?.enable_international_payments === 1 && (
+                <>
+                  <Card
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      selectedPayment === 'international'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border'
+                    }`}
+                    onClick={() => setSelectedPayment('international')}
+                  >
+                    <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        selectedPayment === 'international'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base">{t('buyLana.step4InternationalPayment')}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {t('buyLana.step4InternationalDesc')}
+                        </p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selectedPayment === 'international' ? 'border-primary' : 'border-muted-foreground'
+                      }`}>
+                        {selectedPayment === 'international' && <div className="w-3 h-3 rounded-full bg-primary" />}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* International payment details */}
+                  {selectedPayment === 'international' && intlPaymentConfig && (
+                    <Card className="bg-muted/50">
+                      <CardContent className="pt-6 space-y-4">
+                        {/* Reference number */}
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground mb-2">{t('buyLana.step4Reference')}</p>
+                          <p className="text-2xl font-bold font-mono tracking-wider">{reference}</p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {t('buyLana.step4IntlReferenceNote')}
+                          </p>
+                        </div>
+
+                        {/* International bank details */}
+                        <div className="border-t border-border pt-4 space-y-2">
+                          <p className="text-sm font-semibold text-center">{t('buyLana.step4IntlBankDetails')}</p>
+                          <div className="bg-background rounded-lg p-3 space-y-2">
+                            {intlPaymentConfig.intl_recipient_name && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlRecipient')}:</span>
+                                <span className="text-xs font-mono">{intlPaymentConfig.intl_recipient_name}</span>
+                              </div>
+                            )}
+                            {intlPaymentConfig.intl_iban && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">IBAN:</span>
+                                <span className="text-xs font-mono">{intlPaymentConfig.intl_iban}</span>
+                              </div>
+                            )}
+                            {intlPaymentConfig.intl_swift && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">SWIFT/BIC:</span>
+                                <span className="text-xs font-mono">{intlPaymentConfig.intl_swift}</span>
+                              </div>
+                            )}
+                            {intlPaymentConfig.intl_bank_name && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlBankName')}:</span>
+                                <span className="text-xs font-mono">{intlPaymentConfig.intl_bank_name}</span>
+                              </div>
+                            )}
+                            {intlPaymentConfig.intl_bank_address && (
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlBankAddr')}:</span>
+                                <span className="text-xs font-mono text-right">{intlPaymentConfig.intl_bank_address}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlCurrency')}:</span>
+                              <span className="text-xs font-mono">{currency || 'EUR'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
             </div>
 
