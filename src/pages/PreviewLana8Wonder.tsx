@@ -208,6 +208,8 @@ const PreviewLana8Wonder = () => {
   const [loadedAmountPerWallet, setLoadedAmountPerWallet] = useState<number>(0);
   const [loadedTotalTransferred, setLoadedTotalTransferred] = useState<number>(0);
   const [loadedSourceBalance, setLoadedSourceBalance] = useState<number>(0);
+  const [loadedIsPreviousSplitUpgrade, setLoadedIsPreviousSplitUpgrade] = useState(false);
+  const [loadedUpgradeSplit, setLoadedUpgradeSplit] = useState<number | null>(null);
 
   const {
     sourceWallet,
@@ -236,6 +238,8 @@ const PreviewLana8Wonder = () => {
   const effectiveTotalTransferred = totalTransferred || loadedTotalTransferred;
   const effectiveSourceBalance = sourceBalance || loadedSourceBalance;
   const effectiveRemainingBalance = remainingBalance !== undefined ? remainingBalance : (effectiveSourceBalance - effectiveTotalTransferred);
+  const effectiveIsPreviousSplitUpgrade = isPreviousSplitUpgrade || loadedIsPreviousSplitUpgrade;
+  const effectiveUpgradeSplit = upgradeSplit || loadedUpgradeSplit;
 
   // Calculate start price (8% more than exchange rate)
   const startPrice = effectiveExchangeRate ? effectiveExchangeRate * 1.08 : 0;
@@ -389,7 +393,7 @@ const PreviewLana8Wonder = () => {
         // Fetch profile data
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("id, selected_wallet, tx")
+          .select("id, selected_wallet, tx, enrollment_exchange_rate, enrollment_split, enrollment_currency, is_previous_split_upgrade")
           .eq("nostr_hex_id", nostrHexId)
           .maybeSingle();
         
@@ -431,18 +435,20 @@ const PreviewLana8Wonder = () => {
           }
         }
         
-        // Get exchange rate from params
-        const rate = params.exchangeRates[currency as keyof typeof params.exchangeRates];
+        // Use stored enrollment exchange rate if available, fall back to current system rate
+        const systemRate = params.exchangeRates[currency as keyof typeof params.exchangeRates];
+        const rate = profile.enrollment_exchange_rate || systemRate;
+        const effectiveCurrency = profile.enrollment_currency || currency;
         if (!rate) {
           toast.error("Exchange rate not available");
           return;
         }
-        
-        // Calculate all values
-        const minLana = 88 / rate;
-        const phi = 12 / rate;  // 12 EUR fixed donation
-        const perWallet = minLana / 8;
-        const total = minLana + phi;
+
+        // Calculate all values (matching state path: minRequiredLana = 100 / rate)
+        const total = 100 / rate;
+        const phi = 12 / rate;
+        const minLana = total;                // matches state path where minRequiredLana = 100/rate
+        const perWallet = (total - phi) / 8;  // = 88 / (8 * rate) = 11 / rate
         
         // Fetch source wallet balance
         const electrumServers = params.electrum.map(e => ({
@@ -468,7 +474,7 @@ const PreviewLana8Wonder = () => {
         
         // Set all loaded state
         setLoadedSourceWallet(profile.selected_wallet);
-        setLoadedPlanCurrency(currency);
+        setLoadedPlanCurrency(effectiveCurrency);
         setLoadedExchangeRate(rate);
         setLoadedWallets(dbWallets.map(w => ({ address: w.wallet_address })));
         setLoadedMinRequiredLana(minLana);
@@ -477,11 +483,16 @@ const PreviewLana8Wonder = () => {
         setLoadedTotalTransferred(total);
         setLoadedSourceBalance(sourceBalanceValue);
         setTxHash(profile.tx || '');
+        setLoadedIsPreviousSplitUpgrade(!!profile.is_previous_split_upgrade);
+        setLoadedUpgradeSplit(profile.enrollment_split || null);
         
         console.log('✅ Plan data loaded from database:', {
           sourceWallet: profile.selected_wallet,
-          currency,
+          currency: effectiveCurrency,
           exchangeRate: rate,
+          rateSource: profile.enrollment_exchange_rate ? 'enrollment (stored)' : 'system (current)',
+          isPreviousSplitUpgrade: !!profile.is_previous_split_upgrade,
+          enrollmentSplit: profile.enrollment_split,
           wallets: dbWallets.length,
           minRequiredLana: minLana,
           amountPerWallet: perWallet
@@ -918,10 +929,10 @@ const PreviewLana8Wonder = () => {
           </p>
         </div>
 
-        {isPreviousSplitUpgrade && (
+        {effectiveIsPreviousSplitUpgrade && (
           <div className="mb-4 md:mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 md:p-4">
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              Split {upgradeSplit} Upgrade — Plan created at previous split exchange rate
+              Split {effectiveUpgradeSplit} Upgrade — Plan created at previous split exchange rate
             </p>
           </div>
         )}

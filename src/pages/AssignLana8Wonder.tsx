@@ -376,10 +376,16 @@ const AssignLana8Wonder = () => {
         return;
       }
       
-      // Update profile with selected_wallet (wallet address, not ID)
+      // Update profile with selected_wallet and enrollment data
       const { error: updateProfileError } = await supabase
         .from("profiles")
-        .update({ selected_wallet: sourceWallet })
+        .update({
+          selected_wallet: sourceWallet,
+          enrollment_exchange_rate: exchangeRate,
+          enrollment_currency: planCurrency,
+          enrollment_split: upgradeSplit || null,
+          is_previous_split_upgrade: isPreviousSplitUpgrade ? 1 : 0
+        })
         .eq("id", profileId);
       
       if (updateProfileError) {

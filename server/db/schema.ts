@@ -157,6 +157,12 @@ export function initializeSchema(db: Database.Database): void {
   try { db.exec('ALTER TABLE profiles ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
   try { db.exec('ALTER TABLE waiting_list ADD COLUMN domain_key TEXT REFERENCES domains(domain_key)'); } catch(e) { /* column already exists */ }
 
+  // Add enrollment data columns to profiles (safe migration)
+  try { db.exec('ALTER TABLE profiles ADD COLUMN enrollment_exchange_rate REAL'); } catch(e) { /* column already exists */ }
+  try { db.exec('ALTER TABLE profiles ADD COLUMN enrollment_split INTEGER'); } catch(e) { /* column already exists */ }
+  try { db.exec('ALTER TABLE profiles ADD COLUMN enrollment_currency TEXT'); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE profiles ADD COLUMN is_previous_split_upgrade INTEGER DEFAULT 0"); } catch(e) { /* column already exists */ }
+
   // Add new columns to buy_lana (safe migration)
   try { db.exec("ALTER TABLE buy_lana ADD COLUMN split TEXT"); } catch(e) { /* column already exists */ }
   try { db.exec("ALTER TABLE buy_lana ADD COLUMN email TEXT"); } catch(e) { /* column already exists */ }
