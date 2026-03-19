@@ -62,44 +62,81 @@ router.post('/', async (req: Request, res: Response) => {
     if (!utxos || utxos.length === 0) throw new Error('No UTXOs available');
     console.log(`Found ${utxos.length} UTXOs`);
 
-    const amountSatoshis = Math.floor(amount * 100000000);
+    let amountSatoshis = Math.floor(amount * 100000000);
+    const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
+    console.log(`Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
 
     // Calculate initial dynamic fee with improved estimation
     const estimatedInputCount = Math.min(
       Math.ceil(utxos.length * 0.3), // ~30% of UTXOs as realistic estimate
       10 // Max 10 for safety (prevent too high initial fee)
     );
-    const outputCount = 2;
+    let outputCount = 2;
     let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
     console.log(`Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
 
+    // Detect "send max" scenario: user wants to empty the wallet
+    let isSendMax = false;
+    if (amountSatoshis + fee > totalAvailable && amountSatoshis <= totalAvailable) {
+      isSendMax = true;
+      const allInputCount = Math.min(utxos.length, UTXOSelector.MAX_INPUTS);
+      outputCount = 1; // No change output when emptying wallet
+      fee = (allInputCount * 180 + outputCount * 34 + 10) * 100;
+      amountSatoshis = totalAvailable - fee;
+
+      if (amountSatoshis <= 0) {
+        throw new Error(
+          `Balance too low to cover transaction fee. ` +
+          `Balance: ${(totalAvailable / 100000000).toFixed(8)} LANA, ` +
+          `Fee: ${(fee / 100000000).toFixed(8)} LANA`
+        );
+      }
+
+      console.log(`Send-max mode: deducting fee from amount. ` +
+        `Sending ${(amountSatoshis / 100000000).toFixed(8)} LANA, ` +
+        `Fee: ${(fee / 100000000).toFixed(8)} LANA (${allInputCount} inputs, ${outputCount} output)`);
+    }
+
     // Pre-select UTXOs to know actual input count
-    const totalNeeded = amountSatoshis + fee;
+    const totalNeeded = isSendMax ? totalAvailable : amountSatoshis + fee;
     const { selected: selectedUTXOs, totalValue } = UTXOSelector.selectUTXOs(utxos, totalNeeded);
 
     // Recalculate fee based on ACTUAL selected UTXOs
     const actualInputCount = selectedUTXOs.length;
     const actualFee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
 
-    if (actualFee > fee) {
+    if (isSendMax) {
+      fee = actualFee;
+      amountSatoshis = totalValue - fee;
+      console.log(`Send-max final: ${(amountSatoshis / 100000000).toFixed(8)} LANA, fee: ${(fee / 100000000).toFixed(8)} LANA`);
+    } else if (actualFee > fee) {
       console.log(`Adjusting fee: ${fee} -> ${actualFee} satoshis (${actualInputCount} actual inputs)`);
       fee = actualFee;
 
       // Check if we still have enough balance after fee adjustment
       const newTotalNeeded = amountSatoshis + fee;
       if (totalValue < newTotalNeeded) {
-        throw new Error(
-          `Insufficient funds after fee adjustment. ` +
-          `Need: ${(newTotalNeeded / 100000000).toFixed(8)} LANA, ` +
-          `Have: ${(totalValue / 100000000).toFixed(8)} LANA`
-        );
+        // Try send-max as fallback
+        outputCount = 1;
+        fee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
+        amountSatoshis = totalValue - fee;
+        isSendMax = true;
+        console.log(`Switched to send-max: ${(amountSatoshis / 100000000).toFixed(8)} LANA, fee: ${(fee / 100000000).toFixed(8)} LANA`);
+
+        if (amountSatoshis <= 0) {
+          throw new Error(
+            `Insufficient funds after fee adjustment. ` +
+            `Need: ${(newTotalNeeded / 100000000).toFixed(8)} LANA, ` +
+            `Have: ${(totalValue / 100000000).toFixed(8)} LANA`
+          );
+        }
       }
     } else {
       console.log(`Fee sufficient: ${fee} satoshis for ${actualInputCount} inputs`);
     }
 
     const recipients = [{ address: recipientAddress, amount: amountSatoshis }];
-    console.log(`Sending ${amountSatoshis} satoshis (${(amountSatoshis / 100000000).toFixed(8)} LANA)`);
+    console.log(`Sending ${amountSatoshis} satoshis (${(amountSatoshis / 100000000).toFixed(8)} LANA)${isSendMax ? ' [send-max]' : ''}`);
 
     // Build and sign transaction using the Node.js library
     // The Node.js buildSignedTx takes pre-selected UTXOs and an electrumCallFn
