@@ -135,6 +135,8 @@
     "netAmount": "Neto znesek za pošiljanje",
     "warningTitle": "Opozorilo",
     "warningMessage": "PDF dokument bo izbrisan po tem, ko pritisnete Ustvari načrt. Če izgubite podatke iz PDF datoteke, so denarnice za vedno izgubljene.",
+    "walletsLockedTitle": "Denarnice že dodeljene",
+    "walletsLockedMessage": "Vaših 8 anuitetnih denarnic je že bilo ustvarjenih in shranjenih. Ni jih mogoče spremeniti, da ne pride do zmešnjave z vašo varnostno kopijo.",
     "createPlan": "Ustvari načrt",
     "cancel": "Prekliči",
     "walletLabel": "Denarnica",

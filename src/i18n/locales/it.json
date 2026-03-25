@@ -135,6 +135,8 @@
     "netAmount": "Importo netto da inviare",
     "warningTitle": "Avviso",
     "warningMessage": "Il documento PDF verrà eliminato dopo aver premuto Crea piano. Se perdi i dati del file PDF, i wallet sono persi per sempre.",
+    "walletsLockedTitle": "Wallet già assegnati",
+    "walletsLockedMessage": "I tuoi 8 wallet rendita sono già stati generati e salvati. Non possono essere modificati per evitare confusione con il tuo backup.",
     "createPlan": "Crea piano",
     "cancel": "Annulla",
     "walletLabel": "Wallet",

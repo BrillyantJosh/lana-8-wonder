@@ -47,6 +47,7 @@ const AssignLana8Wonder = () => {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [walletsGenerated, setWalletsGenerated] = useState(false);
+  const [walletsLocked, setWalletsLocked] = useState(false);
 
   const sourceWallet = location.state?.sourceWallet;
   const sourceBalance = location.state?.balance;
@@ -62,6 +63,55 @@ const AssignLana8Wonder = () => {
       navigate("/create-lana8wonder");
     }
   }, [sourceWallet, navigate]);
+
+  // Check if wallets already exist in DB for this profile — lock if they do
+  useEffect(() => {
+    const checkExistingWallets = async () => {
+      try {
+        const sessionData = sessionStorage.getItem("lana_session");
+        if (!sessionData) return;
+
+        const session = JSON.parse(sessionData);
+        const nostrHexId = session.nostrHexId;
+        if (!nostrHexId) return;
+
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("nostr_hex_id", nostrHexId)
+          .maybeSingle();
+
+        if (!profile) return;
+
+        // Check for existing annuity wallets
+        const { data: existingWallets } = await supabase
+          .from("wallets")
+          .select("wallet_address, position")
+          .eq("profile_id", profile.id)
+          .eq("wallet_type", "annuity")
+          .order("position", { ascending: true });
+
+        if (existingWallets && existingWallets.length === 8) {
+          // Wallets already saved — load them and lock
+          const loadedWallets = existingWallets.map(w => ({
+            address: w.wallet_address,
+            balance: null,
+            isValid: true,
+            isChecking: false,
+          }));
+          setWallets(loadedWallets);
+          setWalletsGenerated(true);
+          setWalletsLocked(true);
+          console.log('🔒 Existing wallets loaded and locked');
+        }
+      } catch (error) {
+        console.error("Error checking existing wallets:", error);
+      }
+    };
+
+    checkExistingWallets();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -292,6 +342,7 @@ const AssignLana8Wonder = () => {
       });
       
       setWalletsGenerated(true);
+      setWalletsLocked(true);
       toast.success("Wallets generated successfully! PDF has been downloaded.");
     } catch (error) {
       console.error("Error generating wallets:", error);
@@ -517,24 +568,26 @@ const AssignLana8Wonder = () => {
                   {t('assignLana8Wonder.walletsEmptyRequirement')}
                 </CardDescription>
               </div>
-              <Button 
-                onClick={() => setShowGenerateDialog(true)}
-                disabled={isGenerating}
-                size="default"
-                className="w-full sm:w-auto shrink-0"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">{t('common.loading')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    <span className="ml-2">{t('assignLana8Wonder.generateWallets')}</span>
-                  </>
-                )}
-              </Button>
+              {!walletsLocked && (
+                <Button
+                  onClick={() => setShowGenerateDialog(true)}
+                  disabled={isGenerating}
+                  size="default"
+                  className="w-full sm:w-auto shrink-0"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="ml-2">{t('common.loading')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      <span className="ml-2">{t('assignLana8Wonder.generateWallets')}</span>
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -551,21 +604,23 @@ const AssignLana8Wonder = () => {
                         value={wallet.address}
                         onChange={(e) => handleAddressChange(index, e.target.value)}
                         placeholder={t('assignLana8Wonder.walletInputPlaceholder')}
-                        disabled={wallet.isChecking || scannerActive === index}
+                        disabled={walletsLocked || wallet.isChecking || scannerActive === index}
                         className="font-mono text-sm"
                       />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => scannerActive === index ? stopScanner() : handleScan(index)}
-                        disabled={wallet.isChecking}
-                      >
-                        {scannerActive === index ? (
-                          <X className="h-4 w-4" />
-                        ) : (
-                          <QrCode className="h-4 w-4" />
-                        )}
-                      </Button>
+                      {!walletsLocked && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => scannerActive === index ? stopScanner() : handleScan(index)}
+                          disabled={wallet.isChecking}
+                        >
+                          {scannerActive === index ? (
+                            <X className="h-4 w-4" />
+                          ) : (
+                            <QrCode className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                     
                     {scannerActive === index && (
@@ -600,7 +655,15 @@ const AssignLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        {walletsGenerated && (
+        {walletsLocked && (
+          <Alert className="mt-6 border-primary/50 bg-primary/5">
+            <AlertDescription className="text-sm">
+              <strong>{t('assignLana8Wonder.walletsLockedTitle')}:</strong> {t('assignLana8Wonder.walletsLockedMessage')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {walletsGenerated && !walletsLocked && (
           <Alert variant="destructive" className="mt-6">
             <AlertDescription className="text-sm">
               <strong>{t('assignLana8Wonder.warningTitle')}:</strong> {t('assignLana8Wonder.warningMessage')}

@@ -135,6 +135,8 @@
     "netAmount": "Nettobetrag zu senden",
     "warningTitle": "Warnung",
     "warningMessage": "Das PDF-Dokument wird nach dem Drücken von Plan erstellen gelöscht. Wenn Sie die Daten aus der PDF-Datei verlieren, sind die Wallets für immer verloren.",
+    "walletsLockedTitle": "Wallets bereits zugewiesen",
+    "walletsLockedMessage": "Ihre 8 Renten-Wallets wurden bereits generiert und gespeichert. Sie können nicht geändert werden, um Verwechslungen mit Ihrem Backup zu vermeiden.",
     "createPlan": "Plan erstellen",
     "cancel": "Abbrechen",
     "walletLabel": "Wallet",

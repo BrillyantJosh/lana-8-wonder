@@ -135,6 +135,8 @@
     "netAmount": "Net Amount to Send",
     "warningTitle": "Warning",
     "warningMessage": "The PDF document will be deleted after you press Create Plan. If you lose the data from the PDF file, the wallets are lost forever.",
+    "walletsLockedTitle": "Wallets already assigned",
+    "walletsLockedMessage": "Your 8 annuity wallets have already been generated and saved. They cannot be changed to prevent confusion with your backup.",
     "createPlan": "Create Plan",
     "cancel": "Cancel",
     "walletLabel": "Wallet",

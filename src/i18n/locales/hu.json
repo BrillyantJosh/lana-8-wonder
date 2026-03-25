@@ -135,6 +135,8 @@
     "netAmount": "Küldendő nettó összeg",
     "warningTitle": "Figyelmeztetés",
     "warningMessage": "A PDF dokumentum törlésre kerül a Terv létrehozása gombra kattintás után. Ha elveszted a PDF fájl adatait, a tárcák örökre elvesznek.",
+    "walletsLockedTitle": "Tárcák már hozzárendelve",
+    "walletsLockedMessage": "A 8 járadék tárcád már létrejött és mentésre került. Nem módosíthatók a biztonsági másolattal való keveredés elkerülése érdekében.",
     "createPlan": "Terv létrehozása",
     "cancel": "Mégsem",
     "walletLabel": "Tárca",
