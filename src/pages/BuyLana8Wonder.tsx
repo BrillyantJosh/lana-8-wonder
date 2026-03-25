@@ -742,13 +742,16 @@ const BuyLana8Wonder = () => {
 
               {/* Credit card payment link info */}
               {selectedPayment === 'card' && buyerProfile?.payment_link && (
-                <Card className="bg-muted/50 border-primary/20">
+                <Card className="bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 border-2">
                   <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-                    <div className="text-center space-y-2">
-                      <p className="text-sm font-semibold">Credit Card Payment Link</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
-                        The payment page will open after you submit your order.
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-red-700 dark:text-red-300">{t('buyLana.step4CardPayment')}</p>
+                        <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
+                          {t('buyLana.step4CardPaymentNotice')}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1095,8 +1098,8 @@ const BuyLana8Wonder = () => {
   const renderStep6 = () => (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-500" />
+        <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
+          <AlertCircle className="w-8 h-8 text-amber-600 dark:text-amber-500" />
         </div>
         <CardTitle className="text-2xl sm:text-3xl">{t('buyLana.step6Title')}</CardTitle>
         <CardDescription className="text-sm sm:text-base">
@@ -1104,6 +1107,18 @@ const BuyLana8Wonder = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Payment reminder - prominent red warning */}
+        <Card className="bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 border-2">
+          <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm sm:text-base font-semibold text-red-700 dark:text-red-300">
+                {t('buyLana.step6PaymentReminder')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-4">
             <p className="text-sm sm:text-base text-center text-muted-foreground">
