@@ -23,12 +23,12 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
-import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
+import { fetchKind0Profile, fetchKind88888, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
-type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format';
+type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format' | 'has_lana8wonder';
 
 const BuyLana8Wonder = () => {
   const { t } = useTranslation();
@@ -256,6 +256,22 @@ const BuyLana8Wonder = () => {
       const json = await res.json();
 
       if (json.registered) {
+        // Check if this wallet's owner already has a Lana8Wonder plan (KIND 88888)
+        const hexId = json.wallet?.nostr_hex_id;
+        if (hexId && params?.relays && params.relays.length > 0) {
+          try {
+            const existingPlan = await fetchKind88888(hexId, params.relays);
+            if (existingPlan) {
+              setWalletStatus('has_lana8wonder');
+              setWalletError(t('buyLana.step3HasLana8Wonder'));
+              return;
+            }
+          } catch (err) {
+            console.error('Error checking KIND 88888:', err);
+            // Non-fatal — allow to proceed if relay check fails
+          }
+        }
+
         setWalletStatus('registered');
         setWalletError(null);
       } else {
@@ -505,6 +521,17 @@ const BuyLana8Wonder = () => {
       );
     }
 
+    if (walletStatus === 'has_lana8wonder') {
+      return (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <span className="text-sm font-semibold text-red-700 dark:text-red-300">{t('buyLana.step3HasLana8Wonder')}</span>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -613,7 +640,7 @@ const BuyLana8Wonder = () => {
               className={`font-mono text-xs sm:text-sm flex-1 ${
                 walletStatus === 'registered'
                   ? 'border-green-500'
-                  : walletStatus === 'not_registered' || walletStatus === 'already_used' || walletStatus === 'invalid_format'
+                  : walletStatus === 'not_registered' || walletStatus === 'already_used' || walletStatus === 'invalid_format' || walletStatus === 'has_lana8wonder'
                   ? 'border-destructive'
                   : ''
               }`}

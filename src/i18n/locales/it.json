@@ -193,6 +193,7 @@
     "step3Registered": "Il portafoglio è registrato",
     "step3NotRegistered": "Questo portafoglio non è registrato. Per favore, registralo prima.",
     "step3AlreadyUsed": "Questo indirizzo del portafoglio è già stato utilizzato per un acquisto",
+    "step3HasLana8Wonder": "Questo portafoglio ha già un piano rendita Lana8Wonder. Una seconda registrazione non è possibile.",
     "step3Continue": "Continua",
     "step4Title": "Pagamento",
     "step4Amount": "Importo da pagare",

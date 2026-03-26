@@ -193,6 +193,7 @@
     "step3Registered": "Geldbörse ist registriert",
     "step3NotRegistered": "Diese Geldbörse ist nicht registriert. Bitte registrieren Sie sie zuerst.",
     "step3AlreadyUsed": "Diese Wallet-Adresse wurde bereits für einen Kauf verwendet",
+    "step3HasLana8Wonder": "Dieses Wallet hat bereits einen Lana8Wonder-Rentenplan. Eine zweite Registrierung ist nicht möglich.",
     "step3Continue": "Weiter",
     "step4Title": "Zahlung",
     "step4Amount": "Zu zahlender Betrag",

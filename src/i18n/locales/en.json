@@ -193,6 +193,7 @@
     "step3Registered": "Wallet is registered",
     "step3NotRegistered": "This wallet is not registered. Please register it first.",
     "step3AlreadyUsed": "This wallet address has already been used for a purchase",
+    "step3HasLana8Wonder": "This wallet already has a Lana8Wonder annuity plan. A second registration is not possible.",
     "step3Continue": "Continue",
     "step4Title": "Payment",
     "step4Amount": "Amount to pay",

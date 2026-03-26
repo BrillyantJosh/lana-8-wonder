@@ -193,6 +193,7 @@
     "step3Registered": "Denarnica je registrirana",
     "step3NotRegistered": "Ta denarnica ni registrirana. Prosim, najprej jo registrirajte.",
     "step3AlreadyUsed": "Ta naslov denarnice je bil že uporabljen za nakup",
+    "step3HasLana8Wonder": "Ta denarnica že ima Lana8Wonder anuitetni načrt. Druga registracija ni mogoča.",
     "step3Continue": "Nadaljuj",
     "step4Title": "Plačilo",
     "step4Amount": "Znesek za plačilo",

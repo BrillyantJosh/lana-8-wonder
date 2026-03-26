@@ -193,6 +193,7 @@
     "step3Registered": "A pénztárca regisztrálva van",
     "step3NotRegistered": "Ez a pénztárca nincs regisztrálva. Kérjük, először regisztrálja.",
     "step3AlreadyUsed": "Ez a pénztárca cím már használva volt vásárlásra",
+    "step3HasLana8Wonder": "Ez a pénztárca már rendelkezik Lana8Wonder járadék tervvel. Második regisztráció nem lehetséges.",
     "step3Continue": "Tovább",
     "step4Title": "Fizetés",
     "step4Amount": "Fizetendő összeg",
