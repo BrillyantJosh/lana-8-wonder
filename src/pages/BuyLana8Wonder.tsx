@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
-import { fetchKind0Profile, fetchKind88888, type LanaProfile } from '@/lib/nostrClient';
+import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
@@ -257,18 +257,24 @@ const BuyLana8Wonder = () => {
 
       if (json.registered) {
         // Check if this wallet's owner already has a Lana8Wonder plan (KIND 88888)
+        // Uses server-side endpoint for reliable relay connectivity
         const hexId = json.wallet?.nostr_hex_id;
-        if (hexId && params?.relays && params.relays.length > 0) {
+        if (hexId) {
           try {
-            const existingPlan = await fetchKind88888(hexId, params.relays);
-            if (existingPlan) {
+            const l8wRes = await fetch('/api/check-lana8wonder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ nostr_hex_id: hexId })
+            });
+            const l8wJson = await l8wRes.json();
+            if (l8wJson.has_plan) {
               setWalletStatus('has_lana8wonder');
               setWalletError(t('buyLana.step3HasLana8Wonder'));
               return;
             }
           } catch (err) {
             console.error('Error checking KIND 88888:', err);
-            // Non-fatal — allow to proceed if relay check fails
+            // Non-fatal — allow to proceed if check fails
           }
         }
 
