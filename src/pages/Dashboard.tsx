@@ -159,13 +159,14 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  const handleSendLana = (accountId: number, wallet: string, amount: number) => {
+  const handleSendLana = (accountId: number, wallet: string, amount: number, emptyWallet: boolean = false) => {
     // Navigate to send-lana page with params
     const params = new URLSearchParams({
       accountId: accountId.toString(),
       wallet: wallet,
       amount: amount.toString()
     });
+    if (emptyWallet) params.set('emptyWallet', 'true');
     navigate(`/send-lana?${params}`);
   };
 
@@ -302,6 +303,7 @@ const Dashboard = () => {
               
               const requiredBalance = lastTriggeredLevel.remaining_lanas;
               const withdrawalAmount = currentBalance - requiredBalance;
+              const isLastWithdrawal = requiredBalance === 0;
               
               // Apply 2% tolerance - only show withdrawal if amount exceeds 2% of required balance
               const tolerance = requiredBalance * 0.02;
@@ -311,7 +313,8 @@ const Dashboard = () => {
                   currentBalance,
                   requiredBalance,
                   withdrawalAmount,
-                  triggeredCount: triggeredLevels.length
+                  triggeredCount: triggeredLevels.length,
+                  isLastWithdrawal
                 };
               }
               
@@ -364,7 +367,7 @@ const Dashboard = () => {
                               <p className="text-xs text-muted-foreground mb-2">{t('dashboard.toWithdraw')}</p>
                               <Button 
                                 size="sm"
-                                onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount)}
+                                onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount, info.isLastWithdrawal)}
                                 className="w-full sm:w-auto"
                               >
                                 <Send className="mr-2 h-4 w-4" />

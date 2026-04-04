@@ -34,6 +34,7 @@ const SendLanaConfirm = () => {
   const fromWallet = searchParams.get("fromWallet");
   const toWallet = searchParams.get("toWallet");
   const amount = searchParams.get("amount");
+  const emptyWallet = searchParams.get("emptyWallet") === "true";
 
   useEffect(() => {
     return () => {
@@ -210,6 +211,7 @@ const SendLanaConfirm = () => {
         recipientAddress: toWallet,
         amount: parseFloat(amount!),
         privateKey: normalizedPrivateKey,
+        emptyWallet,
         electrumServers
       };
 

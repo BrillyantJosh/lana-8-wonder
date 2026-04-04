@@ -15,16 +15,17 @@ const router = Router();
 router.post('/', async (req: Request, res: Response) => {
   try {
     console.log('Starting LANA transaction...');
-    const { senderAddress, recipientAddress, amount, privateKey, electrumServers } = req.body;
+    const { senderAddress, recipientAddress, amount, privateKey, electrumServers, emptyWallet } = req.body;
 
     console.log('Transaction parameters:', {
       senderAddress,
       recipientAddress,
       amount,
+      emptyWallet: !!emptyWallet,
       hasPrivateKey: !!privateKey
     });
 
-    if (!senderAddress || !recipientAddress || !privateKey || !amount) {
+    if (!senderAddress || !recipientAddress || !privateKey || (!amount && !emptyWallet)) {
       throw new Error('Missing required parameters');
     }
 
@@ -62,25 +63,19 @@ router.post('/', async (req: Request, res: Response) => {
     if (!utxos || utxos.length === 0) throw new Error('No UTXOs available');
     console.log(`Found ${utxos.length} UTXOs`);
 
-    let amountSatoshis = Math.floor(amount * 100000000);
     const totalAvailable = utxos.reduce((sum: number, utxo: any) => sum + utxo.value, 0);
     console.log(`Total available: ${totalAvailable} satoshis (${(totalAvailable / 100000000).toFixed(8)} LANA)`);
 
-    // Calculate initial dynamic fee with improved estimation
-    const estimatedInputCount = Math.min(
-      Math.ceil(utxos.length * 0.3), // ~30% of UTXOs as realistic estimate
-      10 // Max 10 for safety (prevent too high initial fee)
-    );
-    let outputCount = 2;
-    let fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
-    console.log(`Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
-
-    // Detect "send max" scenario: user wants to empty the wallet
+    let amountSatoshis: number;
+    let fee: number;
+    let outputCount: number;
     let isSendMax = false;
-    if (amountSatoshis + fee > totalAvailable && amountSatoshis <= totalAvailable) {
+
+    if (emptyWallet) {
+      // Explicit empty wallet mode: send everything minus fee
       isSendMax = true;
       const allInputCount = Math.min(utxos.length, UTXOSelector.MAX_INPUTS);
-      outputCount = 1; // No change output when emptying wallet
+      outputCount = 1; // No change output
       fee = (allInputCount * 180 + outputCount * 34 + 10) * 100;
       amountSatoshis = totalAvailable - fee;
 
@@ -91,13 +86,39 @@ router.post('/', async (req: Request, res: Response) => {
           `Fee: ${(fee / 100000000).toFixed(8)} LANA`
         );
       }
+      console.log(`Empty wallet mode: sending ${(amountSatoshis / 100000000).toFixed(8)} LANA, fee: ${(fee / 100000000).toFixed(8)} LANA`);
+    } else {
+      amountSatoshis = Math.floor(amount * 100000000);
 
-      console.log(`Send-max mode: deducting fee from amount. ` +
-        `Sending ${(amountSatoshis / 100000000).toFixed(8)} LANA, ` +
-        `Fee: ${(fee / 100000000).toFixed(8)} LANA (${allInputCount} inputs, ${outputCount} output)`);
+      // Calculate initial dynamic fee
+      const estimatedInputCount = Math.min(
+        Math.ceil(utxos.length * 0.3),
+        10
+      );
+      outputCount = 2;
+      fee = (estimatedInputCount * 180 + outputCount * 34 + 10) * 100;
+      console.log(`Initial fee estimate: ${fee} satoshis for ~${estimatedInputCount} inputs`);
+
+      // Auto-detect send-max: amount + fee exceeds total available
+      if (amountSatoshis + fee > totalAvailable && amountSatoshis <= totalAvailable) {
+        isSendMax = true;
+        const allInputCount = Math.min(utxos.length, UTXOSelector.MAX_INPUTS);
+        outputCount = 1;
+        fee = (allInputCount * 180 + outputCount * 34 + 10) * 100;
+        amountSatoshis = totalAvailable - fee;
+
+        if (amountSatoshis <= 0) {
+          throw new Error(
+            `Balance too low to cover transaction fee. ` +
+            `Balance: ${(totalAvailable / 100000000).toFixed(8)} LANA, ` +
+            `Fee: ${(fee / 100000000).toFixed(8)} LANA`
+          );
+        }
+        console.log(`Auto send-max: sending ${(amountSatoshis / 100000000).toFixed(8)} LANA, fee: ${(fee / 100000000).toFixed(8)} LANA`);
+      }
     }
 
-    // Pre-select UTXOs to know actual input count
+    // Select UTXOs
     const totalNeeded = isSendMax ? totalAvailable : amountSatoshis + fee;
     const { selected: selectedUTXOs, totalValue } = UTXOSelector.selectUTXOs(utxos, totalNeeded);
 
@@ -113,10 +134,9 @@ router.post('/', async (req: Request, res: Response) => {
       console.log(`Adjusting fee: ${fee} -> ${actualFee} satoshis (${actualInputCount} actual inputs)`);
       fee = actualFee;
 
-      // Check if we still have enough balance after fee adjustment
       const newTotalNeeded = amountSatoshis + fee;
       if (totalValue < newTotalNeeded) {
-        // Try send-max as fallback
+        // Fallback to send-max
         outputCount = 1;
         fee = (actualInputCount * 180 + outputCount * 34 + 10) * 100;
         amountSatoshis = totalValue - fee;

@@ -25,6 +25,7 @@ const SendLana = () => {
   const accountId = searchParams.get("accountId");
   const fromWallet = searchParams.get("wallet");
   const amount = searchParams.get("amount");
+  const emptyWallet = searchParams.get("emptyWallet") === "true";
 
   useEffect(() => {
     const loadData = async () => {
@@ -113,6 +114,7 @@ const SendLana = () => {
       toWallet: selectedDestination,
       amount: amount || ""
     });
+    if (emptyWallet) confirmParams.set('emptyWallet', 'true');
     navigate(`/send-lana-confirm?${confirmParams}`);
   };
 
