@@ -113,6 +113,48 @@ const BuyLana8Wonder = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch wallet balance when wallet is registered and params are available
+  useEffect(() => {
+    if (walletStatus !== 'registered' || !walletId || !params?.electrum || !params?.exchangeRates) return;
+
+    const fetchBalance = async () => {
+      try {
+        console.log('Fetching wallet balance for dynamic payment...', walletId);
+        const electrumServers = params.electrum.map(e => ({
+          host: e.host,
+          port: parseInt(String(e.port))
+        }));
+
+        const balRes = await fetch('/api/check-wallet-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_addresses: [walletId],
+            electrum_servers: electrumServers
+          })
+        });
+        const balJson = await balRes.json();
+        console.log('Balance response:', balJson);
+
+        if (balJson.success && balJson.wallets?.length > 0) {
+          const bal = balJson.wallets[0].balance || 0;
+          setExistingBalance(bal);
+          const effectiveCurrency = currency || 'EUR';
+          const rate = params.exchangeRates[effectiveCurrency as keyof typeof params.exchangeRates] || params.exchangeRates.EUR || 0;
+          const valueInCurrency = Math.round(bal * rate * 100) / 100;
+          setExistingValueInCurrency(valueInCurrency);
+          console.log(`Wallet balance: ${bal} LANA = ${valueInCurrency} ${effectiveCurrency} (rate: ${rate})`);
+        }
+      } catch (err) {
+        console.error('Balance check failed:', err);
+        setExistingBalance(0);
+        setExistingValueInCurrency(0);
+      }
+    };
+
+    fetchBalance();
+  }, [walletStatus, walletId, params?.electrum, params?.exchangeRates, currency]);
+
   // Recalculate existing value when currency or rates change
   useEffect(() => {
     if (existingBalance > 0 && currency && params?.exchangeRates) {
@@ -291,32 +333,6 @@ const BuyLana8Wonder = () => {
           } catch (err) {
             console.error('Error checking KIND 88888:', err);
             // Non-fatal — allow to proceed if check fails
-          }
-        }
-
-        // Fetch wallet balance for dynamic payment calculation
-        if (params?.electrum) {
-          try {
-            const balRes = await fetch('/api/check-wallet-balance', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                wallet_addresses: [address],
-                electrum_servers: params.electrum
-              })
-            });
-            const balJson = await balRes.json();
-            if (balJson.success && balJson.wallets?.length > 0) {
-              const bal = balJson.wallets[0].balance || 0;
-              setExistingBalance(bal);
-              const rate = params.exchangeRates?.[currency as keyof typeof params.exchangeRates]
-                        || params.exchangeRates?.EUR || 0;
-              setExistingValueInCurrency(Math.round(bal * rate * 100) / 100);
-            }
-          } catch (err) {
-            console.error('Balance check failed:', err);
-            setExistingBalance(0);
-            setExistingValueInCurrency(0);
           }
         }
 
