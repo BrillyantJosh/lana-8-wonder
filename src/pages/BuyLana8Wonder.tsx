@@ -1213,6 +1213,21 @@ const BuyLana8Wonder = () => {
           />
         </div>
 
+        {/* Order summary */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-4 pb-4">
+            <div className="text-center space-y-1">
+              <p className="text-sm text-muted-foreground">{t('buyLana.step4PaymentAmount')}</p>
+              <p className="text-xl font-bold text-primary">{dynamicPaymentAmount} {currency || 'EUR'}</p>
+              {existingBalance > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  ({t('buyLana.step4BreakdownTotal')}: {TOTAL_REQUIRED} {currency || 'EUR'} — {t('buyLana.step4BreakdownExisting')}: {existingValueInCurrency.toFixed(2)} {currency || 'EUR'})
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Info text */}
         <Card className="bg-muted/50">
           <CardContent className="pt-4">
@@ -1266,7 +1281,26 @@ const BuyLana8Wonder = () => {
           </CardContent>
         </Card>
 
+        {/* Order amount summary */}
         <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-4 pb-4">
+            <div className="text-center space-y-1">
+              <p className="text-sm text-muted-foreground">{t('buyLana.step4BreakdownToPay')}</p>
+              <p className="text-2xl font-bold text-primary">{dynamicPaymentAmount} {currency || 'EUR'}</p>
+              {existingBalance > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('buyLana.step3BalanceFound', {
+                    balance: existingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                    value: existingValueInCurrency.toFixed(2),
+                    currency: currency || 'EUR'
+                  })}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/50">
           <CardContent className="pt-4">
             <p className="text-sm sm:text-base text-center text-muted-foreground">
               {t('buyLana.step6NextSplit')}
