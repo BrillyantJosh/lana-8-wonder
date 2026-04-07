@@ -35,6 +35,8 @@ interface BuyLanaRecord {
   payment_amount: number | null;
   status: string;
   split: string | null;
+  existing_balance: number | null;
+  existing_value_in_currency: number | null;
 }
 
 // Helper: calculate LANA amount from exchange rates
@@ -545,6 +547,16 @@ const AdminBuyLana = () => {
         {record.split && (
           <div className="text-xs text-muted-foreground">
             Split: <span className="font-medium text-foreground">{record.split}</span>
+          </div>
+        )}
+
+        {record.existing_balance != null && record.existing_balance > 0 && (
+          <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 p-2 rounded">
+            Existing: {record.existing_balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA
+            (~{(record.existing_value_in_currency || 0).toFixed(2)} {record.currency})
+            {record.payment_amount != null && record.payment_amount < 100 && (
+              <span> | Pays: {record.payment_amount} {record.currency}</span>
+            )}
           </div>
         )}
 

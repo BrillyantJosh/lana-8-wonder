@@ -176,6 +176,10 @@ export function initializeSchema(db: Database.Database): void {
   // Records with no paid_on_account → ensure 'pending'
   db.exec(`UPDATE buy_lana SET status = 'pending' WHERE (paid_on_account IS NULL OR paid_on_account = '') AND (status IS NULL OR status = '')`);
 
+  // Dynamic buy amount: existing wallet balance audit columns (safe migration)
+  try { db.exec("ALTER TABLE buy_lana ADD COLUMN existing_balance REAL DEFAULT 0"); } catch(e) { /* column already exists */ }
+  try { db.exec("ALTER TABLE buy_lana ADD COLUMN existing_value_in_currency REAL DEFAULT 0"); } catch(e) { /* column already exists */ }
+
   // International payments columns on domains (safe migration)
   try { db.exec("ALTER TABLE domains ADD COLUMN enable_international_payments INTEGER DEFAULT 0"); } catch(e) { /* column already exists */ }
   try { db.exec("ALTER TABLE domains ADD COLUMN intl_recipient_name TEXT"); } catch(e) { /* column already exists */ }

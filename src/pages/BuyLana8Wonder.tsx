@@ -100,10 +100,26 @@ const BuyLana8Wonder = () => {
     intl_swift: string;
   } | null>(null);
 
+  // Wallet balance for dynamic payment calculation
+  const [existingBalance, setExistingBalance] = useState<number>(0);
+  const [existingValueInCurrency, setExistingValueInCurrency] = useState<number>(0);
+
+  const TOTAL_REQUIRED = 100;
+  const dynamicPaymentAmount = Math.max(0, Math.ceil(TOTAL_REQUIRED - existingValueInCurrency));
+  const walletHasEnough = existingValueInCurrency >= TOTAL_REQUIRED;
+
   // Step 5: Contact
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Recalculate existing value when currency or rates change
+  useEffect(() => {
+    if (existingBalance > 0 && currency && params?.exchangeRates) {
+      const rate = params.exchangeRates[currency as keyof typeof params.exchangeRates] || 0;
+      setExistingValueInCurrency(Math.round(existingBalance * rate * 100) / 100);
+    }
+  }, [currency, existingBalance, params?.exchangeRates]);
 
   // Generate 7-digit reference on step 4 mount
   useEffect(() => {
@@ -278,6 +294,32 @@ const BuyLana8Wonder = () => {
           }
         }
 
+        // Fetch wallet balance for dynamic payment calculation
+        if (params?.electrum) {
+          try {
+            const balRes = await fetch('/api/check-wallet-balance', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                wallet_addresses: [address],
+                electrum_servers: params.electrum
+              })
+            });
+            const balJson = await balRes.json();
+            if (balJson.success && balJson.wallets?.length > 0) {
+              const bal = balJson.wallets[0].balance || 0;
+              setExistingBalance(bal);
+              const rate = params.exchangeRates?.[currency as keyof typeof params.exchangeRates]
+                        || params.exchangeRates?.EUR || 0;
+              setExistingValueInCurrency(Math.round(bal * rate * 100) / 100);
+            }
+          } catch (err) {
+            console.error('Balance check failed:', err);
+            setExistingBalance(0);
+            setExistingValueInCurrency(0);
+          }
+        }
+
         setWalletStatus('registered');
         setWalletError(null);
       } else {
@@ -421,7 +463,9 @@ const BuyLana8Wonder = () => {
           phone_number: phone,
           email: email,
           currency: effectiveCurrency,
-          payment_amount: 100,
+          payment_amount: dynamicPaymentAmount,
+          existing_balance: existingBalance,
+          existing_value_in_currency: existingValueInCurrency,
           split: params?.split || '',
           status: 'pending'
         });
@@ -688,10 +732,47 @@ const BuyLana8Wonder = () => {
         )}
 
         {/* Continue button */}
+        {/* Balance info when wallet has existing LANA */}
+        {walletStatus === 'registered' && existingBalance > 0 && !walletHasEnough && (
+          <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <CardContent className="pt-4 pb-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  {t('buyLana.step3BalanceFound', {
+                    balance: existingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                    value: existingValueInCurrency.toFixed(2),
+                    currency: currency || 'EUR'
+                  })}
+                </p>
+                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  {t('buyLana.step3ReducedPayment', {
+                    amount: dynamicPaymentAmount,
+                    currency: currency || 'EUR'
+                  })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Wallet already has enough LANA */}
+        {walletStatus === 'registered' && walletHasEnough && (
+          <Card className="bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3 justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                  {t('buyLana.step3WalletHasEnough')}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Button
           className="w-full"
           size="lg"
-          disabled={walletStatus !== 'registered'}
+          disabled={walletStatus !== 'registered' || walletHasEnough}
           onClick={() => setCurrentStep(4)}
         >
           {t('buyLana.step3Continue')}
@@ -724,10 +805,27 @@ const BuyLana8Wonder = () => {
                     <p className="text-base sm:text-lg">
                       {t('buyLana.step4PaymentAmount')}:{' '}
                       <span className="font-bold text-primary text-xl sm:text-2xl">
-                        100 {currency}
+                        {dynamicPaymentAmount} {currency}
                       </span>
                     </p>
                   </div>
+                  {/* Breakdown when user has existing balance */}
+                  {existingBalance > 0 && existingValueInCurrency > 0 && (
+                    <div className="mt-3 pt-3 border-t border-primary/20 space-y-1 text-xs sm:text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>{t('buyLana.step4BreakdownTotal')}</span>
+                        <span>{TOTAL_REQUIRED} {currency}</span>
+                      </div>
+                      <div className="flex justify-between text-green-600 dark:text-green-400">
+                        <span>{t('buyLana.step4BreakdownExisting')}</span>
+                        <span>-{existingValueInCurrency.toFixed(2)} {currency} ({existingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA)</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-primary/10">
+                        <span>{t('buyLana.step4BreakdownToPay')}</span>
+                        <span>{dynamicPaymentAmount} {currency}</span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
