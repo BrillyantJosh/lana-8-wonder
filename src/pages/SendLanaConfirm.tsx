@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Send, QrCode, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Html5Qrcode } from "html5-qrcode";
+import { useQRScanner } from "@/hooks/useQRScanner";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
 import { api as supabase } from "@/integrations/api/client";
 
@@ -25,8 +25,7 @@ const SendLanaConfirm = () => {
     derivedWalletId?: string;
     error?: string;
   } | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const videoRef = useRef<HTMLDivElement>(null);
+  const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get transfer params from URL
@@ -38,11 +37,7 @@ const SendLanaConfirm = () => {
 
   useEffect(() => {
     return () => {
-      // Cleanup scanner on unmount
-      if (scannerRef.current && isScanning) {
-        scannerRef.current.stop().catch(console.error);
-      }
-      // Cleanup validation timeout
+      cleanupQR();
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current);
       }
@@ -114,71 +109,24 @@ const SendLanaConfirm = () => {
 
   const startScanner = async () => {
     setShowScanner(true);
-    
-    // CRITICAL: 100ms delay to ensure DOM is ready
-    setTimeout(async () => {
-      try {
-        // 1. Enumerate cameras
-        const cameras = await Html5Qrcode.getCameras();
-        
-        if (!cameras || cameras.length === 0) {
-          toast.error("No camera found on this device");
-          setShowScanner(false);
-          return;
-        }
-
-        // 2. Select camera (priority: back camera)
-        let selectedCamera = cameras[0];
-        if (cameras.length > 1) {
-          const backCamera = cameras.find(camera => 
-            camera.label.toLowerCase().includes('back') || 
-            camera.label.toLowerCase().includes('rear')
-          );
-          if (backCamera) {
-            selectedCamera = backCamera;
-          }
-        }
-
-        // 3. Initialize scanner with unique ID
-        const scanner = new Html5Qrcode("qr-reader-private-key");
-        scannerRef.current = scanner;
-
-        // 4. Start scanner with camera.id
-        await scanner.start(
-          selectedCamera.id,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-          },
-          (decodedText) => {
-            setWifPrivateKey(decodedText);
-            stopScanner();
-            toast.success("Private key scanned successfully");
-          },
-          (errorMessage) => {
-            // Ignore scan errors during operation
-          }
-        );
-        
-        setIsScanning(true);
-      } catch (err) {
-        console.error("Error starting scanner:", err);
-        toast.error("Failed to start camera scanner");
+    try {
+      await startQR((data) => {
+        setWifPrivateKey(data);
         setShowScanner(false);
         setIsScanning(false);
-      }
-    }, 100);
+        toast.success("Private key scanned successfully");
+      });
+      setIsScanning(true);
+    } catch (err: any) {
+      console.error("Error starting scanner:", err);
+      toast.error("Failed to start camera scanner");
+      setShowScanner(false);
+      setIsScanning(false);
+    }
   };
 
-  const stopScanner = async () => {
-    if (scannerRef.current && isScanning) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-      } catch (err) {
-        console.error("Error stopping scanner:", err);
-      }
-    }
+  const stopScanner = () => {
+    cleanupQR();
     setShowScanner(false);
     setIsScanning(false);
   };
@@ -453,11 +401,16 @@ const SendLanaConfirm = () => {
                 {showScanner && (
                   <Card className="border-2">
                     <CardContent className="p-4">
-                      <div 
-                        id="qr-reader-private-key" 
-                        ref={videoRef}
-                        className="w-full rounded-lg overflow-hidden"
-                      />
+                      <div className="relative w-full rounded-lg overflow-hidden aspect-square bg-black">
+                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div className="absolute top-4 left-4 w-10 h-10 border-l-4 border-t-4 border-primary rounded-tl-lg" />
+                          <div className="absolute top-4 right-4 w-10 h-10 border-r-4 border-t-4 border-primary rounded-tr-lg" />
+                          <div className="absolute bottom-4 left-4 w-10 h-10 border-l-4 border-b-4 border-primary rounded-bl-lg" />
+                          <div className="absolute bottom-4 right-4 w-10 h-10 border-r-4 border-b-4 border-primary rounded-br-lg" />
+                        </div>
+                      </div>
                       <p className="text-xs text-center text-muted-foreground mt-2">
                         Position the QR code within the frame
                       </p>

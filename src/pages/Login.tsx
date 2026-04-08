@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrCode, KeyRound, Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
 import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { useQRScanner } from "@/hooks/useQRScanner";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { validateWifAndGetAddress } from "@/lib/wifValidation";
 import { getDomainKey } from "@/integrations/api/client";
@@ -23,8 +23,7 @@ const Login = () => {
   const [wifValidation, setWifValidation] = useState<{ valid: boolean; error?: string } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const navigate = useNavigate();
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerDivRef = useRef<HTMLDivElement>(null);
+  const { videoRef, canvasRef, startScanning: startQR, cleanup } = useQRScanner();
   const { params } = useNostrLanaParams();
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -63,86 +62,26 @@ const Login = () => {
   }, [wif]);
 
   useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
+    return () => { cleanup(); };
+  }, [cleanup]);
 
   const startScanning = async () => {
     setIsScanning(true);
-    
-    // CRITICAL: 100ms delay to ensure DOM is ready
-    setTimeout(async () => {
-      try {
-        // 1. Enumerate cameras
-        const cameras = await Html5Qrcode.getCameras();
-        
-        if (!cameras || cameras.length === 0) {
-          toast.error("No camera found on this device");
-          setIsScanning(false);
-          return;
-        }
-
-        // 2. Select camera (priority: back camera)
-        let selectedCamera = cameras[0];
-        if (cameras.length > 1) {
-          const backCamera = cameras.find(camera => 
-            camera.label.toLowerCase().includes('back') || 
-            camera.label.toLowerCase().includes('rear')
-          );
-          if (backCamera) {
-            selectedCamera = backCamera;
-          }
-        }
-
-        // 3. Initialize scanner with unique ID
-        const scanner = new Html5Qrcode("qr-reader-login");
-        scannerRef.current = scanner;
-
-        // 4. Start scanner with camera.id
-        await scanner.start(
-          selectedCamera.id,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            setWif(decodedText);
-            stopScanning();
-            toast.success("QR code scanned successfully!");
-          },
-          (errorMessage) => {
-            // Ignore scan errors during operation
-          }
-        );
-      } catch (error: any) {
-        console.error("Error starting QR scanner:", error);
+    try {
+      await startQR((data) => {
+        setWif(data);
         setIsScanning(false);
-        
-        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
-        } else if (error.name === "NotFoundError") {
-          toast.error("No camera found on this device");
-        } else if (error.name === "NotReadableError") {
-          toast.error("Camera is already in use by another application");
-        } else {
-          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
-        }
-      }
-    }, 100);
+        toast.success("QR code scanned successfully!");
+      });
+    } catch (err: any) {
+      console.error("Error starting QR scanner:", err);
+      setIsScanning(false);
+      toast.error(err.message || "Camera error");
+    }
   };
 
-  const stopScanning = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-      } catch (error) {
-        console.error("Error stopping scanner:", error);
-      }
-    }
+  const stopScanning = () => {
+    cleanup();
     setIsScanning(false);
   };
 
@@ -310,11 +249,16 @@ const Login = () => {
               </div>
             ) : (
               <div className="space-y-2 sm:space-y-4">
-                <div
-                  id="qr-reader-login"
-                  ref={scannerDivRef}
-                  className="rounded-lg overflow-hidden border-2 border-primary"
-                />
+                <div className="relative rounded-lg overflow-hidden border-2 border-primary aspect-square bg-black">
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                  <canvas ref={canvasRef} className="hidden" />
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-4 left-4 w-10 h-10 border-l-4 border-t-4 border-primary rounded-tl-lg" />
+                    <div className="absolute top-4 right-4 w-10 h-10 border-r-4 border-t-4 border-primary rounded-tr-lg" />
+                    <div className="absolute bottom-4 left-4 w-10 h-10 border-l-4 border-b-4 border-primary rounded-bl-lg" />
+                    <div className="absolute bottom-4 right-4 w-10 h-10 border-r-4 border-b-4 border-primary rounded-br-lg" />
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant="destructive"

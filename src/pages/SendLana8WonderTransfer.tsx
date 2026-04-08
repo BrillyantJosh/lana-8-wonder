@@ -8,7 +8,7 @@ import { ArrowLeft, Wallet, Send, Loader2, Eye, EyeOff, QrCode } from "lucide-re
 import { toast } from "sonner";
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { verifyWifMatchesWallet } from "@/lib/wifValidation";
-import { Html5Qrcode } from "html5-qrcode";
+import { useQRScanner } from "@/hooks/useQRScanner";
 
 interface LocationState {
   sourceWallet: string;
@@ -31,7 +31,7 @@ const SendLana8WonderTransfer = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
   const [transactionResult, setTransactionResult] = useState<{
     success: boolean;
     txid?: string;
@@ -39,12 +39,8 @@ const SendLana8WonderTransfer = () => {
   } | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
+    return () => { cleanupQR(); };
+  }, [cleanupQR]);
 
   if (!state) {
     navigate('/preview-lana8wonder');
@@ -126,77 +122,21 @@ const SendLana8WonderTransfer = () => {
 
   const startScanner = async () => {
     setShowScanner(true);
-    
-    // CRITICAL: 100ms delay to ensure DOM is ready
-    setTimeout(async () => {
-      try {
-        // 1. Enumerate cameras
-        const cameras = await Html5Qrcode.getCameras();
-        
-        if (!cameras || cameras.length === 0) {
-          toast.error("No camera found on this device");
-          setShowScanner(false);
-          return;
-        }
-
-        // 2. Select camera (priority: back camera)
-        let selectedCamera = cameras[0];
-        if (cameras.length > 1) {
-          const backCamera = cameras.find(camera => 
-            camera.label.toLowerCase().includes('back') || 
-            camera.label.toLowerCase().includes('rear')
-          );
-          if (backCamera) {
-            selectedCamera = backCamera;
-          }
-        }
-
-        // 3. Initialize scanner with unique ID
-        const scanner = new Html5Qrcode("qr-reader-transfer");
-        scannerRef.current = scanner;
-
-        // 4. Start scanner with camera.id
-        await scanner.start(
-          selectedCamera.id,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            handlePrivateKeyChange(decodedText);
-            stopScanner();
-            toast.success("Private key scanned successfully!");
-          },
-          (errorMessage) => {
-            // Ignore scan errors during operation
-          }
-        );
-      } catch (error: any) {
-        console.error("Error starting QR scanner:", error);
+    try {
+      await startQR((data) => {
+        handlePrivateKeyChange(data);
         setShowScanner(false);
-        
-        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
-        } else if (error.name === "NotFoundError") {
-          toast.error("No camera found on this device");
-        } else if (error.name === "NotReadableError") {
-          toast.error("Camera is already in use by another application");
-        } else {
-          toast.error(`Error starting camera: ${error.message || "Unknown error"}`);
-        }
-      }
-    }, 100);
+        toast.success("Private key scanned successfully!");
+      });
+    } catch (err: any) {
+      console.error("Error starting QR scanner:", err);
+      setShowScanner(false);
+      toast.error(err.message || "Camera error");
+    }
   };
 
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-      } catch (error) {
-        console.error("Error stopping scanner:", error);
-      }
-    }
+  const stopScanner = () => {
+    cleanupQR();
     setShowScanner(false);
   };
 
@@ -450,10 +390,16 @@ const SendLana8WonderTransfer = () => {
               ) : (
                 <div className="space-y-4">
                   <Label>Scan Private Key QR Code</Label>
-                  <div
-                    id="qr-reader-transfer"
-                    className="rounded-lg overflow-hidden border-2 border-primary"
-                  />
+                  <div className="relative rounded-lg overflow-hidden border-2 border-primary aspect-square bg-black">
+                    <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                    <canvas ref={canvasRef} className="hidden" />
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute top-4 left-4 w-10 h-10 border-l-4 border-t-4 border-primary rounded-tl-lg" />
+                      <div className="absolute top-4 right-4 w-10 h-10 border-r-4 border-t-4 border-primary rounded-tr-lg" />
+                      <div className="absolute bottom-4 left-4 w-10 h-10 border-l-4 border-b-4 border-primary rounded-bl-lg" />
+                      <div className="absolute bottom-4 right-4 w-10 h-10 border-r-4 border-b-4 border-primary rounded-br-lg" />
+                    </div>
+                  </div>
                   <Button
                     type="button"
                     variant="destructive"

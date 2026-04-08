@@ -11,7 +11,7 @@ import { ArrowLeft, Loader2, QrCode, CheckCircle2, XCircle, X, Sparkles } from "
 import { toast } from "sonner";
 import { api as supabase } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
-import { Html5Qrcode } from "html5-qrcode";
+import { useQRScanner } from "@/hooks/useQRScanner";
 import { getCurrencySymbol } from "@/lib/utils";
 import { validateLanaAddress } from "@/lib/walletValidation";
 import { generate8Wallets } from "@/lib/walletGenerator";
@@ -42,7 +42,7 @@ const AssignLana8Wonder = () => {
   );
   const [scannerActive, setScannerActive] = useState<number | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -115,16 +115,12 @@ const AssignLana8Wonder = () => {
 
   useEffect(() => {
     return () => {
-      // Cleanup scanner on unmount
-      if (scannerRef.current && isScanning) {
-        scannerRef.current.stop().catch(console.error);
-      }
-      // Cleanup validation timeout
+      cleanupQR();
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current);
       }
     };
-  }, [isScanning]);
+  }, [cleanupQR]);
 
   const checkWalletBalance = async (address: string, index: number) => {
     if (!address.trim()) return;
@@ -232,73 +228,25 @@ const AssignLana8Wonder = () => {
     }
 
     setScannerActive(index);
-    
-    // CRITICAL: 100ms delay to ensure DOM is ready
-    setTimeout(async () => {
-      try {
-        // 1. Enumerate cameras
-        const cameras = await Html5Qrcode.getCameras();
-        
-        if (!cameras || cameras.length === 0) {
-          toast.error("No camera found on this device");
-          setScannerActive(null);
-          return;
-        }
-
-        // 2. Select camera (priority: back camera)
-        let selectedCamera = cameras[0];
-        if (cameras.length > 1) {
-          const backCamera = cameras.find(camera => 
-            camera.label.toLowerCase().includes('back') || 
-            camera.label.toLowerCase().includes('rear')
-          );
-          if (backCamera) {
-            selectedCamera = backCamera;
-          }
-        }
-
-        // 3. Initialize scanner with unique ID
-        const scanner = new Html5Qrcode(`qr-reader-${index}`);
-        scannerRef.current = scanner;
-
-        // 4. Start scanner with camera.id
-        await scanner.start(
-          selectedCamera.id,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-          },
-          async (decodedText) => {
-            handleAddressChange(index, decodedText);
-            stopScanner();
-            toast.success("QR code scanned successfully");
-            // Trigger validation immediately after scan
-            await checkWalletBalance(decodedText, index);
-          },
-          (errorMessage) => {
-            // Ignore scan errors during operation
-          }
-        );
-        
-        setIsScanning(true);
-      } catch (err) {
-        console.error("Error starting scanner:", err);
-        toast.error("Failed to start camera scanner");
+    try {
+      await startQR(async (data) => {
+        handleAddressChange(index, data);
         setScannerActive(null);
         setIsScanning(false);
-      }
-    }, 100);
+        toast.success("QR code scanned successfully");
+        await checkWalletBalance(data, index);
+      });
+      setIsScanning(true);
+    } catch (err: any) {
+      console.error("Error starting scanner:", err);
+      toast.error("Failed to start camera scanner");
+      setScannerActive(null);
+      setIsScanning(false);
+    }
   };
 
-  const stopScanner = async () => {
-    if (scannerRef.current && isScanning) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-      } catch (err) {
-        console.error("Error stopping scanner:", err);
-      }
-    }
+  const stopScanner = () => {
+    cleanupQR();
     setScannerActive(null);
     setIsScanning(false);
   };
@@ -624,7 +572,16 @@ const AssignLana8Wonder = () => {
                     </div>
                     
                     {scannerActive === index && (
-                      <div id={`qr-reader-${index}`} className="w-full"></div>
+                      <div className="relative rounded-lg overflow-hidden border-2 border-primary aspect-square bg-black">
+                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-primary rounded-tl-lg" />
+                          <div className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-primary rounded-tr-lg" />
+                          <div className="absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 border-primary rounded-bl-lg" />
+                          <div className="absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 border-primary rounded-br-lg" />
+                        </div>
+                      </div>
                     )}
                     
                     {wallet.isValid !== null && !wallet.isChecking && (

@@ -18,7 +18,7 @@ import {
   UserPlus,
   Check,
 } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { useQRScanner } from '@/hooks/useQRScanner';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
@@ -79,8 +79,7 @@ const BuyLana8Wonder = () => {
   const [walletStatus, setWalletStatus] = useState<WalletStatus>('idle');
   const [walletError, setWalletError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerDivRef = useRef<HTMLDivElement>(null);
+  const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Step 4: Payment
@@ -255,12 +254,8 @@ const BuyLana8Wonder = () => {
 
   // Cleanup QR scanner on unmount
   useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
+    return () => { cleanupQR(); };
+  }, [cleanupQR]);
 
   // Debounced wallet validation for step 3
   const validateWallet = useCallback(async (address: string) => {
@@ -373,72 +368,21 @@ const BuyLana8Wonder = () => {
   // QR Scanner
   const startScanning = async () => {
     setIsScanning(true);
-
-    setTimeout(async () => {
-      try {
-        const cameras = await Html5Qrcode.getCameras();
-
-        if (!cameras || cameras.length === 0) {
-          toast.error('No camera found on this device');
-          setIsScanning(false);
-          return;
-        }
-
-        let selectedCamera = cameras[0];
-        if (cameras.length > 1) {
-          const backCamera = cameras.find(camera =>
-            camera.label.toLowerCase().includes('back') ||
-            camera.label.toLowerCase().includes('rear')
-          );
-          if (backCamera) {
-            selectedCamera = backCamera;
-          }
-        }
-
-        const scanner = new Html5Qrcode('qr-reader-buy');
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          selectedCamera.id,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            setWalletId(decodedText);
-            stopScanning();
-            toast.success('QR code scanned successfully!');
-          },
-          () => {
-            // Ignore scan errors during operation
-          }
-        );
-      } catch (error: any) {
-        console.error('Error starting QR scanner:', error);
+    try {
+      await startQR((data) => {
+        setWalletId(data);
         setIsScanning(false);
-
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          toast.error('Camera permission denied. Please allow camera access in your browser settings.');
-        } else if (error.name === 'NotFoundError') {
-          toast.error('No camera found on this device');
-        } else if (error.name === 'NotReadableError') {
-          toast.error('Camera is already in use by another application');
-        } else {
-          toast.error(`Error starting camera: ${error.message || 'Unknown error'}`);
-        }
-      }
-    }, 100);
+        toast.success('QR code scanned successfully!');
+      });
+    } catch (err: any) {
+      console.error('Error starting QR scanner:', err);
+      setIsScanning(false);
+      toast.error(err.message || 'Camera error');
+    }
   };
 
-  const stopScanning = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-      } catch (error) {
-        console.error('Error stopping scanner:', error);
-      }
-    }
+  const stopScanning = () => {
+    cleanupQR();
     setIsScanning(false);
   };
 
@@ -731,11 +675,16 @@ const BuyLana8Wonder = () => {
         {/* QR Scanner */}
         {isScanning && (
           <div className="space-y-3">
-            <div
-              id="qr-reader-buy"
-              ref={scannerDivRef}
-              className="rounded-lg overflow-hidden border-2 border-primary"
-            />
+            <div className="relative rounded-lg overflow-hidden border-2 border-primary aspect-square bg-black">
+              <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-4 left-4 w-10 h-10 border-l-4 border-t-4 border-primary rounded-tl-lg" />
+                <div className="absolute top-4 right-4 w-10 h-10 border-r-4 border-t-4 border-primary rounded-tr-lg" />
+                <div className="absolute bottom-4 left-4 w-10 h-10 border-l-4 border-b-4 border-primary rounded-bl-lg" />
+                <div className="absolute bottom-4 right-4 w-10 h-10 border-r-4 border-b-4 border-primary rounded-br-lg" />
+              </div>
+            </div>
             <Button
               type="button"
               variant="destructive"
