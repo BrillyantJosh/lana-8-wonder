@@ -18,6 +18,7 @@ import contentManagementRouter from './routes/contentManagement.js';
 import registerVirginWalletsRouter from './routes/registerVirginWallets.js';
 import globalSlotsRouter from './routes/globalSlots.js';
 import checkLana8WonderRouter from './routes/checkLana8Wonder.js';
+import fetchKind30889Router from './routes/fetchKind30889.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,7 @@ app.use('/api/check-admin', adminAuthRouter);
 app.use('/api/content', contentManagementRouter);
 app.use('/api/global-slots', globalSlotsRouter);
 app.use('/api/check-lana8wonder', checkLana8WonderRouter);
+app.use('/api/admin/fetch-kind30889', fetchKind30889Router);
 
 // API Routes - Generic DB CRUD
 app.use('/api/db', dbRouter);

@@ -11,6 +11,7 @@ import BuyLana8Wonder from "./pages/BuyLana8Wonder";
 import AdminBuyLana from "./pages/AdminBuyLana";
 import AdminDomainSettings from "./pages/AdminDomainSettings";
 import AdminContent from "./pages/AdminContent";
+import AdminRecreatePlan from "./pages/AdminRecreatePlan";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
 import AssignLana8Wonder from "./pages/AssignLana8Wonder";
 import PreviewLana8Wonder from "./pages/PreviewLana8Wonder";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/admin-buy-lana" element={<AdminBuyLana />} />
           <Route path="/admin-domain-settings" element={<AdminDomainSettings />} />
           <Route path="/admin-content" element={<AdminContent />} />
+          <Route path="/admin-recreate-plan" element={<AdminRecreatePlan />} />
           <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
           <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
           <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />
