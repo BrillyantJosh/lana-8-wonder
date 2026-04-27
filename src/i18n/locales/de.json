@@ -109,6 +109,8 @@
     "walletsVerified": "Wallets auf Nostr Relays verifiziert!",
     "walletsVerifiedDetail": "Alle 8 Wallet-Adressen wurden auf Nostr Relays bestätigt (KIND 30889).",
     "walletsNotFound": "Wallet-Einträge noch nicht auf Relays gefunden. Bei anhaltendem Problem kontaktieren Sie:",
+    "retryRegistration": "Registrierung wiederholen",
+    "registeringWallets": "Registrierung...",
     "loadingExistingPlan": "Lade Ihren bestehenden Lana8Wonder Plan...",
     "planDetails": "Plandetails",
     "customerInfo": "Kundeninformationen",

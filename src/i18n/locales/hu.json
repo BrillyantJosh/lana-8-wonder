@@ -109,6 +109,8 @@
     "walletsVerified": "Tárcák ellenőrizve a Nostr relay-eken!",
     "walletsVerifiedDetail": "Mind a 8 tárca cím megerősítve a Nostr relay-eken (KIND 30889).",
     "walletsNotFound": "Tárca rekordok még nem találhatók a relay-eken. Ha a probléma fennáll, lépjen kapcsolatba:",
+    "retryRegistration": "Újrapróbálás",
+    "registeringWallets": "Regisztrálás...",
     "loadingExistingPlan": "Meglévő Lana8Wonder terved betöltése...",
     "planDetails": "Terv részletei",
     "customerInfo": "Ügyfél adatai",

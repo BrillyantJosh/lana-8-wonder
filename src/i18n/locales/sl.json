@@ -109,6 +109,8 @@
     "walletsVerified": "Denarnice potrjene na Nostr relayjih!",
     "walletsVerifiedDetail": "Vseh 8 naslovov denarnic je potrjenih na Nostr relayjih (KIND 30889).",
     "walletsNotFound": "Zapisi denarnic še niso najdeni na relayjih. Če se težava nadaljuje, kontaktirajte:",
+    "retryRegistration": "Ponovi registracijo",
+    "registeringWallets": "Registriranje...",
     "loadingExistingPlan": "Nalaganje vašega obstoječega Lana8Wonder načrta...",
     "planDetails": "Podrobnosti načrta",
     "customerInfo": "Informacije o stranki",

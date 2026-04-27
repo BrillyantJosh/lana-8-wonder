@@ -781,38 +781,61 @@ const PreviewLana8Wonder = () => {
       const result = await response.json();
       console.log('Response body:', JSON.stringify(result, null, 2));
 
-      const isAlreadyRegistered = !response.ok || !result.success;
-      const errorMsg = result.message || '';
+      // STRICT validation: API must return success AND all 8 nostr broadcasts must succeed
+      const apiSuccess = response.ok && result.success;
+      const broadcastsSuccessful = result.data?.nostr_broadcasts?.successful || 0;
+      const broadcastsFailed = result.data?.nostr_broadcasts?.failed || 0;
+      const expectedWallets = effectiveWallets?.length || 8;
+      const allBroadcastsSucceeded = broadcastsSuccessful >= expectedWallets && broadcastsFailed === 0;
 
-      if (isAlreadyRegistered) {
-        console.warn('⚠️ External API returned non-success:', result);
-      } else {
-        console.log('✅ Wallets registered successfully:', result);
-      }
+      // Special case: API may return "already registered" message — accept it
+      const errorMsg = (result.message || '').toLowerCase();
+      const isAlreadyRegistered = !apiSuccess && (errorMsg.includes('already registered') || errorMsg.includes('already exists'));
 
-      // Update profile to mark wallets as registered (even if "already registered")
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ wallet_registered: 1 })
-        .eq('nostr_hex_id', nostrHexId);
+      const registrationOk = (apiSuccess && allBroadcastsSucceeded) || isAlreadyRegistered;
 
-      if (updateError) {
-        console.error('Error updating profile:', updateError);
-        toast.error('Failed to update profile status');
-        return;
-      }
-
-      // Set registration result for display
-      setRegistrationResult(result);
-      setWalletRegistered(true);
-
-      if (isAlreadyRegistered) {
-        toast.success('Wallets already registered — step marked as complete', { duration: 5000 });
-      } else {
-        toast.success(
-          `Successfully registered ${result.data?.wallets_registered || effectiveWallets?.length} wallets`,
-          { duration: 5000 }
+      if (!registrationOk) {
+        console.error('❌ Registration failed:', {
+          apiSuccess,
+          broadcastsSuccessful,
+          broadcastsFailed,
+          message: result.message
+        });
+        setRegistrationResult(result);
+        // Set walletRegistered=true so UI shows verification step which will detect failure
+        // and offer retry. But do NOT mark profile.wallet_registered yet.
+        setWalletRegistered(true);
+        // Trigger relay verification — it will fail and show retry button
+        // (we still navigate to verifying state so user sees retry option)
+        toast.error(
+          `Registration incomplete: ${broadcastsSuccessful}/${expectedWallets} broadcasts succeeded. Will verify on relays...`,
+          { duration: 7000 }
         );
+        // Don't return — continue to relay verification step
+      } else {
+        // Only mark profile as wallet_registered if registration truly succeeded
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ wallet_registered: 1 })
+          .eq('nostr_hex_id', nostrHexId);
+
+        if (updateError) {
+          console.error('Error updating profile:', updateError);
+          toast.error('Failed to update profile status');
+          return;
+        }
+
+        setRegistrationResult(result);
+        setWalletRegistered(true);
+
+        if (isAlreadyRegistered) {
+          toast.success('Wallets already registered — step marked as complete', { duration: 5000 });
+        } else {
+          toast.success(
+            `Successfully registered ${result.data?.wallets_registered || effectiveWallets?.length} wallets`,
+            { duration: 5000 }
+          );
+        }
       }
 
       // === VERIFY KIND 30889 ON RELAYS ===
@@ -840,6 +863,15 @@ const PreviewLana8Wonder = () => {
           if (verified) {
             console.log('✅ KIND 30889 verified on relays');
             setRelayVerifyStatus('verified');
+            // Ensure profile is marked as registered (in case earlier step skipped it due to broadcast count mismatch)
+            try {
+              await supabase
+                .from('profiles')
+                .update({ wallet_registered: 1 })
+                .eq('nostr_hex_id', nostrHexId);
+            } catch (e) {
+              console.error('Failed to update wallet_registered after verification:', e);
+            }
             toast.success(t('createLana8Wonder.walletsVerified'), { duration: 5000 });
           } else {
             console.warn('⚠️ KIND 30889 not found or wallets mismatch');
@@ -1136,19 +1168,46 @@ const PreviewLana8Wonder = () => {
                     )}
 
                     {relayVerifyStatus === 'not_found' && (
-                      <div className="mt-2 md:mt-4 p-2 md:p-4 bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
-                        <div className="flex items-center justify-center gap-2 md:gap-3">
-                          <AlertTriangle className="h-4 w-4 md:h-6 md:w-6 text-amber-600 dark:text-amber-400 shrink-0" />
-                          <div>
-                            <p className="font-bold text-sm md:text-base text-amber-800 dark:text-amber-200">
-                              {t('createLana8Wonder.walletsNotFound')}
-                            </p>
-                            {relayVerifyContact && (
-                              <p className="hidden md:block text-sm text-amber-700 dark:text-amber-300 mt-1">
-                                {relayVerifyContact}
+                      <div className="mt-2 md:mt-4 p-3 md:p-4 bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex items-center justify-center gap-2 md:gap-3">
+                            <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <div className="text-center">
+                              <p className="font-bold text-sm md:text-base text-amber-800 dark:text-amber-200">
+                                {t('createLana8Wonder.walletsNotFound')}
                               </p>
-                            )}
+                              {relayVerifyContact && (
+                                <p className="text-xs md:text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                  {relayVerifyContact}
+                                </p>
+                              )}
+                            </div>
                           </div>
+                          <Button
+                            onClick={() => {
+                              // Reset state and retry registration
+                              setRelayVerifyStatus('idle');
+                              setWalletRegistered(false);
+                              setRegistrationResult(null);
+                              handleRegisterWallets();
+                            }}
+                            disabled={isRegistering}
+                            variant="default"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                          >
+                            {isRegistering ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {t('createLana8Wonder.registeringWallets') || 'Retrying...'}
+                              </>
+                            ) : (
+                              <>
+                                <Radio className="mr-2 h-4 w-4" />
+                                {t('createLana8Wonder.retryRegistration') || 'Retry Registration'}
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                     )}
