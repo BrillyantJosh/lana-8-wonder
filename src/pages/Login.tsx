@@ -13,7 +13,7 @@ import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { useQRScanner } from "@/hooks/useQRScanner";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { validateWifAndGetAddress } from "@/lib/wifValidation";
-import { getDomainKey } from "@/integrations/api/client";
+import { api as supabase, getDomainKey } from "@/integrations/api/client";
 
 const Login = () => {
   const { t, i18n } = useTranslation();
@@ -155,6 +155,46 @@ const Login = () => {
         toast.success("Annuity plan found!");
         navigate("/dashboard");
       } else {
+        // No published plan — check if user has incomplete enrollment
+        // (wallets registered + transaction made, but plan not yet published)
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, wallet_registered, tx, published_plan, selected_wallet')
+            .eq('nostr_hex_id', ids.nostrHexId)
+            .maybeSingle();
+
+          if (profileData) {
+            const profileRow = profileData as {
+              id: string;
+              wallet_registered: number | null;
+              tx: string | null;
+              published_plan: number | null;
+              selected_wallet: string | null;
+            };
+
+            // Check if 8 annuity wallets exist locally
+            const { data: walletData } = await supabase
+              .from('wallets')
+              .select('wallet_address')
+              .eq('profile_id', profileRow.id)
+              .eq('wallet_type', 'annuity');
+
+            const hasAllWallets = Array.isArray(walletData) && walletData.length === 8;
+            const hasTransaction = !!profileRow.tx;
+            const planNotPublished = !profileRow.published_plan;
+
+            if (hasAllWallets && hasTransaction && planNotPublished) {
+              toast.info("Resuming: complete your annuity plan publication.");
+              navigate("/preview-lana8wonder");
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Error checking incomplete enrollment:', err);
+          // Fall through to default behavior
+        }
+
         toast.info("No annuity plan found. Create a new one.");
         navigate("/create-lana8wonder");
       }

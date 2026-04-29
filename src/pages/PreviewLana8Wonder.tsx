@@ -398,14 +398,14 @@ const PreviewLana8Wonder = () => {
           .maybeSingle();
         
         if (profileError) throw profileError;
-        
-        if (!profile?.selected_wallet) {
-          console.warn('No selected_wallet found in profile');
+
+        if (!profile) {
+          console.warn('No profile found');
           toast.error("No annuity plan found. Create a new one.");
           navigate("/create-lana8wonder");
           return;
         }
-        
+
         // Fetch wallets from database ordered by position
         const { data: dbWallets, error: walletsError } = await supabase
           .from("wallets")
@@ -413,15 +413,57 @@ const PreviewLana8Wonder = () => {
           .eq("profile_id", profile.id)
           .eq("wallet_type", "annuity")
           .order('position', { ascending: true });
-        
+
         if (walletsError) throw walletsError;
-        
+
         if (!dbWallets || dbWallets.length !== 8) {
           console.warn('Incomplete wallets found:', dbWallets?.length);
           toast.error("Incomplete annuity plan. Please set up again.");
           navigate("/create-lana8wonder");
           return;
         }
+
+        // Recover selected_wallet if missing but transaction is done
+        // This handles the case where user lost session mid-flow
+        let recoveredSelectedWallet = profile.selected_wallet;
+        if (!recoveredSelectedWallet && profile.tx && params?.relays) {
+          console.log('🔄 selected_wallet missing but tx exists — recovering from KIND 30889...');
+          try {
+            const k30889res = await fetch('/api/admin/fetch-kind30889', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ nostr_hex_id: nostrHexId })
+            });
+            const k30889data = await k30889res.json();
+            if (k30889data.found && k30889data.wallets) {
+              // Find Main Wallet (not Lana8Wonder type)
+              const mainWallet = k30889data.wallets.find((w: { wallet_type: string }) =>
+                w.wallet_type === 'Main Wallet' || w.wallet_type === 'main_wallet'
+              );
+              if (mainWallet) {
+                recoveredSelectedWallet = mainWallet.wallet_address;
+                console.log('✅ Recovered selected_wallet from KIND 30889:', recoveredSelectedWallet);
+                // Persist back to DB
+                await supabase
+                  .from('profiles')
+                  .update({ selected_wallet: recoveredSelectedWallet })
+                  .eq('id', profile.id);
+              }
+            }
+          } catch (err) {
+            console.error('Failed to recover selected_wallet:', err);
+          }
+        }
+
+        if (!recoveredSelectedWallet) {
+          console.warn('No selected_wallet found in profile and recovery failed');
+          toast.error("No annuity plan found. Create a new one.");
+          navigate("/create-lana8wonder");
+          return;
+        }
+
+        // Use the recovered or stored selected_wallet
+        profile.selected_wallet = recoveredSelectedWallet;
         
         // Get session data for currency
         const sessionData = sessionStorage.getItem("lana_session");
