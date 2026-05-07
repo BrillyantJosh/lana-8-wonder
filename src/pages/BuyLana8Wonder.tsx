@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { validateLanaAddress } from '@/lib/walletValidation';
+import { validateWifAndGetAddress } from '@/lib/wifValidation';
 import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 
@@ -365,13 +366,40 @@ const BuyLana8Wonder = () => {
     };
   }, [walletId, validateWallet]);
 
+  // Smart input handler: accepts both LANA address and LANA WIF (private key).
+  // If input is a WIF, derives the wallet address automatically.
+  const processWalletInput = async (raw: string): Promise<string> => {
+    const cleaned = raw.replace(/[\s​-‍﻿]/g, '');
+
+    // First, try as LANA address (cheaper validation)
+    const addressResult = await validateLanaAddress(cleaned);
+    if (addressResult.valid) {
+      return cleaned;
+    }
+
+    // If not a valid address, try as WIF and derive address
+    try {
+      const wifResult = await validateWifAndGetAddress(cleaned);
+      if (wifResult.valid && wifResult.walletId) {
+        toast.success(t('buyLana.step3WifDetected') || 'WIF detected — wallet address derived', { duration: 4000 });
+        return wifResult.walletId;
+      }
+    } catch {
+      // Not a WIF either
+    }
+
+    // Return as-is (will fail validation and show error to user)
+    return cleaned;
+  };
+
   // QR Scanner
   const startScanning = async () => {
     setIsScanning(true);
     try {
-      await startQR((data) => {
-        setWalletId(data);
+      await startQR(async (data) => {
         setIsScanning(false);
+        const processed = await processWalletInput(data);
+        setWalletId(processed);
         toast.success('QR code scanned successfully!');
       });
     } catch (err: any) {
@@ -647,6 +675,12 @@ const BuyLana8Wonder = () => {
               placeholder={t('buyLana.step3WalletPlaceholder')}
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
+              onPaste={async (e) => {
+                e.preventDefault();
+                const pasted = e.clipboardData.getData('text');
+                const processed = await processWalletInput(pasted);
+                setWalletId(processed);
+              }}
               className={`font-mono text-xs sm:text-sm flex-1 ${
                 walletStatus === 'registered'
                   ? 'border-green-500'
@@ -670,6 +704,11 @@ const BuyLana8Wonder = () => {
             )}
           </div>
           <WalletStatusIndicator />
+          {!walletId.trim() && (
+            <p className="text-xs text-muted-foreground mt-1">
+              💡 {t('buyLana.step3WifHint')}
+            </p>
+          )}
         </div>
 
         {/* QR Scanner */}
