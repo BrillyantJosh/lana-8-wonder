@@ -201,6 +201,7 @@
     "step3BalanceFound": "Your wallet has {{balance}} LANA (~{{value}} {{currency}})",
     "step3ReducedPayment": "You only need to pay {{amount}} {{currency}}",
     "step3WalletHasEnough": "Your wallet already has enough LANA. No purchase needed.",
+    "step3LoginPrompt": "Please log in to create your annuity plan.",
     "step3Continue": "Continue",
     "step4Title": "Payment",
     "step4Amount": "Amount to pay",

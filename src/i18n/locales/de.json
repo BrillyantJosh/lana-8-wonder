@@ -201,6 +201,7 @@
     "step3BalanceFound": "Ihr Wallet hat {{balance}} LANA (~{{value}} {{currency}})",
     "step3ReducedPayment": "Sie müssen nur {{amount}} {{currency}} zahlen",
     "step3WalletHasEnough": "Ihr Wallet hat bereits genug LANA. Kein Kauf erforderlich.",
+    "step3LoginPrompt": "Bitte melden Sie sich an, um Ihren Rentenplan zu erstellen.",
     "step3Continue": "Weiter",
     "step4Title": "Zahlung",
     "step4Amount": "Zu zahlender Betrag",

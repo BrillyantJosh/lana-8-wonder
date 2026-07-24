@@ -201,6 +201,7 @@
     "step3BalanceFound": "Il tuo portafoglio ha {{balance}} LANA (~{{value}} {{currency}})",
     "step3ReducedPayment": "Devi pagare solo {{amount}} {{currency}}",
     "step3WalletHasEnough": "Il tuo portafoglio ha già abbastanza LANA. Nessun acquisto necessario.",
+    "step3LoginPrompt": "Effettua l'accesso per creare il tuo piano di rendita.",
     "step3Continue": "Continua",
     "step4Title": "Pagamento",
     "step4Amount": "Importo da pagare",

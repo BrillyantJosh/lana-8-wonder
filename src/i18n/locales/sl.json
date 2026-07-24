@@ -201,6 +201,7 @@
     "step3BalanceFound": "Vaša denarnica ima {{balance}} LANA (~{{value}} {{currency}})",
     "step3ReducedPayment": "Plačati morate samo {{amount}} {{currency}}",
     "step3WalletHasEnough": "Vaša denarnica že ima dovolj LAN. Nakup ni potreben.",
+    "step3LoginPrompt": "Prosimo, prijavite se za izdelavo vašega načrta anuitete.",
     "step3Continue": "Nadaljuj",
     "step4Title": "Plačilo",
     "step4Amount": "Znesek za plačilo",

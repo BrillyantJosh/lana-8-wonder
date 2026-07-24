@@ -762,25 +762,38 @@ const BuyLana8Wonder = () => {
         {/* Wallet already has enough LANA */}
         {walletStatus === 'registered' && walletHasEnough && (
           <Card className="bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800">
-            <CardContent className="pt-4 pb-4">
+            <CardContent className="pt-4 pb-4 space-y-3">
               <div className="flex items-center gap-3 justify-center">
                 <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300 text-center">
                   {t('buyLana.step3WalletHasEnough')}
                 </p>
               </div>
+              <p className="text-xs text-green-600 dark:text-green-400 text-center">
+                {t('buyLana.step3LoginPrompt')}
+              </p>
             </CardContent>
           </Card>
         )}
 
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={walletStatus !== 'registered' || walletHasEnough}
-          onClick={() => setCurrentStep(4)}
-        >
-          {t('buyLana.step3Continue')}
-        </Button>
+        {walletStatus === 'registered' && walletHasEnough ? (
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => navigate('/login')}
+          >
+            {t('buyLana.step6Login')}
+          </Button>
+        ) : (
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={walletStatus !== 'registered'}
+            onClick={() => setCurrentStep(4)}
+          >
+            {t('buyLana.step3Continue')}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

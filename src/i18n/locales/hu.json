@@ -201,6 +201,7 @@
     "step3BalanceFound": "Pénztárcájában {{balance}} LANA van (~{{value}} {{currency}})",
     "step3ReducedPayment": "Csak {{amount}} {{currency}} fizetendő",
     "step3WalletHasEnough": "Pénztárcájában már elegendő LANA van. Nincs szükség vásárlásra.",
+    "step3LoginPrompt": "Kérjük, jelentkezzen be a járadékterv létrehozásához.",
     "step3Continue": "Tovább",
     "step4Title": "Fizetés",
     "step4Amount": "Fizetendő összeg",
