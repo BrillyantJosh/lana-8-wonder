@@ -158,6 +158,13 @@
     "walletsEmptyRequirement": "Minden tárcának üresnek kell lennie (egyenleg = 0) vagy új/nem regisztrált",
     "walletInputPlaceholder": "Add meg a tárca címét vagy szkenned be a QR kódot"
   },
+  "upgradeChoiceDialog": {
+    "title": "Előző split frissítés elérhető",
+    "description": "Egyenlege alapján jogosult az előző splitre (Split {{prevSplit}}) való jelentkezésre kedvezőbb belépési árral és nagyobb befizetéssel. Vagy folytathatja a jelenlegi splittel (Split {{currentSplit}}). Válasszon:",
+    "upgradeButton": "Frissítés Split {{split}}-re",
+    "currentButton": "Maradás Split {{split}}-en",
+    "depositHint": "befizetés"
+  },
   "generateWalletsDialog": {
     "title": "Tárcák generálása - Biztonsági figyelmeztetés",
     "message1": "Létrehozhatsz tárcákat az offlinelana.org oldalon vagy itt helyben. Tudnod kell, hogy ezek a számítógépeden jönnek létre, ami online van, míg az offlinelana.org-on ez offline történik.",

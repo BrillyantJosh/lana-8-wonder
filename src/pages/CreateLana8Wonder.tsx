@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { api as supabase } from "@/integrations/api/client";
 import { getCurrencySymbol } from "@/lib/utils";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { UpgradeChoiceDialog } from "@/components/UpgradeChoiceDialog";
 
 const CreateLana8Wonder = () => {
   const { t } = useTranslation();
@@ -25,6 +26,7 @@ const CreateLana8Wonder = () => {
   const [balancesLoading, setBalancesLoading] = useState(false);
   const [exchangeRates, setExchangeRates] = useState<{ EUR: number; USD: number; GBP: number } | null>(null);
   const [planCurrency, setPlanCurrency] = useState<string>("EUR");
+  const [upgradeChoice, setUpgradeChoice] = useState<{ walletAddress: string; currentBalance: number } | null>(null);
   const { params } = useNostrLanaParams();
 
   useEffect(() => {
@@ -194,6 +196,72 @@ const CreateLana8Wonder = () => {
   const previousSplitDeposit = previousSplitRate > 0 ? 100 / previousSplitRate : 0;
   const currentSplit = params?.split ? parseInt(params.split) : 0;
 
+  // Check if profile already has a completed plan → redirect to preview.
+  // Returns true if it redirected (caller should stop).
+  const checkExistingPlanAndRedirect = async (): Promise<boolean> => {
+    if (!session?.nostrHexId) return false;
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id, selected_wallet")
+      .eq("nostr_hex_id", session.nostrHexId)
+      .maybeSingle();
+
+    if (existingProfile?.selected_wallet) {
+      const { data: existingWallets, error: walletsError } = await supabase
+        .from("wallets")
+        .select("wallet_address")
+        .eq("profile_id", existingProfile.id)
+        .eq("wallet_type", "annuity");
+
+      if (walletsError) {
+        console.error("Error checking wallets:", walletsError);
+      }
+
+      if (existingWallets && existingWallets.length === 8) {
+        toast.success(t('createLana8Wonder.existingPlanFound'));
+        navigate("/preview-lana8wonder");
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Navigate to assign with the chosen upgrade decision.
+  const navigateToAssign = (walletAddress: string, currentBalance: number, useUpgrade: boolean) => {
+    const effectiveRate = useUpgrade
+      ? previousSplitRate
+      : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
+    const effectiveDeposit = 100 / effectiveRate;
+
+    navigate('/assign-lana8wonder', {
+      state: {
+        sourceWallet: walletAddress,
+        balance: currentBalance,
+        minRequiredLana: effectiveDeposit,
+        planCurrency: planCurrency,
+        exchangeRate: effectiveRate,
+        isPreviousSplitUpgrade: useUpgrade,
+        upgradeSplit: useUpgrade ? currentSplit - 1 : currentSplit
+      }
+    });
+  };
+
+  // Handle "Assign to L8W" click: check existing plan, then either open the
+  // upgrade-choice modal (if eligible) or navigate directly (current split).
+  const handleAssignClick = async (walletAddress: string, currentBalance: number, isUpgradeEligible: boolean) => {
+    try {
+      if (await checkExistingPlanAndRedirect()) return;
+      if (isUpgradeEligible) {
+        setUpgradeChoice({ walletAddress, currentBalance });
+      } else {
+        navigateToAssign(walletAddress, currentBalance, false);
+      }
+    } catch (error) {
+      console.error("Error checking existing wallets:", error);
+      toast.error("Failed to check existing wallets");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4 pb-24">
       <div className="max-w-4xl mx-auto">
@@ -330,52 +398,7 @@ const CreateLana8Wonder = () => {
                               {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
                                 <Button
                                   size="sm"
-                                  onClick={async () => {
-                                    try {
-                                      const { data: existingProfile } = await supabase
-                                        .from("profiles")
-                                        .select("id, selected_wallet")
-                                        .eq("nostr_hex_id", session.nostrHexId)
-                                        .maybeSingle();
-
-                                      if (existingProfile?.selected_wallet) {
-                                        const { data: existingWallets, error: walletsError } = await supabase
-                                          .from("wallets")
-                                          .select("wallet_address")
-                                          .eq("profile_id", existingProfile.id)
-                                          .eq("wallet_type", "annuity");
-
-                                        if (walletsError) {
-                                          console.error("Error checking wallets:", walletsError);
-                                        }
-
-                                        if (existingWallets && existingWallets.length === 8) {
-                                          toast.success(t('createLana8Wonder.existingPlanFound'));
-                                          navigate("/preview-lana8wonder");
-                                          return;
-                                        }
-                                      }
-
-                                      // Use previous split rate when upgrade eligible
-                                      const effectiveRate = isUpgradeEligible ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
-                                      const effectiveDeposit = 100 / effectiveRate;
-
-                                      navigate('/assign-lana8wonder', {
-                                        state: {
-                                          sourceWallet: wallet.wallet_address,
-                                          balance: currentBalance,
-                                          minRequiredLana: effectiveDeposit,
-                                          planCurrency: planCurrency,
-                                          exchangeRate: effectiveRate,
-                                          isPreviousSplitUpgrade: isUpgradeEligible,
-                                          upgradeSplit: isUpgradeEligible ? currentSplit - 1 : currentSplit
-                                        }
-                                      });
-                                    } catch (error) {
-                                      console.error("Error checking existing wallets:", error);
-                                      toast.error("Failed to check existing wallets");
-                                    }
-                                  }}
+                                  onClick={() => handleAssignClick(wallet.wallet_address, currentBalance, isUpgradeEligible)}
                                   className="text-xs shrink-0"
                                 >
                                   {t('createLana8Wonder.assignToL8W')}
@@ -454,52 +477,7 @@ const CreateLana8Wonder = () => {
                                 {!balancesLoading && hasEnoughBalance && minimumRequired > 0 && (
                                   <Button
                                     size="sm"
-                                    onClick={async () => {
-                                      try {
-                                        const { data: existingProfile } = await supabase
-                                          .from("profiles")
-                                          .select("id, selected_wallet")
-                                          .eq("nostr_hex_id", session.nostrHexId)
-                                          .maybeSingle();
-
-                                        if (existingProfile?.selected_wallet) {
-                                          const { data: existingWallets, error: walletsError } = await supabase
-                                            .from("wallets")
-                                            .select("wallet_address")
-                                            .eq("profile_id", existingProfile.id)
-                                            .eq("wallet_type", "annuity");
-
-                                          if (walletsError) {
-                                            console.error("Error checking wallets:", walletsError);
-                                          }
-
-                                          if (existingWallets && existingWallets.length === 8) {
-                                            toast.success(t('createLana8Wonder.existingPlanFound'));
-                                            navigate("/preview-lana8wonder");
-                                            return;
-                                          }
-                                        }
-
-                                        // Use previous split rate when upgrade eligible
-                                        const effectiveRate = isUpgradeEligible ? previousSplitRate : (exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 1);
-                                        const effectiveDeposit = 100 / effectiveRate;
-
-                                        navigate('/assign-lana8wonder', {
-                                          state: {
-                                            sourceWallet: wallet.wallet_address,
-                                            balance: currentBalance,
-                                            minRequiredLana: effectiveDeposit,
-                                            planCurrency: planCurrency,
-                                            exchangeRate: effectiveRate,
-                                            isPreviousSplitUpgrade: isUpgradeEligible,
-                                            upgradeSplit: isUpgradeEligible ? currentSplit - 1 : currentSplit
-                                          }
-                                        });
-                                      } catch (error) {
-                                        console.error("Error checking existing wallets:", error);
-                                        toast.error("Failed to check existing wallets");
-                                      }
-                                    }}
+                                    onClick={() => handleAssignClick(wallet.wallet_address, currentBalance, isUpgradeEligible)}
                                     className="text-xs whitespace-nowrap"
                                   >
                                     {t('createLana8Wonder.assignToL8W')}
@@ -518,6 +496,23 @@ const CreateLana8Wonder = () => {
           </Card>
         </div>
       </div>
+
+      <UpgradeChoiceDialog
+        open={!!upgradeChoice}
+        currentSplit={currentSplit}
+        currency={planCurrency}
+        currentDeposit={depositAmount}
+        upgradeDeposit={previousSplitDeposit}
+        onUpgrade={() => {
+          if (upgradeChoice) navigateToAssign(upgradeChoice.walletAddress, upgradeChoice.currentBalance, true);
+          setUpgradeChoice(null);
+        }}
+        onCurrent={() => {
+          if (upgradeChoice) navigateToAssign(upgradeChoice.walletAddress, upgradeChoice.currentBalance, false);
+          setUpgradeChoice(null);
+        }}
+        onCancel={() => setUpgradeChoice(null)}
+      />
     </div>
   );
 };

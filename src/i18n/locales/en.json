@@ -158,6 +158,13 @@
     "walletsEmptyRequirement": "All wallets must be empty (balance = 0) or new/unregistered",
     "walletInputPlaceholder": "Enter wallet address or scan QR code"
   },
+  "upgradeChoiceDialog": {
+    "title": "Previous split upgrade available",
+    "description": "Your balance qualifies you to enroll at the previous split (Split {{prevSplit}}) with a better entry price and a larger deposit. Or continue at the current split (Split {{currentSplit}}). Choose:",
+    "upgradeButton": "Upgrade to Split {{split}}",
+    "currentButton": "Stay at Split {{split}}",
+    "depositHint": "deposit"
+  },
   "generateWalletsDialog": {
     "title": "Generate Wallets - Security Notice",
     "message1": "You can create wallets through offlinelana.org or right here. You need to be aware that these are generated on your computer, which is online, whereas on offlinelana.org this is done when your computer is offline.",

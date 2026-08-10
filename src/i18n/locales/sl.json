@@ -158,6 +158,13 @@
     "walletsEmptyRequirement": "Vse denarnice morajo biti prazne (stanje = 0) ali nove/neregistrirane",
     "walletInputPlaceholder": "Vnesite naslov denarnice ali skenirajte QR kodo"
   },
+  "upgradeChoiceDialog": {
+    "title": "Nadgradnja na prejšnji split je na voljo",
+    "description": "Vaše stanje omogoča prijavo na prejšnji split (Split {{prevSplit}}) po ugodnejši vstopni ceni z večjim pologom. Lahko pa nadaljujete na tekočem splitu (Split {{currentSplit}}). Izberite:",
+    "upgradeButton": "Nadgradi na Split {{split}}",
+    "currentButton": "Ostani na Splitu {{split}}",
+    "depositHint": "polog"
+  },
   "generateWalletsDialog": {
     "title": "Generiranje denarnic - Varnostno obvestilo",
     "message1": "Denarnice lahko ustvarite prek offlinelana.org ali tukaj. Zavedati se morate, da se te generirajo na vašem računalniku, ki je povezan s spletom, medtem ko se na offlinelana.org to izvaja, ko je vaš računalnik brez povezave.",
