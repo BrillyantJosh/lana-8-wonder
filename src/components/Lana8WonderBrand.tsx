@@ -33,11 +33,8 @@ export const LanaMark = ({ className = "", title = "Lana8Wonder" }: MarkProps) =
 );
 
 export const BrandLockup = ({ compact = false }: { compact?: boolean }) => (
-  <div className="l8w-brand" aria-label="Lana8Wonder">
+  <div className="l8w-brand l8w-brand--mark-only" aria-label="Lana8Wonder">
     <LanaMark className={compact ? "l8w-brand__mark l8w-brand__mark--compact" : "l8w-brand__mark"} />
-    <span className={compact ? "l8w-brand__word l8w-brand__word--compact" : "l8w-brand__word"}>
-      Lana<span>8</span>Wonder
-    </span>
   </div>
 );
 
