@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Compass, Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
+import { BalanceSignals, BrandLockup } from "@/components/Lana8WonderBrand";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { getPublicLandingCopy } from "@/i18n/publicLandingCopy";
 
@@ -96,7 +96,14 @@ const GlobalLanding = () => {
         </div>
 
         <div className="l8w-global__visual">
-          <NatureFlowIllustration compact />
+          <img
+            src="/images/lana8wonder/growth-to-balance-hero.webp"
+            alt=""
+            width="1568"
+            height="1003"
+            loading="eager"
+            decoding="async"
+          />
         </div>
       </section>
 

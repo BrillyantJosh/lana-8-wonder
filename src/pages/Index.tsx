@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   CircleDot,
-  DoorOpen,
   HandHeart,
   Leaf,
   Loader2,
@@ -13,7 +12,6 @@ import {
   Sprout,
   Users,
   WalletCards,
-  Waves,
   Wifi,
   Wind,
 } from "lucide-react";
@@ -22,21 +20,26 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import NostrStatusCard from "@/components/NostrStatusCard";
-import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
+import { BalanceSignals, BrandLockup } from "@/components/Lana8WonderBrand";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { getPublicLandingCopy } from "@/i18n/publicLandingCopy";
 import { getDomainKey } from "@/integrations/api/client";
 
-const evolutionIcons = [DoorOpen, Sprout, RefreshCw, Scale] as const;
-const principleIcons = [DoorOpen, Waves, WalletCards] as const;
+const evolutionArtwork = [
+  "/images/lana8wonder/evolution-entry.webp",
+  "/images/lana8wonder/evolution-growth.webp",
+  "/images/lana8wonder/evolution-circulation.webp",
+  "/images/lana8wonder/evolution-balance.webp",
+] as const;
+const principleArtwork = [evolutionArtwork[0], evolutionArtwork[2], evolutionArtwork[3]] as const;
 const balanceReasonIcons = [HandHeart, Wind, RefreshCw] as const;
 const economyIcons = [RefreshCw, Users, ShieldCheck] as const;
 
 const Index = () => {
   const { t, i18n } = useTranslation();
   const copy = getPublicLandingCopy(i18n.resolvedLanguage || i18n.language);
-  const evolutionStages = copy.evolution.stages.map((stage, index) => ({ ...stage, icon: evolutionIcons[index] }));
-  const principles = copy.principles.cards.map((principle, index) => ({ ...principle, icon: principleIcons[index] }));
+  const evolutionStages = copy.evolution.stages.map((stage, index) => ({ ...stage, artwork: evolutionArtwork[index] }));
+  const principles = copy.principles.cards.map((principle, index) => ({ ...principle, artwork: principleArtwork[index] }));
   const balanceReasons = copy.why.items.map((reason, index) => ({ ...reason, icon: balanceReasonIcons[index] }));
   const livingEconomy = copy.economy.items.map((item, index) => ({ ...item, icon: economyIcons[index] }));
   const { params, loading, error } = useNostrLanaParams();
@@ -143,7 +146,6 @@ const Index = () => {
 
       <main id="top">
         <section className="l8w-hero" aria-labelledby="hero-title">
-          <div className="l8w-orbit" aria-hidden="true" />
           <div className="l8w-shell l8w-hero__grid">
             <div className="l8w-hero__copy">
               <p className="l8w-kicker">{copy.hero.kicker}</p>
@@ -172,7 +174,17 @@ const Index = () => {
             </div>
 
             <div className="l8w-hero__art">
-              <NatureFlowIllustration />
+              <picture className="l8w-hero__picture">
+                <source media="(max-width: 640px)" srcSet="/images/lana8wonder/growth-to-balance-hero-mobile.webp" />
+                <img
+                  src="/images/lana8wonder/growth-to-balance-hero.webp"
+                  alt=""
+                  width="1568"
+                  height="1003"
+                  loading="eager"
+                  decoding="async"
+                />
+              </picture>
               <BalanceSignals labels={copy.signals} />
             </div>
           </div>
@@ -181,11 +193,17 @@ const Index = () => {
         <section id="idea" className="l8w-section l8w-section--idea">
           <div className="l8w-shell l8w-idea-grid">
             <div className="l8w-botanical-medallion" aria-hidden="true">
-              <span><Sprout /></span>
-              <i /><i /><i />
+              <img
+                src="/images/lana8wonder/idea-sprout-medallion.webp"
+                alt=""
+                width="900"
+                height="900"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
             <div className="l8w-section-copy">
-              <p className="l8w-section-number">01</p>
+              <p className="l8w-section-number">1.</p>
               <h2>{copy.idea.title}</h2>
               <p>{copy.idea.belief}</p>
               <p>{copy.idea.wealth}</p>
@@ -202,17 +220,18 @@ const Index = () => {
         <section id="evolution" className="l8w-section l8w-section--white">
           <div className="l8w-shell">
             <div className="l8w-section-heading">
-              <p className="l8w-section-number">02</p>
+              <p className="l8w-section-number">2.</p>
               <h2>{copy.evolution.title}</h2>
               <p>{copy.evolution.intro}</p>
             </div>
             <ol className="l8w-evolution">
               {evolutionStages.map((stage, index) => {
-                const Icon = stage.icon;
                 return (
                   <li key={stage.title}>
                     <span className="l8w-evolution__number">{index + 1}</span>
-                    <div className="l8w-evolution__icon"><Icon /></div>
+                    <div className="l8w-evolution__icon" aria-hidden="true">
+                      <img src={stage.artwork} alt="" width="480" height="480" loading="lazy" decoding="async" />
+                    </div>
                     <h3>{stage.title}</h3>
                     <p>{stage.text}</p>
                     {index < evolutionStages.length - 1 && <ArrowRight className="l8w-evolution__arrow" aria-hidden="true" />}
@@ -226,22 +245,21 @@ const Index = () => {
         <section id="principles" className="l8w-section l8w-section--tint">
           <div className="l8w-shell">
             <div className="l8w-section-heading">
-              <p className="l8w-section-number">03</p>
+              <p className="l8w-section-number">3.</p>
               <h2>{copy.principles.title}</h2>
             </div>
             <div className="l8w-principles">
-              {principles.map((principle, index) => {
-                const Icon = principle.icon;
-                return (
-                  <article key={principle.title}>
-                    <div className={`l8w-principles__icon l8w-principles__icon--${index + 1}`}><Icon /></div>
-                    <div>
-                      <h3>{principle.title} <Leaf /></h3>
-                      <p>{principle.text}</p>
-                    </div>
-                  </article>
-                );
-              })}
+              {principles.map((principle, index) => (
+                <article key={principle.title}>
+                  <div className={`l8w-principles__icon l8w-principles__icon--${index + 1}`} aria-hidden="true">
+                    <img src={principle.artwork} alt="" width="480" height="480" loading="lazy" decoding="async" />
+                  </div>
+                  <div>
+                    <h3>{principle.title} <Leaf /></h3>
+                    <p>{principle.text}</p>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
@@ -249,7 +267,7 @@ const Index = () => {
         <section id="why-balance" className="l8w-section l8w-section--landscape">
           <div className="l8w-shell">
             <div className="l8w-section-heading">
-              <p className="l8w-section-number">04</p>
+              <p className="l8w-section-number">4.</p>
               <h2>{copy.why.title}</h2>
             </div>
             <div className="l8w-balance-reasons">
