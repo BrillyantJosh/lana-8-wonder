@@ -303,6 +303,23 @@ All colors MUST be HSL.
   justify-content: space-between;
 }
 
+.l8w-global__tools {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.l8w-global__tools [role="combobox"] {
+  width: 116px;
+  border-color: var(--l8w-line);
+  color: var(--l8w-green);
+  background: hsl(42 50% 99% / 0.72);
+}
+
+.l8w-global__tools > div > svg {
+  color: var(--l8w-green-soft);
+}
+
 .l8w-eyebrow {
   display: flex;
   align-items: center;
@@ -629,6 +646,10 @@ All colors MUST be HSL.
   display: flex;
   align-items: center;
   gap: 9px;
+}
+
+.l8w-mobile-language {
+  display: none;
 }
 
 .l8w-site-header__actions [role="combobox"] {
@@ -1246,6 +1267,9 @@ All colors MUST be HSL.
   .l8w-global__header .l8w-brand__mark { width: 36px; height: 43px; }
   .l8w-global__header .l8w-brand__word { font-size: 1.43rem; }
   .l8w-global__header .l8w-eyebrow { display: none; }
+  .l8w-global__tools { gap: 4px; }
+  .l8w-global__tools [role="combobox"] { width: 112px; }
+  .l8w-global__tools > div > svg { display: none; }
   .l8w-global__hero { min-height: 385px; margin-top: 0; align-items: start; }
   .l8w-global__intro { padding-top: 48px; }
   .l8w-global__intro h1 { font-size: clamp(2.75rem, 14vw, 4rem); }
@@ -1273,9 +1297,27 @@ All colors MUST be HSL.
   .l8w-site-header { grid-template-columns: 1fr auto; }
   .l8w-site-header__actions > div:has([role="combobox"]),
   .l8w-network { display: none; }
+  .l8w-mobile-language {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-top: -2px;
+    padding-top: 7px;
+    border-top: 1px solid hsl(40 34% 82% / 0.55);
+  }
+  .l8w-mobile-language [role="combobox"] {
+    width: 122px;
+    border-color: var(--l8w-line);
+    color: var(--l8w-green);
+    background: transparent;
+  }
+  .l8w-mobile-language > div > svg { color: var(--l8w-green-soft); }
   .l8w-header-enter { min-height: 38px; padding: 8px 13px; font-size: 0.72rem; }
   .l8w-hero__grid { padding: 58px 0 35px; }
   .l8w-hero__copy h1 { font-size: clamp(3.7rem, 19vw, 5rem); }
+  html[lang="hu"] .l8w-hero__copy h1 { font-size: clamp(3.05rem, 16vw, 4.25rem); }
+  html[lang="de"] .l8w-hero__copy h1,
+  html[lang="it"] .l8w-hero__copy h1 { font-size: clamp(3.35rem, 17vw, 4.6rem); }
   .l8w-hero__lead { font-size: 0.95rem; }
   .l8w-hero__actions { display: grid; grid-template-columns: 1fr; }
   .l8w-button { width: 100%; }

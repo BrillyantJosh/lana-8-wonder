@@ -114,19 +114,27 @@ export const NatureFlowIllustration = ({ compact = false }: { compact?: boolean 
   </div>
 );
 
-export const BalanceSignals = () => (
-  <div className="l8w-signals" aria-label="Lana8Wonder principles">
+export const BalanceSignals = ({
+  labels = {
+    people: "People Connected",
+    value: "Value in Motion",
+    balance: "Balance Sustained",
+  },
+}: {
+  labels?: { people: string; value: string; balance: string };
+}) => (
+  <div className="l8w-signals" aria-label={`${labels.people}; ${labels.value}; ${labels.balance}`}>
     <div className="l8w-signal">
       <span><Users /></span>
-      <p>People<br />Connected</p>
+      <p>{labels.people}</p>
     </div>
     <div className="l8w-signal">
       <span><RefreshCw /></span>
-      <p>Value in<br />Motion</p>
+      <p>{labels.value}</p>
     </div>
     <div className="l8w-signal">
       <span><ShieldCheck /></span>
-      <p>Balance<br />Sustained</p>
+      <p>{labels.balance}</p>
     </div>
     <Leaf className="l8w-signals__leaf" aria-hidden="true" />
   </div>

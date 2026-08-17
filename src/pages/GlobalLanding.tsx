@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Compass, Hourglass } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { getPublicLandingCopy } from "@/i18n/publicLandingCopy";
 
 interface CountryOption {
   key: string;
@@ -32,8 +35,27 @@ function detectCountry(): string | null {
 }
 
 const GlobalLanding = () => {
+  const { i18n } = useTranslation();
+  const copy = getPublicLandingCopy(i18n.resolvedLanguage || i18n.language);
   const detected = useMemo(() => detectCountry(), []);
   const [slotsMap, setSlotsMap] = useState<Record<string, SlotData> | null>(null);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const previousLanguage = document.documentElement.lang;
+    const description = document.querySelector('meta[name="description"]');
+    const previousDescription = description?.getAttribute("content");
+
+    document.title = copy.meta.title;
+    document.documentElement.lang = i18n.resolvedLanguage || i18n.language;
+    description?.setAttribute("content", copy.meta.description);
+
+    return () => {
+      document.title = previousTitle;
+      document.documentElement.lang = previousLanguage;
+      if (previousDescription) description?.setAttribute("content", previousDescription);
+    };
+  }, [copy.meta.description, copy.meta.title, i18n.language, i18n.resolvedLanguage]);
 
   useEffect(() => {
     const fetchSlots = async () => {
@@ -58,16 +80,19 @@ const GlobalLanding = () => {
       <div className="l8w-orbit l8w-orbit--global" aria-hidden="true" />
       <header className="l8w-global__header">
         <BrandLockup />
-        <p className="l8w-eyebrow"><span>Growth to Balance</span></p>
+        <div className="l8w-global__tools">
+          <p className="l8w-eyebrow"><span>{copy.global.eyebrow}</span></p>
+          <LanguageSelector />
+        </div>
       </header>
 
       <section className="l8w-global__hero" aria-labelledby="global-title">
         <div className="l8w-global__intro">
-          <p className="l8w-kicker">A balanced relationship with value</p>
-          <h1 id="global-title">Welcome to <span>Lana8Wonder</span></h1>
+          <p className="l8w-kicker">{copy.global.kicker}</p>
+          <h1 id="global-title">{copy.global.welcome} <span>Lana8Wonder</span></h1>
           <div className="l8w-flourish" aria-hidden="true"><i /><b>❧</b><i /></div>
-          <h2>Choose your country to begin your journey</h2>
-          <p>Step into an ecosystem of real value, purposeful growth and conscious circulation.</p>
+          <h2>{copy.global.choose}</h2>
+          <p>{copy.global.description}</p>
         </div>
 
         <div className="l8w-global__visual">
@@ -76,7 +101,7 @@ const GlobalLanding = () => {
       </section>
 
       <section className="l8w-country-section" aria-labelledby="regional-paths">
-        <h2 id="regional-paths"><span />Select your regional path<span /></h2>
+        <h2 id="regional-paths"><span />{copy.global.selectPath}<span /></h2>
         <div className="l8w-country-grid">
           {countries.map((country) => {
             const slotInfo = slotsMap?.[country.key];
@@ -90,16 +115,16 @@ const GlobalLanding = () => {
                 key={country.key}
                 className={`l8w-country-card ${isRecommended ? "is-recommended" : ""} ${isSoldOut ? "is-sold-out" : ""}`}
                 onClick={() => handleSelect(country.hostname)}
-                aria-label={`Continue to Lana8Wonder ${country.name}`}
+                aria-label={`${copy.global.continueTo} ${country.name}`}
               >
                 {isRecommended && (
                   <span className="l8w-country-card__ribbon l8w-country-card__ribbon--green">
-                    <Compass /> Recommended
+                    <Compass /> {copy.global.recommended}
                   </span>
                 )}
                 {isSoldOut && (
                   <span className="l8w-country-card__ribbon l8w-country-card__ribbon--gold">
-                    <Hourglass /> Sold out — waiting list
+                    <Hourglass /> {copy.global.soldOut}
                   </span>
                 )}
                 <img
@@ -109,7 +134,7 @@ const GlobalLanding = () => {
                 />
                 <span className="l8w-country-card__copy">
                   <strong>{country.name}</strong>
-                  <small>Currency: {country.currency}</small>
+                  <small>{copy.global.currency}: {country.currency}</small>
                 </span>
                 <span className="l8w-country-card__arrow"><ArrowRight /></span>
               </button>
@@ -118,11 +143,11 @@ const GlobalLanding = () => {
         </div>
       </section>
 
-      <BalanceSignals />
+      <BalanceSignals labels={copy.signals} />
 
       <footer className="l8w-footer l8w-footer--global">
         <p>© {new Date().getFullYear()} Lana8Wonder</p>
-        <p>Growth is a phase. Balance is the purpose.</p>
+        <p>{copy.global.footer}</p>
       </footer>
     </main>
   );

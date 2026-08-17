@@ -24,78 +24,41 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import NostrStatusCard from "@/components/NostrStatusCard";
 import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
+import { getPublicLandingCopy } from "@/i18n/publicLandingCopy";
 import { getDomainKey } from "@/integrations/api/client";
 
-const evolutionStages = [
-  {
-    title: "Entry",
-    icon: DoorOpen,
-    text: "You enter with a deliberately limited amount of Registered LANA. Limited entry protects balance and keeps participation from becoming a competition for capital.",
-  },
-  {
-    title: "Growth",
-    icon: Sprout,
-    text: "Your wallet develops through successive economic cycles, connected to the wider Lana economy, real circulation and time.",
-  },
-  {
-    title: "Circulation",
-    icon: RefreshCw,
-    text: "Value is meant to move through real consumption, giving, community support and the wider Lana ecosystem.",
-  },
-  {
-    title: "Balance",
-    icon: Scale,
-    text: "The mature state is a Balanced Wallet — a defined personal capacity designed around enough, circulation and long-term balance.",
-  },
-];
-
-const principles = [
-  {
-    title: "Limited Entry",
-    icon: DoorOpen,
-    text: "Participation begins with a deliberately limited amount. Lana8Wonder is not designed to reward whoever can place the most capital into the system.",
-  },
-  {
-    title: "Real Circulation",
-    icon: Waves,
-    text: "Value has meaning when it moves through real people, merchants, creation and community. Circulation is part of the model — not an afterthought.",
-  },
-  {
-    title: "Balanced Wallet",
-    icon: WalletCards,
-    text: "The goal is not infinite accumulation. It is a mature wallet with a defined capacity that remains useful, active and connected to the wider economy.",
-  },
-];
-
-const balanceReasons = [
-  {
-    title: "Use What You Need",
-    icon: HandHeart,
-    text: "Value exists to support life, creation and purpose — not simply to be stored forever.",
-  },
-  {
-    title: "Release What You Don’t Need",
-    icon: Wind,
-    text: "What is not needed can return to circulation, be given, donated or directed toward the common good.",
-  },
-  {
-    title: "Keep Value in Motion",
-    icon: RefreshCw,
-    text: "When value circulates, it can support people, merchants, creators and the wider community.",
-  },
-];
-
-const livingEconomy = [
-  { title: "Circulation", icon: RefreshCw, text: "Value moves through real consumption." },
-  { title: "Common Good", icon: Users, text: "Value can support creation, people and community." },
-  { title: "Balance", icon: ShieldCheck, text: "Personal capacity matures from accumulation toward healthy flow." },
-];
+const evolutionIcons = [DoorOpen, Sprout, RefreshCw, Scale] as const;
+const principleIcons = [DoorOpen, Waves, WalletCards] as const;
+const balanceReasonIcons = [HandHeart, Wind, RefreshCw] as const;
+const economyIcons = [RefreshCw, Users, ShieldCheck] as const;
 
 const Index = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const copy = getPublicLandingCopy(i18n.resolvedLanguage || i18n.language);
+  const evolutionStages = copy.evolution.stages.map((stage, index) => ({ ...stage, icon: evolutionIcons[index] }));
+  const principles = copy.principles.cards.map((principle, index) => ({ ...principle, icon: principleIcons[index] }));
+  const balanceReasons = copy.why.items.map((reason, index) => ({ ...reason, icon: balanceReasonIcons[index] }));
+  const livingEconomy = copy.economy.items.map((item, index) => ({ ...item, icon: economyIcons[index] }));
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [enableBuyLana, setEnableBuyLana] = useState(true);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const previousLanguage = document.documentElement.lang;
+    const description = document.querySelector('meta[name="description"]');
+    const previousDescription = description?.getAttribute("content");
+
+    document.title = copy.meta.title;
+    document.documentElement.lang = i18n.resolvedLanguage || i18n.language;
+    description?.setAttribute("content", copy.meta.description);
+
+    return () => {
+      document.title = previousTitle;
+      document.documentElement.lang = previousLanguage;
+      if (previousDescription) description?.setAttribute("content", previousDescription);
+    };
+  }, [copy.meta.description, copy.meta.title, i18n.language, i18n.resolvedLanguage]);
 
   useEffect(() => {
     const fetchDomainConfig = async () => {
@@ -123,12 +86,12 @@ const Index = () => {
           <BrandLockup compact />
         </a>
 
-        <nav className="l8w-site-nav" aria-label="Main navigation">
-          <a href="#idea">The Idea</a>
-          <a href="#evolution">How It Evolves</a>
-          <a href="#principles">Principles</a>
-          <a href="#why-balance">Why Balance</a>
-          <a href="#growth-phase">How It Works</a>
+        <nav className="l8w-site-nav" aria-label={copy.nav.howItWorks}>
+          <a href="#idea">{copy.nav.idea}</a>
+          <a href="#evolution">{copy.nav.evolution}</a>
+          <a href="#principles">{copy.nav.principles}</a>
+          <a href="#why-balance">{copy.nav.whyBalance}</a>
+          <a href="#growth-phase">{copy.nav.howItWorks}</a>
         </nav>
 
         <div className="l8w-site-header__actions">
@@ -166,12 +129,15 @@ const Index = () => {
           <LanguageSelector />
           {enableBuyLana && (
             <Link to="/buy-lana8wonder" className="l8w-button l8w-button--quiet l8w-header-begin">
-              Begin Your Journey
+              {copy.actions.begin}
             </Link>
           )}
           <Link to="/login" className="l8w-button l8w-button--primary l8w-header-enter">
-            Enter with Wallet
+            {copy.actions.enter}
           </Link>
+        </div>
+        <div className="l8w-mobile-language">
+          <LanguageSelector />
         </div>
       </header>
 
@@ -180,34 +146,34 @@ const Index = () => {
           <div className="l8w-orbit" aria-hidden="true" />
           <div className="l8w-shell l8w-hero__grid">
             <div className="l8w-hero__copy">
-              <p className="l8w-kicker">A journey toward enough</p>
-              <h1 id="hero-title">From Growth<br />to <span>Balance</span></h1>
+              <p className="l8w-kicker">{copy.hero.kicker}</p>
+              <h1 id="hero-title">{copy.hero.line1}<br />{copy.hero.line2Prefix} <span>{copy.hero.balance}</span></h1>
               <div className="l8w-title-line" aria-hidden="true" />
               <p className="l8w-hero__lead">
-                Lana8Wonder is a journey toward a Balanced Wallet — built through real circulation, gradual growth and responsible use of value.
+                {copy.hero.lead}
               </p>
               <div className="l8w-hero__statement">
                 <Leaf />
-                <p>Not built for endless accumulation.<br /><strong>Built for maturity, flow and balance.</strong></p>
+                <p>{copy.hero.statement1}<br /><strong>{copy.hero.statement2}</strong></p>
               </div>
               <div className="l8w-hero__actions">
                 {enableBuyLana && (
                   <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">
-                    Begin Your Journey <ArrowRight />
+                    {copy.actions.begin} <ArrowRight />
                   </Link>
                 )}
                 <Link to="/login" className="l8w-button l8w-button--outline">
-                  Enter with Wallet
+                  {copy.actions.enter}
                 </Link>
               </div>
               {enableBuyLana && (
-                <p className="l8w-hero__note">To begin, you need the required amount of Registered LANA for the current cycle.</p>
+                <p className="l8w-hero__note">{copy.hero.note}</p>
               )}
             </div>
 
             <div className="l8w-hero__art">
               <NatureFlowIllustration />
-              <BalanceSignals />
+              <BalanceSignals labels={copy.signals} />
             </div>
           </div>
         </section>
@@ -220,15 +186,15 @@ const Index = () => {
             </div>
             <div className="l8w-section-copy">
               <p className="l8w-section-number">01</p>
-              <h2>The Idea</h2>
-              <p>Lana8Wonder is built on a simple belief:</p>
-              <p>True wealth is not defined by how much value you can accumulate, but by your ability to live with enough and keep value in healthy circulation.</p>
-              <p>The journey begins with growth. But growth is not the destination.</p>
-              <p>The destination is a <strong>Balanced Wallet</strong> — one that supports your life, participates in the wider economy and gradually moves from accumulation toward flow.</p>
+              <h2>{copy.idea.title}</h2>
+              <p>{copy.idea.belief}</p>
+              <p>{copy.idea.wealth}</p>
+              <p>{copy.idea.journey}</p>
+              <p>{copy.idea.destinationPrefix} <strong>{copy.idea.destinationName}</strong> {copy.idea.destinationSuffix}</p>
             </div>
             <blockquote className="l8w-feature-quote">
               <span>“</span>
-              A Balanced Wallet is not empty or full.<br />It is aligned, useful and always in motion.
+              {copy.idea.quote1}<br />{copy.idea.quote2}
             </blockquote>
           </div>
         </section>
@@ -237,8 +203,8 @@ const Index = () => {
           <div className="l8w-shell">
             <div className="l8w-section-heading">
               <p className="l8w-section-number">02</p>
-              <h2>How It Evolves</h2>
-              <p>Growth has a role. Circulation gives it meaning. Balance gives it direction.</p>
+              <h2>{copy.evolution.title}</h2>
+              <p>{copy.evolution.intro}</p>
             </div>
             <ol className="l8w-evolution">
               {evolutionStages.map((stage, index) => {
@@ -261,7 +227,7 @@ const Index = () => {
           <div className="l8w-shell">
             <div className="l8w-section-heading">
               <p className="l8w-section-number">03</p>
-              <h2>Core Principles</h2>
+              <h2>{copy.principles.title}</h2>
             </div>
             <div className="l8w-principles">
               {principles.map((principle, index) => {
@@ -284,7 +250,7 @@ const Index = () => {
           <div className="l8w-shell">
             <div className="l8w-section-heading">
               <p className="l8w-section-number">04</p>
-              <h2>Why Balance Matters</h2>
+              <h2>{copy.why.title}</h2>
             </div>
             <div className="l8w-balance-reasons">
               {balanceReasons.map((reason) => {
@@ -297,21 +263,21 @@ const Index = () => {
                 );
               })}
             </div>
-            <blockquote>Balance is not a destination you own. It is a way of moving through life.</blockquote>
+            <blockquote>{copy.why.quote}</blockquote>
           </div>
         </section>
 
         <section id="growth-phase" className="l8w-section l8w-section--growth">
           <div className="l8w-shell l8w-growth-grid">
             <div>
-              <p className="l8w-kicker">Transparent by design</p>
-              <h2>Growth Is a Phase</h2>
-              <p className="l8w-growth-grid__lead">Lana8Wonder uses successive economic cycles as part of the development of the wallet.</p>
+              <p className="l8w-kicker">{copy.growth.kicker}</p>
+              <h2>{copy.growth.title}</h2>
+              <p className="l8w-growth-grid__lead">{copy.growth.lead}</p>
             </div>
             <div className="l8w-growth-grid__copy">
-              <p>These cycles can change the system reference value of Registered LANA. But Lana8Wonder is not designed around the promise of a future monetary outcome.</p>
-              <p>The timing of future cycles is not guaranteed. Liquidity is not unlimited. A system reference value is not the same as guaranteed cash value or guaranteed redemption.</p>
-              <p><strong>The purpose of the growth phase is to help the wallet mature toward balance.</strong></p>
+              <p>{copy.growth.p1}</p>
+              <p>{copy.growth.p2}</p>
+              <p><strong>{copy.growth.p3}</strong></p>
             </div>
             <div className="l8w-growth-symbol" aria-hidden="true">
               <CircleDot /><ArrowRight /><Sprout /><ArrowRight /><Scale />
@@ -322,9 +288,9 @@ const Index = () => {
         <section className="l8w-section l8w-section--white">
           <div className="l8w-shell">
             <div className="l8w-section-heading l8w-section-heading--wide">
-              <p className="l8w-kicker">A living economy</p>
-              <h2>A Wallet Does Not Live Alone</h2>
-              <p>Lana8Wonder is part of the wider Lana Balanced Exchange — an economy built around circulation, creation, common good and balance. Its growth is connected to real activity in the wider ecosystem.</p>
+              <p className="l8w-kicker">{copy.economy.kicker}</p>
+              <h2>{copy.economy.title}</h2>
+              <p>{copy.economy.lead}</p>
             </div>
             <div className="l8w-economy-grid">
               {livingEconomy.map((item) => {
@@ -339,15 +305,15 @@ const Index = () => {
           <div className="l8w-shell l8w-wallet-grid">
             <div className="l8w-wallet-symbol" aria-hidden="true"><WalletCards /><RefreshCw /></div>
             <div>
-              <p className="l8w-kicker">Enough creates flow</p>
-              <h2>What Is a Balanced Wallet?</h2>
-              <p>A Balanced Wallet represents a different relationship with value.</p>
+              <p className="l8w-kicker">{copy.wallet.kicker}</p>
+              <h2>{copy.wallet.title}</h2>
+              <p>{copy.wallet.intro}</p>
               <div className="l8w-question-shift">
-                <span>Instead of asking</span><del>“How much can I accumulate?”</del>
-                <span>it begins to ask</span><strong>“How much is enough for me to live, create and participate?”</strong>
+                <span>{copy.wallet.instead}</span><del>{copy.wallet.oldQuestion}</del>
+                <span>{copy.wallet.begins}</span><strong>{copy.wallet.newQuestion}</strong>
               </div>
-              <p>A mature Balanced Wallet is designed around a defined personal capacity. Value beyond what a person needs is encouraged to move — through consumption, giving, support and recirculation.</p>
-              <p>The long-term vision is an economy in which value behaves more like a living flow than a collection of isolated piles.</p>
+              <p>{copy.wallet.p1}</p>
+              <p>{copy.wallet.p2}</p>
             </div>
           </div>
         </section>
@@ -355,12 +321,12 @@ const Index = () => {
         <section className="l8w-section l8w-section--nature">
           <div className="l8w-shell l8w-nature-grid">
             <div>
-              <p className="l8w-kicker">A design philosophy inspired by nature</p>
-              <h2>Growth Like a Living System</h2>
-              <p>Nature grows through cycles. A single cell divides. A young organism grows quickly. A mature organism does not grow forever.</p>
-              <p>It develops capacity, structure and balance.</p>
-              <p>Lana8Wonder uses the same idea as a metaphor — <strong>growth → maturation → balance.</strong></p>
-              <small>This is a metaphor for the design philosophy, not biological proof of a financial outcome.</small>
+              <p className="l8w-kicker">{copy.nature.kicker}</p>
+              <h2>{copy.nature.title}</h2>
+              <p>{copy.nature.p1}</p>
+              <p>{copy.nature.p2}</p>
+              <p>{copy.nature.p3Prefix} <strong>{copy.nature.p3Strong}</strong></p>
+              <small>{copy.nature.disclaimer}</small>
             </div>
             <div className="l8w-nature-cycle" aria-hidden="true">
               <span><CircleDot /></span><ArrowRight /><span><Sprout /></span><ArrowRight /><span><Leaf /></span><ArrowRight /><span><Scale /></span>
@@ -372,21 +338,21 @@ const Index = () => {
           <div className="l8w-shell l8w-entry__card">
             <div className="l8w-entry__mark"><BrandLockup compact /></div>
             <div className="l8w-entry__copy">
-              <p className="l8w-kicker">Your next step</p>
-              <h2>Begin Your Journey</h2>
-              <p>If you do not yet have the Registered LANA required for the current Lana8Wonder cycle, enter through the existing onboarding process.</p>
+              <p className="l8w-kicker">{copy.entry.kicker}</p>
+              <h2>{copy.entry.title}</h2>
+              <p>{copy.entry.text}</p>
               <div className="l8w-entry__actions">
                 {enableBuyLana ? (
-                  <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">Get the Required LANA <ArrowRight /></Link>
+                  <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">{copy.actions.getLana} <ArrowRight /></Link>
                 ) : (
-                  <Badge variant="outline" className="l8w-waiting-badge">New entries are currently coordinated through the regional waiting list.</Badge>
+                  <Badge variant="outline" className="l8w-waiting-badge">{copy.entry.waiting}</Badge>
                 )}
               </div>
             </div>
             <div className="l8w-entry__existing">
-              <p>Already part of Lana8Wonder?</p>
-              <Link to="/login" className="l8w-button l8w-button--outline">Enter with Wallet</Link>
-              <small>Your existing wallet authentication remains unchanged.</small>
+              <p>{copy.entry.already}</p>
+              <Link to="/login" className="l8w-button l8w-button--outline">{copy.actions.enter}</Link>
+              <small>{copy.entry.unchanged}</small>
             </div>
           </div>
         </section>
@@ -395,7 +361,7 @@ const Index = () => {
       <footer className="l8w-footer">
         <div className="l8w-shell">
           <BrandLockup compact />
-          <p>From growth to balance — value in healthy circulation.</p>
+          <p>{copy.footer}</p>
           <p>© {new Date().getFullYear()} Lana8Wonder</p>
         </div>
       </footer>

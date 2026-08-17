@@ -33,8 +33,9 @@ function getDefaultLanguage(): string {
   const domainLang = domainLanguageMap[subdomain];
   if (domainLang) return domainLang;
 
-  // Fallback to English
-  return 'en';
+  // On the global domain, follow the visitor's browser language when supported.
+  const browserLanguage = (navigator.language || 'en').split('-')[0].toLowerCase();
+  return ['en', 'sl', 'de', 'it', 'hu'].includes(browserLanguage) ? browserLanguage : 'en';
 }
 
 const storedLanguage = getDefaultLanguage();
