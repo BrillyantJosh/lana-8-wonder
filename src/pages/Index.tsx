@@ -8,15 +8,11 @@ import {
   Loader2,
   RefreshCw,
   Scale,
-  ShieldCheck,
   Sprout,
-  Users,
-  WalletCards,
   Wifi,
   Wind,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import NostrStatusCard from "@/components/NostrStatusCard";
@@ -33,7 +29,6 @@ const evolutionArtwork = [
 ] as const;
 const principleArtwork = [evolutionArtwork[0], evolutionArtwork[2], evolutionArtwork[3]] as const;
 const balanceReasonIcons = [HandHeart, Wind, RefreshCw] as const;
-const economyIcons = [RefreshCw, Users, ShieldCheck] as const;
 
 const Index = () => {
   const { t, i18n } = useTranslation();
@@ -41,7 +36,6 @@ const Index = () => {
   const evolutionStages = copy.evolution.stages.map((stage, index) => ({ ...stage, artwork: evolutionArtwork[index] }));
   const principles = copy.principles.cards.map((principle, index) => ({ ...principle, artwork: principleArtwork[index] }));
   const balanceReasons = copy.why.items.map((reason, index) => ({ ...reason, icon: balanceReasonIcons[index] }));
-  const livingEconomy = copy.economy.items.map((item, index) => ({ ...item, icon: economyIcons[index] }));
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [enableBuyLana, setEnableBuyLana] = useState(true);
@@ -299,78 +293,6 @@ const Index = () => {
             </div>
             <div className="l8w-growth-symbol" aria-hidden="true">
               <CircleDot /><ArrowRight /><Sprout /><ArrowRight /><Scale />
-            </div>
-          </div>
-        </section>
-
-        <section className="l8w-section l8w-section--white">
-          <div className="l8w-shell">
-            <div className="l8w-section-heading l8w-section-heading--wide">
-              <p className="l8w-kicker">{copy.economy.kicker}</p>
-              <h2>{copy.economy.title}</h2>
-              <p>{copy.economy.lead}</p>
-            </div>
-            <div className="l8w-economy-grid">
-              {livingEconomy.map((item) => {
-                const Icon = item.icon;
-                return <article key={item.title}><Icon /><h3>{item.title}</h3><p>{item.text}</p></article>;
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="l8w-section l8w-section--wallet">
-          <div className="l8w-shell l8w-wallet-grid">
-            <div className="l8w-wallet-symbol" aria-hidden="true"><WalletCards /><RefreshCw /></div>
-            <div>
-              <p className="l8w-kicker">{copy.wallet.kicker}</p>
-              <h2>{copy.wallet.title}</h2>
-              <p>{copy.wallet.intro}</p>
-              <div className="l8w-question-shift">
-                <span>{copy.wallet.instead}</span><del>{copy.wallet.oldQuestion}</del>
-                <span>{copy.wallet.begins}</span><strong>{copy.wallet.newQuestion}</strong>
-              </div>
-              <p>{copy.wallet.p1}</p>
-              <p>{copy.wallet.p2}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="l8w-section l8w-section--nature">
-          <div className="l8w-shell l8w-nature-grid">
-            <div>
-              <p className="l8w-kicker">{copy.nature.kicker}</p>
-              <h2>{copy.nature.title}</h2>
-              <p>{copy.nature.p1}</p>
-              <p>{copy.nature.p2}</p>
-              <p>{copy.nature.p3Prefix} <strong>{copy.nature.p3Strong}</strong></p>
-              <small>{copy.nature.disclaimer}</small>
-            </div>
-            <div className="l8w-nature-cycle" aria-hidden="true">
-              <span><CircleDot /></span><ArrowRight /><span><Sprout /></span><ArrowRight /><span><Leaf /></span><ArrowRight /><span><Scale /></span>
-            </div>
-          </div>
-        </section>
-
-        <section className="l8w-entry">
-          <div className="l8w-shell l8w-entry__card">
-            <div className="l8w-entry__mark"><BrandLockup compact /></div>
-            <div className="l8w-entry__copy">
-              <p className="l8w-kicker">{copy.entry.kicker}</p>
-              <h2>{copy.entry.title}</h2>
-              <p>{copy.entry.text}</p>
-              <div className="l8w-entry__actions">
-                {enableBuyLana ? (
-                  <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">{copy.actions.getLana} <ArrowRight /></Link>
-                ) : (
-                  <Badge variant="outline" className="l8w-waiting-badge">{copy.entry.waiting}</Badge>
-                )}
-              </div>
-            </div>
-            <div className="l8w-entry__existing">
-              <p>{copy.entry.already}</p>
-              <Link to="/login" className="l8w-button l8w-button--outline">{copy.actions.enter}</Link>
-              <small>{copy.entry.unchanged}</small>
             </div>
           </div>
         </section>
