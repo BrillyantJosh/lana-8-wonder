@@ -1,392 +1,402 @@
-import TradingPlanCalculator from "@/components/TradingPlanCalculator";
-import lanaCoin from "@/assets/lana-coin.png";
-import einsteinImg from "@/assets/einstein.png";
-import { Sparkles, Wifi, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
-import NostrStatusCard from "@/components/NostrStatusCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCurrencySymbol } from "@/lib/utils";
-import { LanguageSelector } from "@/components/LanguageSelector";
+import {
+  ArrowRight,
+  CircleDot,
+  DoorOpen,
+  HandHeart,
+  Leaf,
+  Loader2,
+  RefreshCw,
+  Scale,
+  ShieldCheck,
+  Sprout,
+  Users,
+  WalletCards,
+  Waves,
+  Wifi,
+  Wind,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import NostrStatusCard from "@/components/NostrStatusCard";
+import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
+import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { getDomainKey } from "@/integrations/api/client";
 
-// Convert any YouTube URL to embed format
-const toEmbedUrl = (url: string): string => {
-  if (!url) return '';
-  // Already embed format
-  if (url.includes('/embed/')) return url;
-  // youtube.com/watch?v=ID or youtube.com/watch?v=ID&...
-  const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([^&\s]+)/);
-  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
-  // youtu.be/ID
-  const shortMatch = url.match(/youtu\.be\/([^?\s]+)/);
-  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-  // youtube.com/v/ID
-  const vMatch = url.match(/youtube\.com\/v\/([^?\s]+)/);
-  if (vMatch) return `https://www.youtube.com/embed/${vMatch[1]}`;
-  return url;
-};
+const evolutionStages = [
+  {
+    title: "Entry",
+    icon: DoorOpen,
+    text: "You enter with a deliberately limited amount of Registered LANA. Limited entry protects balance and keeps participation from becoming a competition for capital.",
+  },
+  {
+    title: "Growth",
+    icon: Sprout,
+    text: "Your wallet develops through successive economic cycles, connected to the wider Lana economy, real circulation and time.",
+  },
+  {
+    title: "Circulation",
+    icon: RefreshCw,
+    text: "Value is meant to move through real consumption, giving, community support and the wider Lana ecosystem.",
+  },
+  {
+    title: "Balance",
+    icon: Scale,
+    text: "The mature state is a Balanced Wallet — a defined personal capacity designed around enough, circulation and long-term balance.",
+  },
+];
 
-// Video URLs per language (domain→language: si→sl, uk→en, at→de, hu→hu)
-const getVideoUrl = (language: string): string => {
-  const videoUrls: Record<string, string> = {
-    sl: "https://www.youtube.com/embed/cP-MNpeo6gw",
-    // en: "https://www.youtube.com/embed/ENGLISH_VIDEO_ID",
-    // de: "https://www.youtube.com/embed/GERMAN_VIDEO_ID",
-    // hu: "https://www.youtube.com/embed/HUNGARIAN_VIDEO_ID",
-  };
+const principles = [
+  {
+    title: "Limited Entry",
+    icon: DoorOpen,
+    text: "Participation begins with a deliberately limited amount. Lana8Wonder is not designed to reward whoever can place the most capital into the system.",
+  },
+  {
+    title: "Real Circulation",
+    icon: Waves,
+    text: "Value has meaning when it moves through real people, merchants, creation and community. Circulation is part of the model — not an afterthought.",
+  },
+  {
+    title: "Balanced Wallet",
+    icon: WalletCards,
+    text: "The goal is not infinite accumulation. It is a mature wallet with a defined capacity that remains useful, active and connected to the wider economy.",
+  },
+];
 
-  return videoUrls[language] || "https://www.youtube.com/embed/DLbpzJ78YOY";
-};
+const balanceReasons = [
+  {
+    title: "Use What You Need",
+    icon: HandHeart,
+    text: "Value exists to support life, creation and purpose — not simply to be stored forever.",
+  },
+  {
+    title: "Release What You Don’t Need",
+    icon: Wind,
+    text: "What is not needed can return to circulation, be given, donated or directed toward the common good.",
+  },
+  {
+    title: "Keep Value in Motion",
+    icon: RefreshCw,
+    text: "When value circulates, it can support people, merchants, creators and the wider community.",
+  },
+];
 
-interface DynamicFaqItem {
-  id: string;
-  question: string;
-  answer: string;
-  position: number;
-}
-
-interface DynamicWhatIsLana {
-  title: string;
-  question1: string;
-  question2: string;
-  description: string;
-  video_url: string;
-}
+const livingEconomy = [
+  { title: "Circulation", icon: RefreshCw, text: "Value moves through real consumption." },
+  { title: "Common Good", icon: Users, text: "Value can support creation, people and community." },
+  { title: "Balance", icon: ShieldCheck, text: "Personal capacity matures from accumulation toward healthy flow." },
+];
 
 const Index = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { params, loading, error } = useNostrLanaParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [domainCurrency, setDomainCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
   const [enableBuyLana, setEnableBuyLana] = useState(true);
 
-  // Dynamic content state
-  const [dynamicFaq, setDynamicFaq] = useState<DynamicFaqItem[] | null>(null);
-  const [dynamicWhatIsLana, setDynamicWhatIsLana] = useState<DynamicWhatIsLana | null>(null);
-
-  // Get currency symbol from domain config or session
-  const sessionData = typeof window !== 'undefined' ? sessionStorage.getItem("lana_session") : null;
-  const sessionCurrency = sessionData ? JSON.parse(sessionData).currency : null;
-  const currencySymbol = getCurrencySymbol(sessionCurrency || domainCurrency || 'EUR');
-
-  const domainHeaders: Record<string, string> = {
-    ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
-  };
-
-  // Fetch domain config for default currency
   useEffect(() => {
-    const fetchDomainCurrency = async () => {
+    const fetchDomainConfig = async () => {
+      const domainKey = getDomainKey();
+      const headers = domainKey ? { "X-Domain-Key": domainKey } : {};
+
       try {
-        const res = await fetch('/api/domain-config', { headers: domainHeaders });
-        const json = await res.json();
-        if (json.data?.currency_default) {
-          const cur = json.data.currency_default.toUpperCase();
-          if (cur === 'EUR' || cur === 'USD' || cur === 'GBP') {
-            setDomainCurrency(cur);
-          }
-        }
-        // Check if buy LANA is enabled for this domain
+        const response = await fetch("/api/domain-config", { headers });
+        const json = await response.json();
         if (json.data?.enable_buy_lana !== undefined) {
           setEnableBuyLana(json.data.enable_buy_lana === 1);
         }
-      } catch (error) {
-        console.error('Error fetching domain config:', error);
+      } catch (fetchError) {
+        console.error("Error fetching domain config:", fetchError);
       }
     };
 
-    fetchDomainCurrency();
+    fetchDomainConfig();
   }, []);
 
-  // Fetch dynamic content (FAQ + What is Lana) when language changes
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const [faqRes, wilRes] = await Promise.all([
-          fetch(`/api/content/faq?language=${i18n.language}`, { headers: domainHeaders }),
-          fetch(`/api/content/what-is-lana?language=${i18n.language}`, { headers: domainHeaders }),
-        ]);
-
-        const faqJson = await faqRes.json();
-        const wilJson = await wilRes.json();
-
-        setDynamicFaq(faqJson.data && faqJson.data.length > 0 ? faqJson.data : null);
-        setDynamicWhatIsLana(wilJson.data || null);
-      } catch (error) {
-        console.error('Error fetching dynamic content:', error);
-        setDynamicFaq(null);
-        setDynamicWhatIsLana(null);
-      }
-    };
-
-    fetchContent();
-  }, [i18n.language]);
-
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      {/* Top Navigation Bar */}
-      <nav className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            {/* Connection Status */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <button className="flex items-center gap-1 sm:gap-2 hover:opacity-80 transition-opacity min-w-0">
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">{t('index.connecting')}</span>
-                    </>
-                  ) : error ? (
-                    <>
-                      <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0" />
-                      <Badge variant="destructive" className="text-xs">{t('index.disconnected')}</Badge>
-                    </>
-                  ) : params ? (
-                    <>
-                      <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
-                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
-                        {t('index.connected')}
-                      </Badge>
-                    </>
-                  ) : null}
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-[90vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('index.nostrNetworkStatus')}</DialogTitle>
-                </DialogHeader>
-                {loading && (
-                  <div className="flex items-center justify-center gap-3 py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">{t('index.connectingToNostr')}</span>
-                  </div>
+    <div className="l8w-public l8w-regional">
+      <header className="l8w-site-header">
+        <a href="#top" className="l8w-site-header__brand" aria-label="Lana8Wonder home">
+          <BrandLockup compact />
+        </a>
+
+        <nav className="l8w-site-nav" aria-label="Main navigation">
+          <a href="#idea">The Idea</a>
+          <a href="#evolution">How It Evolves</a>
+          <a href="#principles">Principles</a>
+          <a href="#why-balance">Why Balance</a>
+          <a href="#growth-phase">How It Works</a>
+        </nav>
+
+        <div className="l8w-site-header__actions">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <button type="button" className="l8w-network" aria-label={t("index.nostrNetworkStatus")}>
+                {loading ? (
+                  <Loader2 className="animate-spin" />
+                ) : error ? (
+                  <Wifi className="is-offline" />
+                ) : (
+                  <Wifi className="is-online" />
                 )}
-                {error && (
-                  <div className="p-4 sm:p-6 bg-destructive/10 border border-destructive/30 rounded-lg">
-                    <p className="text-xs sm:text-sm text-destructive break-words">{error}</p>
-                  </div>
-                )}
-                {params && <NostrStatusCard params={params} />}
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <LanguageSelector />
-            <Button variant="default" size="sm" asChild className="text-xs sm:text-sm">
-              <Link to="/login">{t('index.logIn')}</Link>
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Header */}
-      <header className="relative overflow-hidden bg-gradient-hero">
-        <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
-          <div className="flex flex-col items-center text-center space-y-4 sm:space-y-8">
-            {/* LANA Coin Image - Smaller on mobile */}
-            <div className="w-full max-w-xs sm:max-w-2xl md:max-w-4xl lg:max-w-6xl px-2">
-              <img
-                src={lanaCoin}
-                alt="LANA Crypto Coin"
-                className="w-full h-auto object-contain drop-shadow-2xl animate-in fade-in zoom-in duration-700"
-              />
-            </div>
-
-            {/* Title and Description */}
-            <div className="space-y-3 sm:space-y-6 animate-in fade-in slide-in-from-bottom duration-700 px-2">
-              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-primary animate-pulse flex-shrink-0" />
-                <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                  {t('index.title')}
-                </h1>
-                <Sparkles className="w-5 h-5 sm:w-8 sm:h-8 text-accent animate-pulse flex-shrink-0" />
-              </div>
-
-              <p className="text-sm sm:text-xl md:text-2xl lg:text-3xl font-semibold text-foreground max-w-4xl mx-auto px-2">
-                {t('index.tagline', { currency: currencySymbol })}
-              </p>
-
-              {/* Prominent Log In button for mobile */}
-              <div className="sm:hidden flex justify-center pt-2">
-                <Button size="lg" className="text-base px-10 py-5 shadow-lg" asChild>
-                  <Link to="/login">{t('index.logIn')}</Link>
-                </Button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 pt-2 sm:pt-8 max-w-4xl mx-auto">
-                <div className="w-16 h-16 sm:w-32 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
-                  <img
-                    src={einsteinImg}
-                    alt="Albert Einstein"
-                    className="w-full h-full object-cover object-center"
-                  />
+                <span className="sr-only">{loading ? t("index.connecting") : error ? t("index.disconnected") : t("index.connected")}</span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[90vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t("index.nostrNetworkStatus")}</DialogTitle>
+              </DialogHeader>
+              {loading && (
+                <div className="flex items-center justify-center gap-3 py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">{t("index.connectingToNostr")}</span>
                 </div>
-                <blockquote className="text-left px-2">
-                  <p className="text-xs sm:text-base md:text-lg lg:text-xl font-medium text-foreground italic">
-                    "{t('index.quote')}"
-                  </p>
-                  <cite className="block mt-1 sm:mt-3 text-[10px] sm:text-sm text-muted-foreground not-italic">— {t('index.quoteAuthor')}</cite>
-                </blockquote>
-              </div>
-
-              {/* What is Lana8Wonder — video + description, Einstein-style layout */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 pt-4 sm:pt-8 max-w-4xl mx-auto">
-                <div className="w-48 sm:w-64 md:w-80 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
-                  <div className="aspect-video">
-                    <iframe
-                      src={dynamicWhatIsLana?.video_url ? toEmbedUrl(dynamicWhatIsLana.video_url) : getVideoUrl(i18n.language)}
-                      title={dynamicWhatIsLana?.title || t('index.whatIsLana.title')}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full border-0"
-                    />
-                  </div>
+              )}
+              {error && (
+                <div className="p-4 sm:p-6 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <p className="text-xs sm:text-sm text-destructive break-words">{error}</p>
                 </div>
-                <div className="text-left px-2 space-y-1 sm:space-y-2">
-                  <h2 className="text-sm sm:text-xl md:text-2xl font-bold text-primary">
-                    {dynamicWhatIsLana?.title || t('index.whatIsLana.title')}
-                  </h2>
-                  <p className="text-xs sm:text-base md:text-lg text-foreground">
-                    {dynamicWhatIsLana?.description
-                      ? <span dangerouslySetInnerHTML={{ __html: dynamicWhatIsLana.description }} />
-                      : t('index.whatIsLana.description')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+              )}
+              {params && <NostrStatusCard params={params} />}
+            </DialogContent>
+          </Dialog>
+          <LanguageSelector />
+          {enableBuyLana && (
+            <Link to="/buy-lana8wonder" className="l8w-button l8w-button--quiet l8w-header-begin">
+              Begin Your Journey
+            </Link>
+          )}
+          <Link to="/login" className="l8w-button l8w-button--primary l8w-header-enter">
+            Enter with Wallet
+          </Link>
         </div>
       </header>
 
-      {/* Buy LANA8Wonder CTA Section — only shown when enabled for this domain */}
-      {enableBuyLana && (
-        <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
-          <div className="max-w-5xl mx-auto">
-            <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background">
-              <CardContent className="p-6 sm:p-10 text-center space-y-4">
-                <h2 className="text-2xl sm:text-3xl font-bold text-primary">
-                  {t('buyLana.title')}
-                </h2>
-                <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-                  {t('buyLana.step2Notice')}
-                </p>
-                {params?.split && (
-                  <p className="text-sm sm:text-base font-semibold text-primary/80">
-                    {t('buyLana.currentSplitInfo', {
-                      currentSplit: params.split,
-                      nextSplit: String(parseInt(params.split) + 1)
-                    })}
-                  </p>
-                )}
-                <Button size="lg" className="text-lg px-8 py-6" asChild>
-                  <Link to="/buy-lana8wonder">
-                    {t('buyLana.indexBuyButton')}
+      <main id="top">
+        <section className="l8w-hero" aria-labelledby="hero-title">
+          <div className="l8w-orbit" aria-hidden="true" />
+          <div className="l8w-shell l8w-hero__grid">
+            <div className="l8w-hero__copy">
+              <p className="l8w-kicker">A journey toward enough</p>
+              <h1 id="hero-title">From Growth<br />to <span>Balance</span></h1>
+              <div className="l8w-title-line" aria-hidden="true" />
+              <p className="l8w-hero__lead">
+                Lana8Wonder is a journey toward a Balanced Wallet — built through real circulation, gradual growth and responsible use of value.
+              </p>
+              <div className="l8w-hero__statement">
+                <Leaf />
+                <p>Not built for endless accumulation.<br /><strong>Built for maturity, flow and balance.</strong></p>
+              </div>
+              <div className="l8w-hero__actions">
+                {enableBuyLana && (
+                  <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">
+                    Begin Your Journey <ArrowRight />
                   </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                )}
+                <Link to="/login" className="l8w-button l8w-button--outline">
+                  Enter with Wallet
+                </Link>
+              </div>
+              {enableBuyLana && (
+                <p className="l8w-hero__note">To begin, you need the required amount of Registered LANA for the current cycle.</p>
+              )}
+            </div>
+
+            <div className="l8w-hero__art">
+              <NatureFlowIllustration />
+              <BalanceSignals />
+            </div>
           </div>
         </section>
-      )}
 
-      {/* FAQ Section — dynamic from DB with i18n fallback */}
-      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
-        <div className="max-w-5xl mx-auto">
-          <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">{t('index.faq.title')}</h2>
-              <Accordion type="single" collapsible className="w-full">
-                {dynamicFaq ? (
-                  dynamicFaq.map((item, index) => (
-                    <AccordionItem key={item.id} value={`item-${index + 1}`}>
-                      <AccordionTrigger className="text-left text-sm sm:text-base">
-                        {item.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                        <span dangerouslySetInnerHTML={{ __html: item.answer }} />
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))
+        <section id="idea" className="l8w-section l8w-section--idea">
+          <div className="l8w-shell l8w-idea-grid">
+            <div className="l8w-botanical-medallion" aria-hidden="true">
+              <span><Sprout /></span>
+              <i /><i /><i />
+            </div>
+            <div className="l8w-section-copy">
+              <p className="l8w-section-number">01</p>
+              <h2>The Idea</h2>
+              <p>Lana8Wonder is built on a simple belief:</p>
+              <p>True wealth is not defined by how much value you can accumulate, but by your ability to live with enough and keep value in healthy circulation.</p>
+              <p>The journey begins with growth. But growth is not the destination.</p>
+              <p>The destination is a <strong>Balanced Wallet</strong> — one that supports your life, participates in the wider economy and gradually moves from accumulation toward flow.</p>
+            </div>
+            <blockquote className="l8w-feature-quote">
+              <span>“</span>
+              A Balanced Wallet is not empty or full.<br />It is aligned, useful and always in motion.
+            </blockquote>
+          </div>
+        </section>
+
+        <section id="evolution" className="l8w-section l8w-section--white">
+          <div className="l8w-shell">
+            <div className="l8w-section-heading">
+              <p className="l8w-section-number">02</p>
+              <h2>How It Evolves</h2>
+              <p>Growth has a role. Circulation gives it meaning. Balance gives it direction.</p>
+            </div>
+            <ol className="l8w-evolution">
+              {evolutionStages.map((stage, index) => {
+                const Icon = stage.icon;
+                return (
+                  <li key={stage.title}>
+                    <span className="l8w-evolution__number">{index + 1}</span>
+                    <div className="l8w-evolution__icon"><Icon /></div>
+                    <h3>{stage.title}</h3>
+                    <p>{stage.text}</p>
+                    {index < evolutionStages.length - 1 && <ArrowRight className="l8w-evolution__arrow" aria-hidden="true" />}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </section>
+
+        <section id="principles" className="l8w-section l8w-section--tint">
+          <div className="l8w-shell">
+            <div className="l8w-section-heading">
+              <p className="l8w-section-number">03</p>
+              <h2>Core Principles</h2>
+            </div>
+            <div className="l8w-principles">
+              {principles.map((principle, index) => {
+                const Icon = principle.icon;
+                return (
+                  <article key={principle.title}>
+                    <div className={`l8w-principles__icon l8w-principles__icon--${index + 1}`}><Icon /></div>
+                    <div>
+                      <h3>{principle.title} <Leaf /></h3>
+                      <p>{principle.text}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section id="why-balance" className="l8w-section l8w-section--landscape">
+          <div className="l8w-shell">
+            <div className="l8w-section-heading">
+              <p className="l8w-section-number">04</p>
+              <h2>Why Balance Matters</h2>
+            </div>
+            <div className="l8w-balance-reasons">
+              {balanceReasons.map((reason) => {
+                const Icon = reason.icon;
+                return (
+                  <article key={reason.title}>
+                    <span><Icon /></span>
+                    <div><h3>{reason.title}</h3><p>{reason.text}</p></div>
+                  </article>
+                );
+              })}
+            </div>
+            <blockquote>Balance is not a destination you own. It is a way of moving through life.</blockquote>
+          </div>
+        </section>
+
+        <section id="growth-phase" className="l8w-section l8w-section--growth">
+          <div className="l8w-shell l8w-growth-grid">
+            <div>
+              <p className="l8w-kicker">Transparent by design</p>
+              <h2>Growth Is a Phase</h2>
+              <p className="l8w-growth-grid__lead">Lana8Wonder uses successive economic cycles as part of the development of the wallet.</p>
+            </div>
+            <div className="l8w-growth-grid__copy">
+              <p>These cycles can change the system reference value of Registered LANA. But Lana8Wonder is not designed around the promise of a future monetary outcome.</p>
+              <p>The timing of future cycles is not guaranteed. Liquidity is not unlimited. A system reference value is not the same as guaranteed cash value or guaranteed redemption.</p>
+              <p><strong>The purpose of the growth phase is to help the wallet mature toward balance.</strong></p>
+            </div>
+            <div className="l8w-growth-symbol" aria-hidden="true">
+              <CircleDot /><ArrowRight /><Sprout /><ArrowRight /><Scale />
+            </div>
+          </div>
+        </section>
+
+        <section className="l8w-section l8w-section--white">
+          <div className="l8w-shell">
+            <div className="l8w-section-heading l8w-section-heading--wide">
+              <p className="l8w-kicker">A living economy</p>
+              <h2>A Wallet Does Not Live Alone</h2>
+              <p>Lana8Wonder is part of the wider Lana Balanced Exchange — an economy built around circulation, creation, common good and balance. Its growth is connected to real activity in the wider ecosystem.</p>
+            </div>
+            <div className="l8w-economy-grid">
+              {livingEconomy.map((item) => {
+                const Icon = item.icon;
+                return <article key={item.title}><Icon /><h3>{item.title}</h3><p>{item.text}</p></article>;
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="l8w-section l8w-section--wallet">
+          <div className="l8w-shell l8w-wallet-grid">
+            <div className="l8w-wallet-symbol" aria-hidden="true"><WalletCards /><RefreshCw /></div>
+            <div>
+              <p className="l8w-kicker">Enough creates flow</p>
+              <h2>What Is a Balanced Wallet?</h2>
+              <p>A Balanced Wallet represents a different relationship with value.</p>
+              <div className="l8w-question-shift">
+                <span>Instead of asking</span><del>“How much can I accumulate?”</del>
+                <span>it begins to ask</span><strong>“How much is enough for me to live, create and participate?”</strong>
+              </div>
+              <p>A mature Balanced Wallet is designed around a defined personal capacity. Value beyond what a person needs is encouraged to move — through consumption, giving, support and recirculation.</p>
+              <p>The long-term vision is an economy in which value behaves more like a living flow than a collection of isolated piles.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="l8w-section l8w-section--nature">
+          <div className="l8w-shell l8w-nature-grid">
+            <div>
+              <p className="l8w-kicker">A design philosophy inspired by nature</p>
+              <h2>Growth Like a Living System</h2>
+              <p>Nature grows through cycles. A single cell divides. A young organism grows quickly. A mature organism does not grow forever.</p>
+              <p>It develops capacity, structure and balance.</p>
+              <p>Lana8Wonder uses the same idea as a metaphor — <strong>growth → maturation → balance.</strong></p>
+              <small>This is a metaphor for the design philosophy, not biological proof of a financial outcome.</small>
+            </div>
+            <div className="l8w-nature-cycle" aria-hidden="true">
+              <span><CircleDot /></span><ArrowRight /><span><Sprout /></span><ArrowRight /><span><Leaf /></span><ArrowRight /><span><Scale /></span>
+            </div>
+          </div>
+        </section>
+
+        <section className="l8w-entry">
+          <div className="l8w-shell l8w-entry__card">
+            <div className="l8w-entry__mark"><BrandLockup compact /></div>
+            <div className="l8w-entry__copy">
+              <p className="l8w-kicker">Your next step</p>
+              <h2>Begin Your Journey</h2>
+              <p>If you do not yet have the Registered LANA required for the current Lana8Wonder cycle, enter through the existing onboarding process.</p>
+              <div className="l8w-entry__actions">
+                {enableBuyLana ? (
+                  <Link to="/buy-lana8wonder" className="l8w-button l8w-button--primary">Get the Required LANA <ArrowRight /></Link>
                 ) : (
-                  <>
-                    <AccordionItem value="item-1">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">
-                        {t('index.faq.q1')}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                        {t('index.faq.a1')}{" "}
-                        <a href="https://youtu.be/cpzb5qKMAXM?si=VMHT2ZpXF40mHE4K" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          https://youtu.be/cpzb5qKMAXM
-                        </a>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-2">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q2')}</AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">{t('index.faq.a2')}</AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-3">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q3')}</AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">{t('index.faq.a3')}</AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-4">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q4')}</AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                        <span dangerouslySetInnerHTML={{ __html: t('index.faq.a4') }} />
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-5">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q5')}</AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                        <p>{t('index.faq.a5_intro')}</p>
-                        <p>{t('index.faq.a5_videos')}</p>
-                        <p>{t('index.faq.a5_step1')}{" "}
-                          <a href="https://youtu.be/AjLZJC1NUMY?si=fnHCG72s9SZsavmn" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://youtu.be/AjLZJC1NUMY</a>
-                        </p>
-                        <p>{t('index.faq.a5_step2')}{" "}
-                          <a href="https://youtu.be/JKyQrO6Im5A?si=wiUcYGPHTI3kNpn5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://youtu.be/JKyQrO6Im5A</a>
-                        </p>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-6">
-                      <AccordionTrigger className="text-left text-sm sm:text-base">{t('index.faq.q6')}</AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-                        <p>{t('index.faq.a6_intro')}{" "}
-                          <a href="https://mejmosefajn.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://mejmosefajn.org/</a>
-                          {t('index.faq.a6_wif')}
-                        </p>
-                        <p>{t('index.faq.a6_workshop')}</p>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </>
+                  <Badge variant="outline" className="l8w-waiting-badge">New entries are currently coordinated through the regional waiting list.</Badge>
                 )}
-              </Accordion>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* 8th Wonder Annuity Plan Calculator — auto-calculated, shown after What is Lana */}
-      <main className="container mx-auto px-2 sm:px-4 py-6 sm:py-12">
-        <TradingPlanCalculator defaultCurrency={domainCurrency} autoCalculate={true} />
+              </div>
+            </div>
+            <div className="l8w-entry__existing">
+              <p>Already part of Lana8Wonder?</p>
+              <Link to="/login" className="l8w-button l8w-button--outline">Enter with Wallet</Link>
+              <small>Your existing wallet authentication remains unchanged.</small>
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-border">
-        <div className="text-center text-muted-foreground px-2">
-          <p className="text-xs sm:text-sm">
-            {t('index.footer')}
-          </p>
-          <p className="text-xs mt-2">
-            {t('index.footerDetails', { currency: currencySymbol })}
-          </p>
+      <footer className="l8w-footer">
+        <div className="l8w-shell">
+          <BrandLockup compact />
+          <p>From growth to balance — value in healthy circulation.</p>
+          <p>© {new Date().getFullYear()} Lana8Wonder</p>
         </div>
       </footer>
     </div>

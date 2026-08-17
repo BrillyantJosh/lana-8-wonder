@@ -1,21 +1,20 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Sparkles, ArrowRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import lanaCoin from '@/assets/lana-coin.png';
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Compass, Hourglass } from "lucide-react";
+import { BalanceSignals, BrandLockup, NatureFlowIllustration } from "@/components/Lana8WonderBrand";
 
 interface CountryOption {
   key: string;
   name: string;
-  flagCode: string; // ISO 3166-1 alpha-2 for flagcdn.com
+  flagCode: string;
   currency: string;
   hostname: string;
 }
 
 const countries: CountryOption[] = [
-  { key: 'si', name: 'Slovenija', flagCode: 'si', currency: 'EUR', hostname: 'si.lana8wonder.com' },
-  { key: 'at', name: 'Österreich', flagCode: 'at', currency: 'EUR', hostname: 'at.lana8wonder.com' },
-  { key: 'uk', name: 'United Kingdom', flagCode: 'gb', currency: 'GBP', hostname: 'uk.lana8wonder.com' },
-  { key: 'hu', name: 'Magyarország', flagCode: 'hu', currency: 'EUR', hostname: 'hu.lana8wonder.com' },
+  { key: "si", name: "Slovenija", flagCode: "si", currency: "EUR", hostname: "si.lana8wonder.com" },
+  { key: "at", name: "Österreich", flagCode: "at", currency: "EUR", hostname: "at.lana8wonder.com" },
+  { key: "uk", name: "United Kingdom", flagCode: "gb", currency: "GBP", hostname: "uk.lana8wonder.com" },
+  { key: "hu", name: "Magyarország", flagCode: "hu", currency: "EUR", hostname: "hu.lana8wonder.com" },
 ];
 
 interface SlotData {
@@ -24,11 +23,11 @@ interface SlotData {
 }
 
 function detectCountry(): string | null {
-  const lang = (navigator.language || '').toLowerCase();
-  if (lang.startsWith('sl')) return 'si';
-  if (lang.startsWith('hu')) return 'hu';
-  if (lang.startsWith('de')) return 'at';
-  if (lang.startsWith('en')) return 'uk';
+  const lang = (navigator.language || "").toLowerCase();
+  if (lang.startsWith("sl")) return "si";
+  if (lang.startsWith("hu")) return "hu";
+  if (lang.startsWith("de")) return "at";
+  if (lang.startsWith("en")) return "uk";
   return null;
 }
 
@@ -36,19 +35,17 @@ const GlobalLanding = () => {
   const detected = useMemo(() => detectCountry(), []);
   const [slotsMap, setSlotsMap] = useState<Record<string, SlotData> | null>(null);
 
-  // Fetch slot availability for all domains
   useEffect(() => {
     const fetchSlots = async () => {
       try {
-        const res = await fetch('/api/global-slots');
-        const json = await res.json();
-        if (json.data) {
-          setSlotsMap(json.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch slot availability:', err);
+        const response = await fetch("/api/global-slots");
+        const json = await response.json();
+        if (json.data) setSlotsMap(json.data);
+      } catch (error) {
+        console.error("Failed to fetch slot availability:", error);
       }
     };
+
     fetchSlots();
   }, []);
 
@@ -57,101 +54,77 @@ const GlobalLanding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--gradient-hero))] relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(270_60%_95%)] to-background pointer-events-none" />
+    <main className="l8w-public l8w-global">
+      <div className="l8w-orbit l8w-orbit--global" aria-hidden="true" />
+      <header className="l8w-global__header">
+        <BrandLockup />
+        <p className="l8w-eyebrow"><span>Growth to Balance</span></p>
+      </header>
 
-      {/* LANA coin background */}
-      <img
-        src={lanaCoin}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none select-none z-[1]"
-      />
+      <section className="l8w-global__hero" aria-labelledby="global-title">
+        <div className="l8w-global__intro">
+          <p className="l8w-kicker">A balanced relationship with value</p>
+          <h1 id="global-title">Welcome to <span>Lana8Wonder</span></h1>
+          <div className="l8w-flourish" aria-hidden="true"><i /><b>❧</b><i /></div>
+          <h2>Choose your country to begin your journey</h2>
+          <p>Step into an ecosystem of real value, purposeful growth and conscious circulation.</p>
+        </div>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Hero section */}
-        <section className="flex flex-col items-center justify-center px-4 pt-16 pb-10 md:pt-24 md:pb-16">
-          {/* Title */}
-          <h1 className="text-3xl md:text-5xl font-bold text-center mb-3 bg-gradient-to-r from-[hsl(var(--mystical-purple))] via-[hsl(var(--gold-accent))] to-[hsl(var(--cyan-tech))] bg-clip-text text-transparent">
-            <Sparkles className="inline h-6 w-6 md:h-8 md:w-8 text-[hsl(var(--gold-accent))] mr-2" />
-            Welcome to Lana8Wonder
-            <Sparkles className="inline h-6 w-6 md:h-8 md:w-8 text-[hsl(var(--gold-accent))] ml-2" />
-          </h1>
+        <div className="l8w-global__visual">
+          <NatureFlowIllustration compact />
+        </div>
+      </section>
 
-          <p className="text-muted-foreground text-center text-base md:text-lg max-w-md">
-            Your gateway to the LanaCoin universe
-          </p>
-        </section>
+      <section className="l8w-country-section" aria-labelledby="regional-paths">
+        <h2 id="regional-paths"><span />Select your regional path<span /></h2>
+        <div className="l8w-country-grid">
+          {countries.map((country) => {
+            const slotInfo = slotsMap?.[country.key];
+            const hasSlots = slotInfo ? slotInfo.slots > 1 : null;
+            const isRecommended = hasSlots === true || (hasSlots === null && detected === country.key);
+            const isSoldOut = hasSlots === false;
 
-        {/* Country selection */}
-        <section className="px-4 pb-16 md:pb-24 max-w-2xl mx-auto flex-1">
-          <h2 className="text-center text-lg md:text-xl font-semibold text-foreground mb-6">
-            Choose your country to get started
-          </h2>
+            return (
+              <button
+                type="button"
+                key={country.key}
+                className={`l8w-country-card ${isRecommended ? "is-recommended" : ""} ${isSoldOut ? "is-sold-out" : ""}`}
+                onClick={() => handleSelect(country.hostname)}
+                aria-label={`Continue to Lana8Wonder ${country.name}`}
+              >
+                {isRecommended && (
+                  <span className="l8w-country-card__ribbon l8w-country-card__ribbon--green">
+                    <Compass /> Recommended
+                  </span>
+                )}
+                {isSoldOut && (
+                  <span className="l8w-country-card__ribbon l8w-country-card__ribbon--gold">
+                    <Hourglass /> Sold out — waiting list
+                  </span>
+                )}
+                <img
+                  src={`https://flagcdn.com/w160/${country.flagCode}.png`}
+                  alt=""
+                  className="l8w-country-card__flag"
+                />
+                <span className="l8w-country-card__copy">
+                  <strong>{country.name}</strong>
+                  <small>Currency: {country.currency}</small>
+                </span>
+                <span className="l8w-country-card__arrow"><ArrowRight /></span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {countries.map((country) => {
-              const slotInfo = slotsMap?.[country.key];
-              const hasSlots = slotInfo ? slotInfo.slots > 1 : null; // null = loading
-              const isRecommended = hasSlots === true;
-              const isSoldOut = hasSlots === false;
+      <BalanceSignals />
 
-              return (
-                <Card
-                  key={country.key}
-                  onClick={() => handleSelect(country.hostname)}
-                  className={`
-                    cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:shadow-[var(--shadow-mystical)]
-                    group relative overflow-hidden
-                    ${isRecommended
-                      ? 'ring-2 ring-primary shadow-[var(--shadow-mystical)]'
-                      : isSoldOut
-                        ? 'ring-1 ring-orange-400/50 opacity-80'
-                        : 'hover:ring-1 hover:ring-primary/40'
-                    }
-                  `}
-                >
-                  {isRecommended && (
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-bl-lg">
-                      Recommended
-                    </div>
-                  )}
-                  {isSoldOut && (
-                    <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-bl-lg">
-                      Sold Out — Waiting list
-                    </div>
-                  )}
-                  <CardContent className="flex items-center gap-4 p-5">
-                    <img
-                      src={`https://flagcdn.com/w80/${country.flagCode}.png`}
-                      srcSet={`https://flagcdn.com/w160/${country.flagCode}.png 2x`}
-                      alt={country.name}
-                      className="w-12 h-8 md:w-14 md:h-10 object-cover rounded shadow-sm"
-                      loading="eager"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base md:text-lg text-foreground">
-                        {country.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Currency: {country.currency}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="text-center py-6 text-xs text-muted-foreground/60 border-t border-border/30">
-          <p>&copy; {new Date().getFullYear()} Lana8Wonder &mdash; Powered by LanaCoin</p>
-        </footer>
-      </div>
-    </div>
+      <footer className="l8w-footer l8w-footer--global">
+        <p>© {new Date().getFullYear()} Lana8Wonder</p>
+        <p>Growth is a phase. Balance is the purpose.</p>
+      </footer>
+    </main>
   );
 };
 
