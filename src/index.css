@@ -8,50 +8,50 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 40% 98%;
-    --foreground: 270 50% 15%;
+    --background: 43 44% 97%;
+    --foreground: 165 31% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 270 50% 15%;
+    --card: 42 50% 99%;
+    --card-foreground: 165 31% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 270 50% 15%;
+    --popover: 42 50% 99%;
+    --popover-foreground: 165 31% 14%;
 
-    --primary: 270 70% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 157 53% 22%;
+    --primary-foreground: 42 50% 99%;
 
-    --secondary: 45 95% 60%;
-    --secondary-foreground: 270 50% 15%;
+    --secondary: 43 52% 88%;
+    --secondary-foreground: 157 53% 18%;
 
-    --muted: 220 30% 94%;
-    --muted-foreground: 270 20% 50%;
+    --muted: 42 38% 93%;
+    --muted-foreground: 159 10% 37%;
 
-    --accent: 190 85% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 43 52% 88%;
+    --accent-foreground: 157 53% 18%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 25% 88%;
-    --input: 220 25% 88%;
-    --ring: 270 70% 55%;
+    --border: 40 34% 82%;
+    --input: 40 34% 82%;
+    --ring: 39 50% 51%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     /* Custom tokens for Lana8Wonder */
-    --mystical-purple: 270 70% 55%;
-    --mystical-purple-light: 270 60% 70%;
-    --gold-accent: 45 95% 60%;
-    --gold-light: 45 90% 75%;
-    --cyan-tech: 190 85% 50%;
-    --cyan-light: 190 70% 65%;
+    --mystical-purple: 157 53% 22%;
+    --mystical-purple-light: 151 24% 45%;
+    --gold-accent: 39 50% 51%;
+    --gold-light: 43 52% 82%;
+    --cyan-tech: 190 25% 50%;
+    --cyan-light: 187 28% 72%;
     
-    --gradient-mystical: linear-gradient(135deg, hsl(270 60% 70%) 0%, hsl(190 70% 65%) 100%);
-    --gradient-wealth: linear-gradient(135deg, hsl(45 90% 75%) 0%, hsl(270 60% 70%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(220 40% 98%) 0%, hsl(270 60% 95%) 50%, hsl(220 40% 98%) 100%);
+    --gradient-mystical: linear-gradient(135deg, hsl(157 53% 20%) 0%, hsl(151 24% 39%) 100%);
+    --gradient-wealth: linear-gradient(135deg, hsl(43 52% 82%) 0%, hsl(39 50% 51%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(43 44% 97%) 0%, hsl(42 38% 93%) 55%, hsl(43 44% 97%) 100%);
     
-    --shadow-mystical: 0 10px 40px -10px hsl(270 70% 55% / 0.3);
-    --shadow-card: 0 4px 20px -2px hsl(270 50% 15% / 0.1);
+    --shadow-mystical: 0 16px 42px -14px hsl(157 53% 16% / 0.28);
+    --shadow-card: 0 12px 34px -18px hsl(157 38% 16% / 0.2);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -64,6 +64,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Lana Sans", ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -81,6 +82,315 @@ All colors MUST be HSL.
   font-style: normal;
   font-weight: 700;
   font-display: swap;
+}
+
+/* Shared authenticated and enrollment experience */
+.l8w-app-surface {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  isolation: isolate;
+  color: hsl(165 31% 14%);
+  background:
+    radial-gradient(circle at 86% 7%, hsl(43 52% 82% / 0.48), transparent 26rem),
+    radial-gradient(circle at 3% 74%, hsl(151 24% 72% / 0.3), transparent 30rem),
+    linear-gradient(180deg, hsl(42 50% 99%) 0%, hsl(43 44% 97%) 48%, hsl(42 38% 93%) 100%);
+}
+
+.l8w-app-surface::before,
+.l8w-app-surface::after {
+  position: fixed;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.l8w-app-surface::before {
+  top: 118px;
+  right: -220px;
+  width: 620px;
+  height: 620px;
+  border: 1px solid hsl(39 50% 51% / 0.14);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle at center, transparent 0 62px, hsl(39 50% 51% / 0.07) 63px 64px),
+    radial-gradient(circle at center, hsl(43 52% 82% / 0.2), transparent 64%);
+}
+
+.l8w-app-surface::after {
+  bottom: -170px;
+  left: -130px;
+  width: 540px;
+  height: 340px;
+  border-radius: 55% 45% 0 0;
+  background:
+    linear-gradient(150deg, transparent 32%, hsl(190 25% 50% / 0.12) 33% 44%, transparent 45%),
+    linear-gradient(165deg, transparent 39%, hsl(151 24% 38% / 0.1) 40% 52%, transparent 53%);
+  transform: rotate(-7deg);
+}
+
+.l8w-app-masthead {
+  position: sticky;
+  z-index: 40;
+  top: 0;
+  height: 72px;
+  border-bottom: 1px solid hsl(40 34% 82% / 0.75);
+  background: hsl(42 50% 99% / 0.88);
+  box-shadow: 0 8px 28px hsl(157 30% 16% / 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.l8w-app-masthead__inner {
+  display: flex;
+  width: min(1320px, calc(100% - 40px));
+  height: 100%;
+  align-items: center;
+  gap: 18px;
+  margin-inline: auto;
+}
+
+.l8w-app-masthead__mark {
+  width: 36px;
+  height: 45px;
+  flex: none;
+}
+
+.l8w-app-masthead__line {
+  width: min(210px, 30vw);
+  height: 1px;
+  background: linear-gradient(90deg, hsl(39 50% 51% / 0.8), transparent);
+}
+
+.l8w-app-route {
+  position: relative;
+  z-index: 1;
+}
+
+.l8w-app-route > .min-h-screen {
+  min-height: calc(100vh - 72px);
+}
+
+.l8w-app-route > .bg-background,
+.l8w-app-route > .min-h-screen.bg-background {
+  background-color: transparent;
+}
+
+.l8w-app-surface h1,
+.l8w-app-surface h2,
+.l8w-app-surface h3,
+.l8w-ui-dialog h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.025em;
+}
+
+.l8w-app-surface h1,
+.l8w-app-surface h2 {
+  color: hsl(157 53% 16%);
+}
+
+.l8w-app-surface .l8w-ui-card,
+.l8w-ui-dialog {
+  border-color: hsl(40 34% 82% / 0.9);
+  background:
+    linear-gradient(145deg, hsl(42 50% 99% / 0.98), hsl(42 44% 97% / 0.94));
+  box-shadow:
+    0 18px 46px hsl(157 30% 16% / 0.08),
+    inset 0 1px hsl(0 0% 100% / 0.84);
+}
+
+.l8w-app-surface .l8w-ui-card {
+  border-radius: 20px;
+}
+
+.l8w-app-surface .l8w-ui-card:hover {
+  border-color: hsl(39 50% 51% / 0.55);
+}
+
+.l8w-app-surface .l8w-ui-button,
+.l8w-ui-dialog .l8w-ui-button {
+  border-radius: 999px;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.l8w-app-surface .l8w-ui-button:hover:not(:disabled),
+.l8w-ui-dialog .l8w-ui-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.l8w-app-surface .l8w-ui-button[data-l8w-variant="default"],
+.l8w-ui-dialog .l8w-ui-button[data-l8w-variant="default"] {
+  background: linear-gradient(135deg, hsl(158 54% 20%), hsl(153 47% 28%));
+  box-shadow: 0 9px 22px hsl(155 45% 18% / 0.16), inset 0 1px hsl(0 0% 100% / 0.14);
+}
+
+.l8w-app-surface .l8w-ui-button[data-l8w-variant="outline"],
+.l8w-ui-dialog .l8w-ui-button[data-l8w-variant="outline"] {
+  border-color: hsl(40 34% 76%);
+  color: hsl(157 53% 18%);
+  background: hsl(42 50% 99% / 0.72);
+}
+
+.l8w-app-surface .l8w-ui-button[data-l8w-variant="outline"]:hover,
+.l8w-ui-dialog .l8w-ui-button[data-l8w-variant="outline"]:hover {
+  border-color: hsl(39 50% 51%);
+  background: hsl(43 52% 92%);
+}
+
+.l8w-app-surface .l8w-ui-button[data-l8w-variant="ghost"]:hover {
+  color: hsl(157 53% 18%);
+  background: hsl(43 52% 88% / 0.7);
+}
+
+.l8w-ui-input,
+.l8w-ui-textarea,
+.l8w-ui-select {
+  border-color: hsl(40 34% 78%);
+  border-radius: 13px;
+  background-color: hsl(42 50% 99% / 0.86);
+  box-shadow: inset 0 1px 2px hsl(157 30% 16% / 0.03);
+}
+
+.l8w-ui-input:focus,
+.l8w-ui-textarea:focus,
+.l8w-ui-select:focus {
+  border-color: hsl(39 50% 51%);
+}
+
+.l8w-ui-popover,
+.l8w-ui-dialog {
+  border-radius: 16px;
+  border-color: hsl(40 34% 78%);
+  background-color: hsl(42 50% 99%);
+  box-shadow: 0 20px 54px hsl(157 30% 16% / 0.18);
+}
+
+.l8w-app-surface table thead {
+  color: hsl(157 53% 18%);
+  background: hsl(43 52% 90% / 0.66);
+}
+
+.l8w-app-surface table tbody tr:hover {
+  background: hsl(43 52% 90% / 0.42);
+}
+
+.l8w-app-surface [role="tablist"] {
+  border: 1px solid hsl(40 34% 82%);
+  border-radius: 999px;
+  background: hsl(42 38% 93% / 0.86);
+}
+
+.l8w-app-surface [role="tab"] {
+  border-radius: 999px;
+}
+
+.l8w-app-surface [role="tab"][data-state="active"] {
+  color: hsl(42 50% 99%);
+  background: hsl(157 53% 22%);
+}
+
+.l8w-login-page {
+  position: relative;
+  padding-block: 36px;
+}
+
+.l8w-login-language {
+  z-index: 3;
+}
+
+.l8w-login-layout {
+  display: grid;
+  width: min(1180px, calc(100% - 36px));
+  grid-template-columns: minmax(360px, 0.76fr) minmax(520px, 1.24fr);
+  align-items: stretch;
+  gap: 28px;
+  margin-inline: auto;
+}
+
+.l8w-login-card {
+  max-width: none;
+  align-self: center;
+  overflow: hidden;
+}
+
+.l8w-login-card::before {
+  display: block;
+  width: 100%;
+  height: 4px;
+  content: "";
+  background: linear-gradient(90deg, hsl(157 53% 22%), hsl(39 50% 51%), hsl(190 25% 50%));
+}
+
+.l8w-login-mark {
+  width: 52px;
+  height: 61px;
+}
+
+.l8w-login-visual {
+  position: relative;
+  min-height: 590px;
+  overflow: hidden;
+  border: 1px solid hsl(40 34% 82% / 0.82);
+  border-radius: 28px;
+  background: hsl(42 50% 99% / 0.76);
+  box-shadow: 0 24px 65px hsl(157 30% 16% / 0.1);
+}
+
+.l8w-login-visual::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(90deg, hsl(42 50% 99% / 0.35), transparent 30%);
+}
+
+.l8w-login-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 58% center;
+}
+
+@media (max-width: 900px) {
+  .l8w-login-layout {
+    width: min(560px, calc(100% - 24px));
+    grid-template-columns: 1fr;
+  }
+
+  .l8w-login-visual {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .l8w-app-masthead {
+    height: 62px;
+  }
+
+  .l8w-app-masthead__inner {
+    width: calc(100% - 28px);
+  }
+
+  .l8w-app-masthead__mark {
+    width: 30px;
+    height: 38px;
+  }
+
+  .l8w-app-route > .min-h-screen {
+    min-height: calc(100vh - 62px);
+  }
+
+  .l8w-app-surface .l8w-ui-card {
+    border-radius: 16px;
+  }
+
+  .l8w-login-page {
+    padding-block: 58px 18px;
+  }
+
+  .l8w-login-language {
+    top: 10px;
+  }
 }
 
 .l8w-public {

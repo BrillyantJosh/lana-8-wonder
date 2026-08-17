@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { QrCode, KeyRound, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { QrCode, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
 import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
@@ -14,6 +14,7 @@ import { useQRScanner } from "@/hooks/useQRScanner";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { validateWifAndGetAddress } from "@/lib/wifValidation";
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
+import { LanaMark } from "@/components/Lana8WonderBrand";
 
 const Login = () => {
   const { t, i18n } = useTranslation();
@@ -73,10 +74,10 @@ const Login = () => {
         setIsScanning(false);
         toast.success("QR code scanned successfully!");
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error starting QR scanner:", err);
       setIsScanning(false);
-      toast.error(err.message || "Camera error");
+      toast.error(err instanceof Error ? err.message : "Camera error");
     }
   };
 
@@ -208,15 +209,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
+    <div className="l8w-login-page min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
+      <div className="l8w-login-language absolute top-2 right-2 sm:top-4 sm:right-4">
         <LanguageSelector />
       </div>
-      <Card className="w-full max-w-md">
+      <div className="l8w-login-layout">
+      <Card className="l8w-login-card w-full max-w-md">
         <CardHeader className="text-center space-y-1 sm:space-y-2 px-4 sm:px-6 py-3 sm:py-6">
-          <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center mb-1 sm:mb-2">
-            <KeyRound className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-          </div>
+          <LanaMark className="l8w-login-mark mx-auto mb-1 sm:mb-2" />
           <CardTitle className="text-lg sm:text-2xl">{t('login.title')}</CardTitle>
           <CardDescription className="text-xs sm:text-sm hidden sm:block">
             {t('login.wifPlaceholder')}
@@ -318,6 +318,10 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
+      <div className="l8w-login-visual" aria-hidden="true">
+        <img src="/images/lana8wonder/growth-to-balance-hero.webp" alt="" />
+      </div>
+      </div>
     </div>
   );
 };

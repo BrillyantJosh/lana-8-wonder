@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import GlobalLanding from "./pages/GlobalLanding";
 import Login from "./pages/Login";
@@ -21,11 +21,56 @@ import SendLanaResult from "./pages/SendLanaResult";
 import SendLana8WonderTransfer from "./pages/SendLana8WonderTransfer";
 import NotFound from "./pages/NotFound";
 import { getDomainKey } from "./integrations/api/client";
+import { LanaMark } from "./components/Lana8WonderBrand";
 
 const queryClient = new QueryClient();
 
 // Show GlobalLanding when no country subdomain is detected (www or root domain)
 const isGlobalDomain = !getDomainKey();
+
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={isGlobalDomain ? <GlobalLanding /> : <Index />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />
+    <Route path="/admin-buy-lana" element={<AdminBuyLana />} />
+    <Route path="/admin-domain-settings" element={<AdminDomainSettings />} />
+    <Route path="/admin-content" element={<AdminContent />} />
+    <Route path="/admin-recreate-plan" element={<AdminRecreatePlan />} />
+    <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
+    <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
+    <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />
+    <Route path="/send-lana" element={<SendLana />} />
+    <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
+    <Route path="/send-lana-result" element={<SendLanaResult />} />
+    <Route path="/send-lana8wonder-transfer" element={<SendLana8WonderTransfer />} />
+    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
+const RoutedExperience = () => {
+  const { pathname } = useLocation();
+
+  if (pathname === "/") {
+    return <AppRoutes />;
+  }
+
+  return (
+    <div className="l8w-app-surface">
+      <header className="l8w-app-masthead" aria-label="Lana8Wonder">
+        <div className="l8w-app-masthead__inner">
+          <LanaMark className="l8w-app-masthead__mark" />
+          <span className="l8w-app-masthead__line" aria-hidden="true" />
+        </div>
+      </header>
+      <main className="l8w-app-route">
+        <AppRoutes />
+      </main>
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -33,25 +78,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={isGlobalDomain ? <GlobalLanding /> : <Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/buy-lana8wonder" element={<BuyLana8Wonder />} />
-          <Route path="/admin-buy-lana" element={<AdminBuyLana />} />
-          <Route path="/admin-domain-settings" element={<AdminDomainSettings />} />
-          <Route path="/admin-content" element={<AdminContent />} />
-          <Route path="/admin-recreate-plan" element={<AdminRecreatePlan />} />
-          <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
-          <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
-          <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />
-          <Route path="/send-lana" element={<SendLana />} />
-          <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
-          <Route path="/send-lana-result" element={<SendLanaResult />} />
-          <Route path="/send-lana8wonder-transfer" element={<SendLana8WonderTransfer />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <RoutedExperience />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
