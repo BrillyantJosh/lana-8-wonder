@@ -347,8 +347,9 @@ All colors MUST be HSL.
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 58% center;
+  padding: 14px;
+  object-fit: contain;
+  object-position: center;
 }
 
 @media (max-width: 900px) {
