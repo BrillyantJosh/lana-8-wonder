@@ -762,13 +762,13 @@ All colors MUST be HSL.
 .l8w-hero__art {
   position: relative;
   align-self: center;
-  margin-right: -72px;
+  margin-right: 0;
 }
 
 .l8w-hero__picture {
   display: block;
-  width: 145%;
-  margin: -55px 0 0 -36%;
+  width: 136%;
+  margin: -38px 0 0 -31%;
 }
 
 .l8w-hero__picture img {
@@ -1218,7 +1218,7 @@ All colors MUST be HSL.
   .l8w-site-nav { display: none; }
   .l8w-site-header__actions { justify-content: flex-end; }
   .l8w-hero__grid { grid-template-columns: 0.8fr 1.2fr; }
-  .l8w-hero__art { margin-right: -75px; }
+  .l8w-hero__art { margin-right: -20px; }
   .l8w-principles article { grid-template-columns: 1fr; text-align: center; }
   .l8w-principles__icon { margin: auto; }
   .l8w-principles h3 { justify-content: center; }
