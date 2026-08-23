@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 
 const router = Router();
 
-const LANA_REGISTER_API_URL = 'https://laluxmwarlejdwyboudz.supabase.co/functions/v1/register-virgin-wallets';
+const LANA_REGISTER_API_URL = `${process.env.REGISTRAR_URL || 'https://lanatrace.us'}/functions/v1/register-virgin-wallets`;
 
 // POST /api/register-virgin-wallets
 // Server-side proxy to keep LANA_REGISTER_API_KEY out of frontend code
