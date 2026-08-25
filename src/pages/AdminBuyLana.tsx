@@ -40,11 +40,22 @@ interface BuyLanaRecord {
 }
 
 // Helper: calculate LANA amount from exchange rates
+//
+// The buyer gets what they paid for, to the last decimal. This used to floor
+// the result, which silently kept the fraction: 100 at 0.128 buys 781.25 LANA
+// and delivered 781. Combined with the plan's own entry minimum, that left
+// every full-price buyer short and unable to create the plan they had just
+// bought. LANA carries 8 decimals on the wire (the transfer multiplies by
+// 1e8), so there was never a precision reason to truncate — only a rounding
+// to that same precision, which is what this does.
+const LANA_DECIMALS = 8;
+
 function calculateLanaAmount(currency: string | null, paymentAmount: number | null, exchangeRates: ExchangeRates): number {
   if (!currency || !paymentAmount) return 0;
   const rate = exchangeRates[currency as keyof ExchangeRates];
   if (!rate || rate === 0) return 0;
-  return Math.floor(paymentAmount / rate);
+  const factor = 10 ** LANA_DECIMALS;
+  return Math.round((paymentAmount / rate) * factor) / factor;
 }
 
 const AdminBuyLana = () => {
@@ -267,9 +278,12 @@ const AdminBuyLana = () => {
     const slotCapacity: { currency: string; lanaPerSlot: number; slots: number }[] = [];
     for (const [currency, rate] of Object.entries(nostrParams.exchangeRates)) {
       if (!rate || rate === 0) continue;
-      const lanaPerSlot = Math.floor(100 / rate); // 100 units of currency → LANA
+      // Exactly what one 100-unit payment now DELIVERS. Flooring here made a
+      // slot look cheaper than it is (781 against 781.25), so the capacity
+      // shown was a little larger than the wallet could actually pay.
+      const lanaPerSlot = 100 / rate; // 100 units of currency → LANA
       if (lanaPerSlot <= 0) continue;
-      const lanaPerSlotSatoshis = lanaPerSlot * 100000000;
+      const lanaPerSlotSatoshis = Math.round(lanaPerSlot * 100000000);
       // Iteratively calculate how many slots fit with fees
       let slots = 0;
       let cumSatoshis = 0;
@@ -886,9 +900,11 @@ const AdminBuyLana = () => {
                 <div className="mb-3 p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="font-semibold text-primary">Current rates (Split {nostrParams.split}):</span>
-                    <span>100 EUR = {Math.floor(100 / nostrParams.exchangeRates.EUR).toLocaleString()} LANA</span>
-                    <span>100 GBP = {Math.floor(100 / nostrParams.exchangeRates.GBP).toLocaleString()} LANA</span>
-                    <span>100 USD = {Math.floor(100 / nostrParams.exchangeRates.USD).toLocaleString()} LANA</span>
+                    {/* The delivered amount, fraction included — the floor here
+                        said 781 while the buyer receives 781.25. */}
+                    <span>100 EUR = {calculateLanaAmount('EUR', 100, nostrParams.exchangeRates).toLocaleString()} LANA</span>
+                    <span>100 GBP = {calculateLanaAmount('GBP', 100, nostrParams.exchangeRates).toLocaleString()} LANA</span>
+                    <span>100 USD = {calculateLanaAmount('USD', 100, nostrParams.exchangeRates).toLocaleString()} LANA</span>
                   </div>
                 </div>
               )}

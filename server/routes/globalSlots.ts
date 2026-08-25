@@ -134,14 +134,16 @@ router.get('/', async (_req: Request, res: Response) => {
       const reservedSatoshis = reservedMap[domain.domain_key] || 0;
       const availableSatoshis = Math.max(0, balance.satoshis - reservedSatoshis);
 
-      // Same slot calculation as AdminBuyLana
-      const lanaPerSlot = Math.floor(100 / rate);
+      // Same slot calculation as AdminBuyLana — exactly what one 100-unit
+      // payment delivers. Flooring made a slot look cheaper than it is, so the
+      // capacity offered was slightly more than the wallet could pay out.
+      const lanaPerSlot = 100 / rate;
       if (lanaPerSlot <= 0) {
         result[domain.domain_key] = { slots: 0, currency };
         continue;
       }
 
-      const lanaPerSlotSatoshis = lanaPerSlot * 100000000;
+      const lanaPerSlotSatoshis = Math.round(lanaPerSlot * 100000000);
       let slots = 0;
       let cumSatoshis = 0;
 

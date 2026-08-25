@@ -176,12 +176,33 @@ const CreateLana8Wonder = () => {
   const allWalletsDeduped = uniqueWallets;
 
   // Calculate minimum required LANA balance (100 currency units / exchange rate)
+  //
+  // WHAT 100 BUYS, AND NOT A CROWN MORE. This used to ask for `+ 0.5` LANA on
+  // top as a fee margin — but the purchase flow sizes the top-up to land on
+  // exactly 100 currency units, so nobody who paid the asking price could ever
+  // clear the bar. It bit hardest the customer who had nothing else: a whole
+  // 100 in the bank and no spare LANA anywhere. The fee comes out of the plan's
+  // own balance at payout, where sendMax already handles a balance a hair under
+  // the plan, instead of being demanded from the buyer up front.
   const getMinimumRequiredBalance = (currency: string = "EUR"): number => {
     if (!exchangeRates) return 0;
     const rate = exchangeRates[currency as keyof typeof exchangeRates];
     if (!rate || rate === 0) return 0;
-    return (100 / rate) + 0.5;
+    return 100 / rate;
   };
+
+  /**
+   * Does this balance clear the bar?
+   *
+   * Deliberately not a bare `>=`. Both sides are computed as `100 / rate` in
+   * binary floating point, one of them after a round-trip through the database,
+   * and a customer who paid in full must never be turned away by a crumb in the
+   * last decimal place. One lanoshi (1e-8 LANA) of slack is far below anything
+   * that could matter and far above the error being tolerated.
+   */
+  const FLOAT_SLACK = 1e-8;
+  const meetsMinimum = (balance: number, required: number): boolean =>
+    required === 0 || balance >= required - FLOAT_SLACK;
 
   const minimumRequired = getMinimumRequiredBalance(planCurrency);
   const depositAmount = exchangeRates && exchangeRates[planCurrency as keyof typeof exchangeRates]
@@ -192,7 +213,7 @@ const CreateLana8Wonder = () => {
   // Previous split upgrade detection: check if user has enough for previous split (2x current minimum)
   const currentRate = exchangeRates?.[planCurrency as keyof typeof exchangeRates] || 0;
   const previousSplitRate = currentRate / 2;
-  const previousSplitMinimum = previousSplitRate > 0 ? (100 / previousSplitRate) + 0.5 : 0;
+  const previousSplitMinimum = previousSplitRate > 0 ? 100 / previousSplitRate : 0;
   const previousSplitDeposit = previousSplitRate > 0 ? 100 / previousSplitRate : 0;
   const currentSplit = params?.split ? parseInt(params.split) : 0;
 
@@ -334,8 +355,8 @@ const CreateLana8Wonder = () => {
                   <div className="md:hidden space-y-4">
                     {allWalletsDeduped.map((wallet, idx) => {
                       const currentBalance = walletBalances[wallet.wallet_address] || 0;
-                      const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && currentBalance >= previousSplitMinimum;
-                      const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired || isUpgradeEligible;
+                      const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
+                      const hasEnoughBalance = meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible;
 
                       return (
                         <Card key={idx} className="overflow-hidden">
@@ -427,8 +448,8 @@ const CreateLana8Wonder = () => {
                       <TableBody>
                         {allWalletsDeduped.map((wallet, idx) => {
                           const currentBalance = walletBalances[wallet.wallet_address] || 0;
-                          const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && currentBalance >= previousSplitMinimum;
-                          const hasEnoughBalance = minimumRequired === 0 || currentBalance >= minimumRequired || isUpgradeEligible;
+                          const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
+                          const hasEnoughBalance = meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible;
 
                           return (
                             <TableRow key={idx}>
