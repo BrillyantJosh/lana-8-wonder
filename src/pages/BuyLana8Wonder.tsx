@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   XCircle,
   UserPlus,
   Check,
+  FileDown,
 } from 'lucide-react';
 import { useQRScanner } from '@/hooks/useQRScanner';
 import { toast } from 'sonner';
@@ -26,13 +27,19 @@ import { validateLanaAddress } from '@/lib/walletValidation';
 import { validateWifAndGetAddress } from '@/lib/wifValidation';
 import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
+import {
+  buildPaymentInstructions,
+  type PaymentInstructions,
+  type PaymentMethodChoice,
+} from '@/lib/paymentInstructions';
+import { generatePaymentSlipPDF, type PaymentSlipRow } from '@/lib/paymentSlipPdf';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format' | 'has_lana8wonder';
 
 const BuyLana8Wonder = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { params } = useNostrLanaParams();
 
@@ -112,6 +119,23 @@ const BuyLana8Wonder = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Step 6: the order as it was actually persisted.
+  // Buyers were losing the bank details by moving past step 4, so the final
+  // page repeats them — but it must repeat what we STORED, not what the wizard
+  // happens to still hold in memory. This is read back from the insert, so the
+  // reference the buyer writes on the transfer is provably the one we will
+  // match the incoming money against.
+  const [confirmedOrder, setConfirmedOrder] = useState<{
+    reference: string | null;
+    payment_amount: number | null;
+    currency: string | null;
+    payment_method: string | null;
+    payee: string | null;
+    lana_wallet_id: string | null;
+  } | null>(null);
+  const [isPreparingPdf, setIsPreparingPdf] = useState(false);
+  const autoDownloadedRef = useRef(false);
 
   // Fetch wallet balance when wallet is registered and params are available
   useEffect(() => {
@@ -439,26 +463,51 @@ const BuyLana8Wonder = () => {
 
     setIsSubmitting(true);
 
+    // Exactly what gets written to the row. Unchanged from before — the only
+    // difference is that we now read the row back so the confirmation page can
+    // quote the stored facts rather than re-deriving them.
+    const orderRow = {
+      lana_wallet_id: walletId,
+      lana_amount: 0,
+      payee: payee,
+      reference: reference,
+      payment_method: selectedPayment,
+      phone_number: phone,
+      email: email,
+      currency: effectiveCurrency,
+      payment_amount: dynamicPaymentAmount,
+      existing_balance: existingBalance,
+      existing_value_in_currency: existingValueInCurrency,
+      split: params?.split || '',
+      status: 'pending'
+    };
+
     try {
-      const { error } = await supabase
+      const { data: savedRow, error } = await supabase
         .from('buy_lana')
-        .insert({
-          lana_wallet_id: walletId,
-          lana_amount: 0,
-          payee: payee,
-          reference: reference,
-          payment_method: selectedPayment,
-          phone_number: phone,
-          email: email,
-          currency: effectiveCurrency,
-          payment_amount: dynamicPaymentAmount,
-          existing_balance: existingBalance,
-          existing_value_in_currency: existingValueInCurrency,
-          split: params?.split || '',
-          status: 'pending'
-        });
+        .insert(orderRow)
+        .select('reference, payment_amount, currency, payment_method, payee, lana_wallet_id')
+        .single();
 
       if (error) throw error;
+
+      // Prefer the values SQLite handed back. If the API ever stops echoing the
+      // row, fall back to the payload we just submitted in this same call —
+      // still the same values, never a leftover from an earlier step.
+      const stored = (savedRow && typeof savedRow === 'object')
+        ? savedRow as Record<string, unknown>
+        : null;
+      if (!stored) {
+        console.warn('[buy_lana] insert returned no row; using the submitted payload for the confirmation page');
+      }
+      setConfirmedOrder({
+        reference: (stored?.reference as string) ?? orderRow.reference ?? null,
+        payment_amount: (stored?.payment_amount as number) ?? orderRow.payment_amount ?? null,
+        currency: (stored?.currency as string) ?? orderRow.currency ?? null,
+        payment_method: (stored?.payment_method as string) ?? orderRow.payment_method ?? null,
+        payee: (stored?.payee as string) ?? orderRow.payee ?? null,
+        lana_wallet_id: (stored?.lana_wallet_id as string) ?? orderRow.lana_wallet_id ?? null,
+      });
 
       // If credit card, open payment link
       if (selectedPayment === 'card' && buyerProfile?.payment_link) {
@@ -474,6 +523,148 @@ const BuyLana8Wonder = () => {
       setIsSubmitting(false);
     }
   };
+
+  // ---- Payment instructions --------------------------------------------
+  // Built once, from the per-domain sources only, and reused by step 4, the
+  // confirmation page and the PDF. One builder is what stops the three from
+  // ever showing different account numbers.
+  const translate = t as unknown as (key: string) => string;
+
+  const selectedInstructions = useMemo(
+    () => buildPaymentInstructions({
+      method: selectedPayment,
+      buyerProfile,
+      intlConfig: intlPaymentConfig,
+      currency: currency || 'EUR',
+      t: translate,
+    }),
+    [selectedPayment, buyerProfile, intlPaymentConfig, currency, translate]
+  );
+
+  const confirmedMethod = (confirmedOrder?.payment_method as PaymentMethodChoice) ?? null;
+  const confirmedInstructions = useMemo(
+    () => buildPaymentInstructions({
+      method: confirmedMethod,
+      buyerProfile,
+      intlConfig: intlPaymentConfig,
+      currency: confirmedOrder?.currency || currency || 'EUR',
+      t: translate,
+    }),
+    [confirmedMethod, buyerProfile, intlPaymentConfig, confirmedOrder?.currency, currency, translate]
+  );
+
+  const isBankOrder = confirmedMethod === 'transfer' || confirmedMethod === 'international';
+
+  // ---- Payment slip PDF ---------------------------------------------------
+  // Fed the same confirmedOrder and confirmedInstructions the page renders, and
+  // labelled with the same t() the page uses, so it is in the buyer's language
+  // and cannot disagree with the screen.
+  const buildSlipInput = useCallback(() => {
+    if (!confirmedOrder) return null;
+
+    const summary: PaymentSlipRow[] = [];
+    if (confirmedOrder.payee) {
+      summary.push({ label: translate('buyLana.step4Payee'), value: confirmedOrder.payee });
+    }
+    if (confirmedOrder.lana_wallet_id) {
+      summary.push({ label: translate('buyLana.pdfWallet'), value: confirmedOrder.lana_wallet_id });
+    }
+    summary.push({
+      label: translate('buyLana.pdfIssued'),
+      value: new Date().toLocaleDateString(i18n.language || 'en'),
+    });
+
+    const amountKnown = confirmedOrder.payment_amount !== null
+      && confirmedOrder.payment_amount !== undefined
+      && !!confirmedOrder.currency;
+
+    const notes = [translate('buyLana.step6PaymentReminder')];
+    if (contactDetails) {
+      notes.push(`${translate('buyLana.step6Questions')} ${contactDetails}`);
+    }
+
+    return {
+      heading: translate('buyLana.pdfHeading'),
+      intro: translate('buyLana.step6PaymentDetailsIntro'),
+      amount: amountKnown
+        ? {
+            label: translate('buyLana.step4BreakdownToPay'),
+            value: `${confirmedOrder.payment_amount} ${confirmedOrder.currency}`,
+          }
+        : undefined,
+      reference: confirmedOrder.reference
+        ? { label: translate('buyLana.step4Reference'), value: confirmedOrder.reference }
+        : undefined,
+      summary,
+      instructions: confirmedInstructions,
+      footerNotes: notes,
+      // ASCII only: the file has to land safely on any phone or desktop.
+      fileName: `lana8wonder-payment-${confirmedOrder.reference || 'order'}.pdf`,
+    };
+  }, [confirmedOrder, confirmedInstructions, contactDetails, translate, i18n.language]);
+
+  const handleDownloadSlip = useCallback(async () => {
+    const input = buildSlipInput();
+    if (!input) return;
+    setIsPreparingPdf(true);
+    try {
+      await generatePaymentSlipPDF(input);
+    } catch (err) {
+      console.error('Payment slip PDF failed:', err);
+      toast.error(translate('buyLana.step6PdfFailed'));
+    } finally {
+      setIsPreparingPdf(false);
+    }
+  }, [buildSlipInput, translate]);
+
+  // Start the download on the buyer's behalf, once, after the page has painted.
+  // Browsers (phones especially) may refuse a download nobody clicked, so this
+  // is best effort and stays silent on failure — the button below is the path
+  // that always works.
+  useEffect(() => {
+    if (currentStep !== 6) return;
+    if (autoDownloadedRef.current) return;
+    if (!confirmedOrder || !isBankOrder || !confirmedInstructions) return;
+
+    autoDownloadedRef.current = true;
+    const timer = setTimeout(() => {
+      const input = buildSlipInput();
+      if (!input) return;
+      generatePaymentSlipPDF(input).catch((err) => {
+        console.warn('Automatic payment slip download did not start:', err);
+      });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [currentStep, confirmedOrder, isBankOrder, confirmedInstructions, buildSlipInput]);
+
+  // ---- Shared renderers ---------------------------------------------------
+  const renderPaymentInstructions = (instructions: PaymentInstructions) => (
+    <div className="border-t border-border pt-4 space-y-3">
+      <p className="text-sm font-semibold text-center">{instructions.title}</p>
+      {instructions.blocks.map((block, blockIdx) => (
+        <div key={blockIdx} className="bg-background rounded-lg p-3 space-y-2">
+          {block.lines.map((line, lineIdx) => (
+            <div key={lineIdx} className="flex justify-between gap-3">
+              <span className="text-xs text-muted-foreground flex-shrink-0">{line.label}:</span>
+              <span className="text-xs font-mono text-right break-all">{line.value}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  // A missing account must read as missing — never a blank row the buyer might
+  // mistake for a real one.
+  const renderDetailsUnavailable = () => (
+    <div className="border-t border-border pt-4">
+      <div className="flex items-start gap-2 rounded-lg border-2 border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3">
+        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-800 dark:text-amber-200">{t('buyLana.detailsUnavailable')}</p>
+      </div>
+    </div>
+  );
 
   // Step navigation helpers
   const goBack = () => {
@@ -937,7 +1128,7 @@ const BuyLana8Wonder = () => {
               </Card>
 
               {/* Bank transfer details */}
-              {selectedPayment === 'transfer' && buyerProfile && (
+              {selectedPayment === 'transfer' && (
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6 space-y-4">
                     {/* Reference number */}
@@ -949,114 +1140,9 @@ const BuyLana8Wonder = () => {
                       </p>
                     </div>
 
-                    {/* Bank details from payment_methods */}
-                    {buyerProfile.payment_methods && buyerProfile.payment_methods.length > 0 && (
-                      <div className="border-t border-border pt-4 space-y-3">
-                        <p className="text-sm font-semibold text-center">{t('buyLana.step4BankDetails')}</p>
-                        {buyerProfile.payment_methods
-                          .filter((pm: any) => pm.scope === 'collect' || pm.scope === 'both')
-                          .map((pm: any, idx: number) => (
-                            <div key={idx} className="bg-background rounded-lg p-3 space-y-2">
-                              {(buyerProfile.display_name || buyerProfile.name) && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">Account Holder:</span>
-                                  <span className="text-xs font-mono">{buyerProfile.display_name || buyerProfile.name}</span>
-                                </div>
-                              )}
-                              {buyerProfile.location && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">Address:</span>
-                                  <span className="text-xs font-mono text-right">{buyerProfile.location}</span>
-                                </div>
-                              )}
-                              {buyerProfile.country && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">Country:</span>
-                                  <span className="text-xs font-mono">{buyerProfile.country}</span>
-                                </div>
-                              )}
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Method:</span>
-                                <span className="text-xs font-mono">{pm.label || pm.scheme}</span>
-                              </div>
-                              {pm.fields?.iban && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">IBAN:</span>
-                                  <span className="text-xs font-mono">{pm.fields.iban}</span>
-                                </div>
-                              )}
-                              {pm.fields?.bic && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">BIC:</span>
-                                  <span className="text-xs font-mono">{pm.fields.bic}</span>
-                                </div>
-                              )}
-                              {pm.fields?.account_number && (
-                                <div className="flex justify-between">
-                                  <span className="text-xs text-muted-foreground">Account:</span>
-                                  <span className="text-xs font-mono">{pm.fields.account_number}</span>
-                                </div>
-                              )}
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">Currency:</span>
-                                <span className="text-xs font-mono">{pm.currency}</span>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-
-                    {/* Legacy bank fields fallback */}
-                    {(!buyerProfile.payment_methods || buyerProfile.payment_methods.length === 0) &&
-                     (buyerProfile.bankName || buyerProfile.bankAccount) && (
-                      <div className="border-t border-border pt-4 space-y-2">
-                        <p className="text-sm font-semibold text-center">{t('buyLana.step4BankDetails')}</p>
-                        <div className="bg-background rounded-lg p-3 space-y-2">
-                          {(buyerProfile.display_name || buyerProfile.name) && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Account Holder:</span>
-                              <span className="text-xs font-mono">{buyerProfile.display_name || buyerProfile.name}</span>
-                            </div>
-                          )}
-                          {buyerProfile.location && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Address:</span>
-                              <span className="text-xs font-mono text-right">{buyerProfile.location}</span>
-                            </div>
-                          )}
-                          {buyerProfile.country && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Country:</span>
-                              <span className="text-xs font-mono">{buyerProfile.country}</span>
-                            </div>
-                          )}
-                          {buyerProfile.bankName && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Bank:</span>
-                              <span className="text-xs">{buyerProfile.bankName}</span>
-                            </div>
-                          )}
-                          {buyerProfile.bankAccount && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Account:</span>
-                              <span className="text-xs font-mono">{buyerProfile.bankAccount}</span>
-                            </div>
-                          )}
-                          {buyerProfile.bankSWIFT && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">SWIFT:</span>
-                              <span className="text-xs font-mono">{buyerProfile.bankSWIFT}</span>
-                            </div>
-                          )}
-                          {buyerProfile.bankAddress && (
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Bank Address:</span>
-                              <span className="text-xs">{buyerProfile.bankAddress}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {selectedInstructions
+                      ? renderPaymentInstructions(selectedInstructions)
+                      : renderDetailsUnavailable()}
                   </CardContent>
                 </Card>
               )}
@@ -1095,7 +1181,7 @@ const BuyLana8Wonder = () => {
                   </Card>
 
                   {/* International payment details */}
-                  {selectedPayment === 'international' && intlPaymentConfig && (
+                  {selectedPayment === 'international' && (
                     <Card className="bg-muted/50">
                       <CardContent className="pt-6 space-y-4">
                         {/* Reference number */}
@@ -1107,46 +1193,9 @@ const BuyLana8Wonder = () => {
                           </p>
                         </div>
 
-                        {/* International bank details */}
-                        <div className="border-t border-border pt-4 space-y-2">
-                          <p className="text-sm font-semibold text-center">{t('buyLana.step4IntlBankDetails')}</p>
-                          <div className="bg-background rounded-lg p-3 space-y-2">
-                            {intlPaymentConfig.intl_recipient_name && (
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlRecipient')}:</span>
-                                <span className="text-xs font-mono">{intlPaymentConfig.intl_recipient_name}</span>
-                              </div>
-                            )}
-                            {intlPaymentConfig.intl_iban && (
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">IBAN:</span>
-                                <span className="text-xs font-mono">{intlPaymentConfig.intl_iban}</span>
-                              </div>
-                            )}
-                            {intlPaymentConfig.intl_swift && (
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">SWIFT/BIC:</span>
-                                <span className="text-xs font-mono">{intlPaymentConfig.intl_swift}</span>
-                              </div>
-                            )}
-                            {intlPaymentConfig.intl_bank_name && (
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlBankName')}:</span>
-                                <span className="text-xs font-mono">{intlPaymentConfig.intl_bank_name}</span>
-                              </div>
-                            )}
-                            {intlPaymentConfig.intl_bank_address && (
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlBankAddr')}:</span>
-                                <span className="text-xs font-mono text-right">{intlPaymentConfig.intl_bank_address}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">{t('buyLana.step4IntlCurrency')}:</span>
-                              <span className="text-xs font-mono">{currency || 'EUR'}</span>
-                            </div>
-                          </div>
-                        </div>
+                        {selectedInstructions
+                          ? renderPaymentInstructions(selectedInstructions)
+                          : renderDetailsUnavailable()}
                       </CardContent>
                     </Card>
                   )}
@@ -1282,24 +1331,86 @@ const BuyLana8Wonder = () => {
           </CardContent>
         </Card>
 
-        {/* Order amount summary */}
+        {/* Order amount summary — quoted from the row we stored, not recomputed */}
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-4 pb-4">
             <div className="text-center space-y-1">
               <p className="text-sm text-muted-foreground">{t('buyLana.step4BreakdownToPay')}</p>
-              <p className="text-2xl font-bold text-primary">{dynamicPaymentAmount} {currency || 'EUR'}</p>
+              {confirmedOrder && confirmedOrder.payment_amount !== null && confirmedOrder.currency ? (
+                <p className="text-2xl font-bold text-primary">
+                  {confirmedOrder.payment_amount} {confirmedOrder.currency}
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  {t('buyLana.detailsUnavailable')}
+                </p>
+              )}
               {existingBalance > 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t('buyLana.step3BalanceFound', {
                     balance: existingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 }),
                     value: existingValueInCurrency.toFixed(2),
-                    currency: currency || 'EUR'
+                    currency: confirmedOrder?.currency || currency || 'EUR'
                   })}
                 </p>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* The bank details again.
+            This is the whole point of the final page: buyers kept reaching it
+            with nowhere left to read the account number or the reference, so
+            both are repeated here — and the PDF below is theirs to keep. */}
+        {isBankOrder && (
+          <Card className="border-2 border-primary/40">
+            <CardHeader className="pb-3 text-center">
+              <CardTitle className="text-base sm:text-lg">{t('buyLana.step6PaymentDetailsTitle')}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {t('buyLana.step6PaymentDetailsIntro')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Reference — the value stored on the order, character for character */}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">{t('buyLana.step4Reference')}</p>
+                {confirmedOrder?.reference ? (
+                  <p className="text-2xl font-bold font-mono tracking-wider break-all">
+                    {confirmedOrder.reference}
+                  </p>
+                ) : (
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    {t('buyLana.step6ReferenceMissing')}
+                  </p>
+                )}
+              </div>
+
+              {confirmedInstructions
+                ? renderPaymentInstructions(confirmedInstructions)
+                : renderDetailsUnavailable()}
+
+              <Button
+                variant="secondary"
+                className="w-full"
+                size="lg"
+                onClick={handleDownloadSlip}
+                disabled={isPreparingPdf || !confirmedOrder}
+              >
+                {isPreparingPdf ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span className="text-sm sm:text-base">{t('common.loading')}</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    <span className="text-sm sm:text-base">{t('buyLana.step6DownloadPdf')}</span>
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="bg-muted/50">
           <CardContent className="pt-4">

@@ -7,8 +7,10 @@ export interface PDFGeneratorOptions {
   userName: string;
 }
 
-// Helper: fetch a TTF font and register it with jsPDF
-async function loadCustomFonts(doc: jsPDF): Promise<boolean> {
+// Helper: fetch a TTF font and register it with jsPDF.
+// Exported so every PDF this app produces gets the same Unicode-capable face
+// (Slovenian s/c/z carons, Hungarian long umlauts) instead of helvetica.
+export async function loadCustomFonts(doc: jsPDF): Promise<boolean> {
   try {
     // Load Roboto Regular
     const regularRes = await fetch('/fonts/Roboto-Regular.ttf');
