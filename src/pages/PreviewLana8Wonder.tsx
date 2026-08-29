@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, Radio } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { fetchKind30889 } from "@/lib/nostrClient";
@@ -801,7 +802,8 @@ const PreviewLana8Wonder = () => {
       const response = await fetch('/api/register-virgin-wallets', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...nostrAuthHeaders('/api/register-virgin-wallets', 'POST')
         },
         body: JSON.stringify({
           nostr_id_hex: nostrHexId,

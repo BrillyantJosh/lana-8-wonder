@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { api as supabase, getDomainKey } from '@/integrations/api/client';
 import { AdminMenu } from '@/components/AdminMenu';
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 import { generate8Wallets, type GeneratedWallet } from '@/lib/walletGenerator';
 import { generateWalletsPDF } from '@/lib/pdfGenerator';
@@ -216,6 +217,56 @@ const AdminSplitEnroll = () => {
     }
   }, [targetSplit, step]);
 
+  // Reads the person's Registrar record (KIND 30889) once, and says plainly
+  // whether it could be read at all. `unreadable` is NOT the same as "no
+  // wallets": every caller below refuses to act on an unreadable answer,
+  // because acting on it is what creates a second set of eight wallets.
+  // Every field is always present, so an unreadable answer can never be
+  // mistaken for an empty one by forgetting a check: `unreadable` must be
+  // tested first, and the other fields are empty when it is true.
+  interface RegistrarRecord {
+    unreadable: boolean;
+    found: boolean;
+    status: string;
+    l8wWallets: string[];
+    wallets: Array<{ wallet_address?: string; wallet_type?: string }>;
+  }
+
+  const UNREADABLE_REGISTRAR: RegistrarRecord = {
+    unreadable: true,
+    found: false,
+    status: '',
+    l8wWallets: [],
+    wallets: []
+  };
+
+  const fetchRegistrarRecord = async (hex: string): Promise<RegistrarRecord> => {
+    try {
+      const res = await fetch('/api/admin/fetch-kind30889', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nostr_hex_id: hex })
+      });
+      const json = await res.json();
+      // found === null means the relays timed out or errored.
+      if (!res.ok || json.found === null || json.found === undefined) {
+        return UNREADABLE_REGISTRAR;
+      }
+      const l8wWallets: string[] = (json.l8w_wallets || [])
+        .map((w: { wallet_address?: string }) => w.wallet_address)
+        .filter(Boolean);
+      return {
+        unreadable: false,
+        found: !!json.found,
+        status: json.status || '',
+        l8wWallets,
+        wallets: json.wallets || []
+      };
+    } catch {
+      return UNREADABLE_REGISTRAR;
+    }
+  };
+
   // Step 1: check user — must be registered, must NOT have a plan
   const handleCheckUser = async () => {
     const hex = hexId.trim();
@@ -245,20 +296,35 @@ const AdminSplitEnroll = () => {
       }
 
       // 2. Must be registered with the Registrar (KIND 30889)
-      const regRes = await fetch('/api/admin/fetch-kind30889', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nostr_hex_id: hex })
-      });
-      const regJson = await regRes.json();
-      if (!regJson.found) {
+      const reg = await fetchRegistrarRecord(hex);
+      if (reg.unreadable) {
+        toast.error('Could not read the Registrar record (relays did not answer). Aborting — try again when relays respond.');
+        return;
+      }
+      if (!reg.found) {
         toast.error('User is not registered with the Registrar (no KIND 30889). Register the user first.');
         return;
       }
 
-      setUserRegistrarStatus(regJson.status || 'registered');
+      // 3. Must NOT already hold Lana8Wonder wallets. A second run used to
+      //    sail past this point and register eight MORE wallets: relay
+      //    verification still passed (all 8 of the new set were present among
+      //    the 16), and Recreate Plan — which requires exactly 8 — then failed
+      //    forever, with nothing on any screen able to undo it. Refuse here,
+      //    before a single wallet is generated.
+      if (reg.l8wWallets.length > 0) {
+        toast.error(
+          `This user already has ${reg.l8wWallets.length} Lana8Wonder wallet(s) registered. ` +
+          `Enrolling again would create a SECOND set of eight and permanently break Recreate Plan. ` +
+          `Resume the interrupted enrollment instead, or have the registration corrected first.`,
+          { duration: 15000 }
+        );
+        return;
+      }
+
+      setUserRegistrarStatus(reg.status || 'registered');
       setStep('split');
-      toast.success('User verified: registered, no existing plan.');
+      toast.success('User verified: registered, no existing plan, no existing wallets.');
     } catch (err) {
       console.error('User check failed:', err);
       toast.error('Failed to verify user');
@@ -285,13 +351,14 @@ const AdminSplitEnroll = () => {
     setRelayVerified('verifying');
     if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs));
     try {
-      const vRes = await fetch('/api/admin/fetch-kind30889', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nostr_hex_id: hexId.trim() })
-      });
-      const vJson = await vRes.json();
-      const registered: string[] = (vJson.l8w_wallets || []).map((w: { wallet_address: string }) => w.wallet_address);
+      const reg = await fetchRegistrarRecord(hexId.trim());
+      if (reg.unreadable) {
+        // Not "not registered" — simply not readable right now.
+        setRelayVerified('failed');
+        toast.warning('Relays did not answer — verification is inconclusive, not negative. Retry in a moment.');
+        return false;
+      }
+      const registered: string[] = reg.l8wWallets;
       const allFound = wallets.length === 8 && wallets.every(w => registered.includes(w.address));
       setRelayVerified(allFound ? 'verified' : 'failed');
       if (allFound) {
@@ -314,6 +381,27 @@ const AdminSplitEnroll = () => {
   const handleGenerateAndRegister = async () => {
     setGenerating(true);
     try {
+      // 0. LAST CHECK BEFORE THE IRREVERSIBLE STEP. Registering wallets under
+      //    someone's identity cannot be undone from any screen here, so re-read
+      //    the Registrar immediately before doing it. Wallets we already
+      //    generated in this run (a retry, or a resumed checkpoint) are ours
+      //    and expected; anything else means a set already exists.
+      const preflight = await fetchRegistrarRecord(hexId.trim());
+      if (preflight.unreadable) {
+        toast.error('Could not read the Registrar record before registering. Refusing to create wallets — try again when relays respond.');
+        return;
+      }
+      const ourAddresses = new Set(generatedWallets.map(w => w.address));
+      const foreign = preflight.l8wWallets.filter(a => !ourAddresses.has(a));
+      if (foreign.length > 0) {
+        toast.error(
+          `Refusing to register: this user already has ${foreign.length} Lana8Wonder wallet(s) ` +
+          `that are not part of this enrollment. A second set of eight would break Recreate Plan permanently.`,
+          { duration: 15000 }
+        );
+        return;
+      }
+
       // 1. Generate 8 wallets (reuse existing set on retry — never regenerate
       //    once a set exists, or the PDF/registration would go out of sync)
       const wallets = generatedWallets.length === 8 ? generatedWallets : await generate8Wallets();
@@ -332,7 +420,10 @@ const AdminSplitEnroll = () => {
       // 3. Register under the USER's hex ID
       const res = await fetch('/api/register-virgin-wallets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...nostrAuthHeaders('/api/register-virgin-wallets', 'POST')
+        },
         body: JSON.stringify({
           nostr_id_hex: hexId.trim(),
           wallets: wallets.map((w, i) => ({
@@ -383,13 +474,13 @@ const AdminSplitEnroll = () => {
     const loadKnights = async () => {
       setKnightsLoading(true);
       try {
-        const res = await fetch('/api/admin/fetch-kind30889', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nostr_hex_id: adminHexId })
-        });
-        const json = await res.json();
-        const knights = (json.wallets || []).find(
+        const reg = await fetchRegistrarRecord(adminHexId);
+        if (reg.unreadable) {
+          setKnightsWallet('');
+          toast.error('Could not read your registrar record (relays did not answer) — this is not the same as having no Knights wallet. Reload to retry.');
+          return;
+        }
+        const knights = reg.wallets.find(
           (w: { wallet_type?: string }) => (w.wallet_type || '').toLowerCase() === 'knights'
         );
         if (!knights?.wallet_address) {
@@ -467,7 +558,14 @@ const AdminSplitEnroll = () => {
       .map((f, i) => ({ address: generatedWallets[i]?.address, amount: Math.round(f.fundingAmount * 10000) / 10000 }))
       .filter(r => r.address && r.amount > 0.01);
     if (recipients.length === 0) { toast.error('Nothing to fund — all levels elapsed?'); return; }
-    if (adminBalance !== null && adminBalance < totalFunding + FEE_BUFFER) {
+    // An unread balance is not a sufficient balance. This guard used to be
+    // skipped entirely when the balance fetch had failed (adminBalance === null),
+    // leaving the send button live with no check at all.
+    if (adminBalance === null) {
+      toast.error('Your Knights wallet balance could not be read — refusing to send. Reload and try again.');
+      return;
+    }
+    if (adminBalance < totalFunding + FEE_BUFFER) {
       toast.error(`Insufficient Knights wallet balance: need ~${(totalFunding + FEE_BUFFER).toFixed(2)} LANA, have ${adminBalance.toFixed(2)}`);
       return;
     }
@@ -583,7 +681,8 @@ const AdminSplitEnroll = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {}),
+          ...nostrAuthHeaders('/api/publish-lana8wonder-plan', 'POST')
         },
         body: JSON.stringify({
           subject_hex: hex,

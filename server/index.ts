@@ -13,6 +13,8 @@ import publishPlanRouter from './routes/publishPlan.js';
 import processPendingPaymentsRouter from './routes/processPendingPayments.js';
 import checkWalletRegistrationRouter from './routes/checkWalletRegistration.js';
 import { domainKeyMiddleware } from './middleware/domainKey.js';
+import { nostrAuthMiddleware } from './middleware/nostrAuth.js';
+import { requireAdmin, requireSelfOrAdmin } from './middleware/requireAdmin.js';
 import domainConfigRouter from './routes/domainConfig.js';
 import adminAuthRouter from './routes/adminAuth.js';
 import contentManagementRouter from './routes/contentManagement.js';
@@ -37,23 +39,50 @@ const PORT = parseInt(process.env.PORT || process.env.SERVER_PORT || '3000', 10)
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(domainKeyMiddleware);
+// Records a PROVEN caller identity on req.authedPubkey when the request
+// carries a valid NIP-98 signature. Rejects nothing by itself.
+app.use(nostrAuthMiddleware);
 
 // Initialize database
 getDb();
 
 // API Routes - Edge functions
+//
+// OPEN endpoints below are open on purpose: they either return public
+// information (electrum balances, relay data) or require the caller to supply
+// the private key of the wallet being spent, which IS the authorization.
+
+// OPEN: reads public chain balances for addresses the caller names.
 app.use('/api/check-wallet-balance', checkWalletBalanceRouter);
+// OPEN: the caller supplies the sending wallet's own WIF; the route refuses a
+// key that does not derive to the sender. Holding the key is the permission.
 app.use('/api/send-lana-transaction', sendLanaTransactionRouter);
 app.use('/api/send-lana-multi-output', sendLanaMultiOutputRouter);
-app.use('/api/publish-lana8wonder-plan', publishPlanRouter);
-app.use('/api/process-pending-payments', processPendingPaymentsRouter);
+// GATED: signs KIND 88888 with the CENTRAL AUTHORITY key, addressable on
+// d=plan:<subject_hex> — an ungated call could replace any person's plan.
+// Ordinary buyers publish their OWN plan here, so the gate is self-or-admin,
+// not admin-only.
+app.use('/api/publish-lana8wonder-plan', requireSelfOrAdmin((req) => req.body?.subject_hex), publishPlanRouter);
+// GATED: moves real money out of the domain donation wallet, and exposes the
+// wallet's configuration. The heartbeat calls the function directly, not over
+// HTTP, so nothing legitimate loses access.
+app.use('/api/process-pending-payments', requireAdmin, processPendingPaymentsRouter);
+// OPEN: yes/no registration lookup for a single wallet address.
 app.use('/api/check-wallet-registration', checkWalletRegistrationRouter);
-app.use('/api/register-virgin-wallets', registerVirginWalletsRouter);
+// GATED: spends the server's registrar API key to WRITE a registration under a
+// person's identity. Buyers register their own wallets here.
+app.use('/api/register-virgin-wallets', requireSelfOrAdmin((req) => req.body?.nostr_id_hex), registerVirginWalletsRouter);
+// MIXED: public GET, admin-gated PUT (gated inside the router).
 app.use('/api/domain-config', domainConfigRouter);
 app.use('/api/check-admin', adminAuthRouter);
+// MIXED: public FAQ/what-is-lana reads, admin-gated writes (inside the router).
 app.use('/api/content', contentManagementRouter);
+// OPEN: public slot availability for the global landing page.
 app.use('/api/global-slots', globalSlotsRouter);
+// OPEN: reads a public relay record; used in the buy flow before login.
 app.use('/api/check-lana8wonder', checkLana8WonderRouter);
+// OPEN despite the /admin/ path: it only re-reads KIND 30889, which is public
+// on the relays, and the ordinary buy flow uses it to recover a lost wallet.
 app.use('/api/admin/fetch-kind30889', fetchKind30889Router);
 
 // API Routes - Generic DB CRUD

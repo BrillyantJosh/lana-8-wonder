@@ -1,15 +1,19 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { getDb } from '../db/connection.js';
+import { isAdminPubkey } from '../middleware/requireAdmin.js';
 
 const router = Router();
 
+// Tables reachable over HTTP. `app_settings` and `waiting_list` were removed on
+// 2026-08-29: no frontend code has ever queried them through this router, and
+// app_settings stores `main_publisher_private_key` and
+// `donation_wallet_id_PrivatKey` — GET /api/db/app_settings handed those out to
+// anyone who asked. Server code still reads the table directly.
 const ALLOWED_TABLES = [
-  'app_settings',
   'profiles',
   'wallets',
   'buy_lana',
-  'waiting_list',
   'admin_users',
   'domains',
   'domain_admins',
@@ -17,7 +21,39 @@ const ALLOWED_TABLES = [
   'what_is_lana',
 ] as const;
 
+// Writing to these decides who is an admin, or rewrites a domain's payout
+// wallet. A write here by an outsider would hand them the keys to everything
+// else, so it takes a proven admin.
+const ADMIN_WRITE_TABLES = ['admin_users', 'domain_admins', 'domains'] as const;
+
+// Columns that must never leave the server. `domains.donation_wallet_private_key`
+// is the WIF that spends the domain's donation wallet; /api/domain-config has
+// always been careful to return only a has_private_key flag, but this generic
+// router would happily SELECT * and include the key itself.
+const SECRET_COLUMNS: Record<string, readonly string[]> = {
+  domains: ['donation_wallet_private_key'],
+};
+
 const DOMAIN_SCOPED_TABLES = ['buy_lana', 'faq_items', 'what_is_lana'] as const;
+
+function isAdminWriteTable(table: string): boolean {
+  return (ADMIN_WRITE_TABLES as readonly string[]).includes(table);
+}
+
+/** Strips secret columns from a row or list of rows before it goes out. */
+function redactSecrets(table: string, data: unknown): unknown {
+  const secrets = SECRET_COLUMNS[table];
+  if (!secrets || data === null || data === undefined) return data;
+
+  const scrub = (row: unknown): unknown => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    const copy = { ...(row as Record<string, unknown>) };
+    for (const col of secrets) delete copy[col];
+    return copy;
+  };
+
+  return Array.isArray(data) ? data.map(scrub) : scrub(data);
+}
 
 function isDomainScoped(table: string): boolean {
   return (DOMAIN_SCOPED_TABLES as readonly string[]).includes(table);
@@ -154,6 +190,53 @@ router.use('/:table', (req: Request, res: Response, next) => {
   if (!isAllowedTable(table)) {
     return respondError(res, `Table "${table}" is not allowed`, 403);
   }
+
+  const isWrite = req.method !== 'GET' && req.method !== 'HEAD';
+  const caller = req.authedPubkey;
+  const callerIsAdmin = !!caller && isAdminPubkey(caller, req.domainKey);
+
+  // Privilege tables: a write decides who is an admin, or where a domain's
+  // money goes. Reads stay open — the pubkey list is public anyway, and the
+  // dashboard reads admin_users to decide whether to show the admin menu.
+  if (isWrite && isAdminWriteTable(table)) {
+    if (!caller) {
+      return respondError(res, 'Authentication required: sign this request with your Nostr key.', 401);
+    }
+    if (!callerIsAdmin) {
+      return respondError(res, `Not authorized to modify "${table}"`, 403);
+    }
+  }
+
+  // buy_lana holds customer names, phone numbers and payment references. The
+  // public buy flow needs exactly one read of it — "is this wallet already
+  // used?" — which always names a single wallet. Anything broader (the admin
+  // list view) takes a proven admin, so the customer list cannot be dumped.
+  if (req.method === 'GET' && table === 'buy_lana' && !callerIsAdmin) {
+    const query = req.query as Record<string, string>;
+    if (!query.eq_lana_wallet_id) {
+      return respondError(
+        res,
+        'Not authorized: reading buy_lana requires an admin, or a lana_wallet_id filter.',
+        403
+      );
+    }
+  }
+
+  // Scrub secret columns from every response this router produces, whichever
+  // handler produced it.
+  const secrets = SECRET_COLUMNS[table];
+  if (secrets) {
+    const originalJson = res.json.bind(res);
+    res.json = (body: unknown) => {
+      if (body && typeof body === 'object' && 'data' in (body as Record<string, unknown>)) {
+        const copy = { ...(body as Record<string, unknown>) };
+        copy.data = redactSecrets(table, copy.data);
+        return originalJson(copy);
+      }
+      return originalJson(body);
+    };
+  }
+
   next();
 });
 

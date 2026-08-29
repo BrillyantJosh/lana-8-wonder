@@ -1,28 +1,22 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { getDb } from '../db/connection.js';
+import { isAdminPubkey } from '../middleware/requireAdmin.js';
 
 const router = Router();
 
 // ---------------------------------------------------------------------------
-// Auth helper (reused pattern from domainConfig.ts)
+// Auth helper
+//
+// Was: trust the nostr_hex_id in the request body. A nostr pubkey is public,
+// so that only ever asked the caller to name an admin, not to be one. Now the
+// identity must be PROVEN by a signature (nostrAuthMiddleware); the authority
+// it is checked against is unchanged (admin_users / domain_admins).
 // ---------------------------------------------------------------------------
-function checkAdmin(db: ReturnType<typeof getDb>, nostrHexId: string, domainKey: string | undefined): boolean {
-  if (!nostrHexId) return false;
-
-  const isGlobalAdmin = db.prepare(
-    'SELECT id FROM admin_users WHERE nostr_hex_id = ?'
-  ).get(nostrHexId);
-  if (isGlobalAdmin) return true;
-
-  if (domainKey) {
-    const isDomainAdmin = db.prepare(
-      'SELECT id FROM domain_admins WHERE nostr_hex_id = ? AND domain_key = ?'
-    ).get(nostrHexId, domainKey);
-    if (isDomainAdmin) return true;
-  }
-
-  return false;
+function checkAdmin(req: Request): boolean {
+  const pubkey = req.authedPubkey;
+  if (!pubkey) return false;
+  return isAdminPubkey(pubkey, req.domainKey);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +113,10 @@ router.get('/admin/faq', (req: Request, res: Response) => {
     const domainKey = req.domainKey;
     const language = (req.query.language as string) || 'en';
 
+    if (!checkAdmin(req)) {
+      return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
+    }
+
     if (!domainKey) {
       return res.json({ data: [], error: null });
     }
@@ -142,6 +140,10 @@ router.get('/admin/what-is-lana', (req: Request, res: Response) => {
     const db = getDb();
     const domainKey = req.domainKey;
     const language = (req.query.language as string) || 'en';
+
+    if (!checkAdmin(req)) {
+      return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
+    }
 
     if (!domainKey) {
       return res.json({ data: null, error: null });
@@ -171,7 +173,7 @@ router.post('/faq', (req: Request, res: Response) => {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!checkAdmin(db, nostr_hex_id, domainKey)) {
+    if (!checkAdmin(req)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 
@@ -210,7 +212,7 @@ router.put('/faq/:id', (req: Request, res: Response) => {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!checkAdmin(db, nostr_hex_id, domainKey)) {
+    if (!checkAdmin(req)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 
@@ -250,7 +252,7 @@ router.put('/faq-reorder', (req: Request, res: Response) => {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!checkAdmin(db, nostr_hex_id, domainKey)) {
+    if (!checkAdmin(req)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 
@@ -284,13 +286,12 @@ router.delete('/faq/:id', (req: Request, res: Response) => {
     const db = getDb();
     const domainKey = req.domainKey;
     const { id } = req.params;
-    const nostr_hex_id = (req.query.nostr_hex_id as string) || req.body?.nostr_hex_id;
 
     if (!domainKey) {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!checkAdmin(db, nostr_hex_id, domainKey)) {
+    if (!checkAdmin(req)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 
@@ -317,7 +318,7 @@ router.post('/what-is-lana', (req: Request, res: Response) => {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!checkAdmin(db, nostr_hex_id, domainKey)) {
+    if (!checkAdmin(req)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 

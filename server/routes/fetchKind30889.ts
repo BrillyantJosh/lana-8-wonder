@@ -36,14 +36,32 @@ router.post('/', async (req: Request, res: Response) => {
         '#d': [nostr_hex_id]
       });
 
-      const timeoutPromise = new Promise<any[]>((resolve) => {
-        setTimeout(() => resolve([]), 15000);
+      // 15 second timeout — resolves to a MARKER, not to [], so that a silent
+      // relay is never reported as "this person has no registration". An
+      // unreadable record is not an absent one: callers decide whether to
+      // register wallets based on this answer, and a false "absent" here is
+      // what lets a second set of eight wallets be created for someone who
+      // already has one. Same convention as /api/check-lana8wonder.
+      const TIMEOUT_MARKER = null;
+      const timeoutPromise = new Promise<any[] | null>((resolve) => {
+        setTimeout(() => resolve(TIMEOUT_MARKER), 15000);
       });
 
       const events = await Promise.race([queryPromise, timeoutPromise]);
 
+      if (events === TIMEOUT_MARKER) {
+        console.warn(`KIND 30889 for ${nostr_hex_id.slice(0, 8)}...: RELAY TIMEOUT (indeterminate)`);
+        return res.status(504).json({
+          found: null,
+          wallets: [],
+          l8w_wallets: [],
+          status: null,
+          error: { message: 'Relay query timed out — registration status unknown' }
+        });
+      }
+
       if (!events || events.length === 0) {
-        return res.json({ found: false, wallets: [], status: null });
+        return res.json({ found: false, wallets: [], l8w_wallets: [], status: null });
       }
 
       // Dedup: keep latest event per registrar (pubkey)
@@ -97,7 +115,14 @@ router.post('/', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('Error fetching KIND 30889:', error);
-    return res.status(500).json({ error: { message: 'Failed to fetch KIND 30889' } });
+    // found: null, never false — a failed read says nothing about whether a
+    // registration exists.
+    return res.status(500).json({
+      found: null,
+      wallets: [],
+      l8w_wallets: [],
+      error: { message: 'Failed to fetch KIND 30889' }
+    });
   }
 });
 

@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Loader2, Save, Plus, Trash2, ChevronUp, ChevronDown, FileText, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminMenu } from '@/components/AdminMenu';
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 
 // Convert any YouTube URL to embed format
 const toEmbedUrl = (url: string): string => {
@@ -79,10 +80,13 @@ const AdminContent = () => {
 
   const [domainKey, setDomainKey] = useState<string | null>(getDomainKey());
 
-  const headers: Record<string, string> = {
+  // Each request gets its OWN signature: the proof is bound to the exact path
+  // and method, so one header cannot be reused on another endpoint.
+  const headersFor = (url: string, method: string): Record<string, string> => ({
     'Content-Type': 'application/json',
     ...(domainKey ? { 'X-Domain-Key': domainKey } : {}),
-  };
+    ...nostrAuthHeaders(url, method),
+  });
 
   // Check admin status
   useEffect(() => {
@@ -99,7 +103,7 @@ const AdminContent = () => {
 
         const res = await fetch('/api/check-admin', {
           method: 'POST',
-          headers,
+          headers: headersFor('/api/check-admin', 'POST'),
           body: JSON.stringify({ nostr_hex_id: hexId }),
         });
         const json = await res.json();
@@ -137,8 +141,12 @@ const AdminContent = () => {
   const fetchContent = async (lang: string) => {
     try {
       const [faqRes, wilRes] = await Promise.all([
-        fetch(`/api/content/admin/faq?language=${lang}`, { headers }),
-        fetch(`/api/content/admin/what-is-lana?language=${lang}`, { headers }),
+        fetch(`/api/content/admin/faq?language=${lang}`, {
+          headers: headersFor(`/api/content/admin/faq?language=${lang}`, 'GET'),
+        }),
+        fetch(`/api/content/admin/what-is-lana?language=${lang}`, {
+          headers: headersFor(`/api/content/admin/what-is-lana?language=${lang}`, 'GET'),
+        }),
       ]);
 
       const faqJson = await faqRes.json();
@@ -158,7 +166,7 @@ const AdminContent = () => {
     try {
       const res = await fetch('/api/content/faq', {
         method: 'POST',
-        headers,
+        headers: headersFor('/api/content/faq', 'POST'),
         body: JSON.stringify({
           nostr_hex_id: userNostrHexId,
           language: selectedLanguage,
@@ -177,9 +185,9 @@ const AdminContent = () => {
 
   const handleDeleteFaq = async (id: string) => {
     try {
-      await fetch(`/api/content/faq/${id}?nostr_hex_id=${userNostrHexId}`, {
+      await fetch(`/api/content/faq/${id}`, {
         method: 'DELETE',
-        headers,
+        headers: headersFor(`/api/content/faq/${id}`, 'DELETE'),
       });
       setFaqItems(faqItems.filter((f) => f.id !== id));
       toast.success('FAQ item deleted');
@@ -224,7 +232,7 @@ const AdminContent = () => {
       // Reorder
       await fetch('/api/content/faq-reorder', {
         method: 'PUT',
-        headers,
+        headers: headersFor('/api/content/faq-reorder', 'PUT'),
         body: JSON.stringify({ nostr_hex_id: userNostrHexId, items: reorderItems }),
       });
 
@@ -232,7 +240,7 @@ const AdminContent = () => {
       for (const item of faqItems) {
         await fetch(`/api/content/faq/${item.id}`, {
           method: 'PUT',
-          headers,
+          headers: headersFor(`/api/content/faq/${item.id}`, 'PUT'),
           body: JSON.stringify({
             nostr_hex_id: userNostrHexId,
             question: item.question,
@@ -258,7 +266,7 @@ const AdminContent = () => {
     try {
       const res = await fetch('/api/content/what-is-lana', {
         method: 'POST',
-        headers,
+        headers: headersFor('/api/content/what-is-lana', 'POST'),
         body: JSON.stringify({
           nostr_hex_id: userNostrHexId,
           language: selectedLanguage,

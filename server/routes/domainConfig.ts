@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
+import { isAdminPubkey } from '../middleware/requireAdmin.js';
 
 const router = Router();
 
@@ -66,26 +67,25 @@ router.put('/', (req: Request, res: Response) => {
   try {
     const db = getDb();
     const domainKey = req.domainKey;
-    const { nostr_hex_id, ...updates } = req.body;
+    // nostr_hex_id is still pulled out of the body so it is never treated as a
+    // column to update, but it is NO LONGER what decides authorization: a
+    // pubkey is public, so naming one proves nothing. The caller must have
+    // signed the request (see nostrAuthMiddleware).
+    const { nostr_hex_id: _claimedId, ...updates } = req.body;
 
     if (!domainKey) {
       return res.status(400).json({ data: null, error: { message: 'No domain context' } });
     }
 
-    if (!nostr_hex_id) {
-      return res.status(400).json({ data: null, error: { message: 'nostr_hex_id required for auth' } });
+    if (!req.authedPubkey) {
+      return res.status(401).json({
+        data: null,
+        error: { message: 'Authentication required: sign this request with your Nostr key.' }
+      });
     }
 
-    // Check admin permission: domain_admins OR global admin_users
-    const isDomainAdmin = db.prepare(
-      'SELECT id FROM domain_admins WHERE nostr_hex_id = ? AND domain_key = ?'
-    ).get(nostr_hex_id, domainKey);
-
-    const isGlobalAdmin = db.prepare(
-      'SELECT id FROM admin_users WHERE nostr_hex_id = ?'
-    ).get(nostr_hex_id);
-
-    if (!isDomainAdmin && !isGlobalAdmin) {
+    // Same authority as always: domain_admins OR global admin_users.
+    if (!isAdminPubkey(req.authedPubkey, domainKey)) {
       return res.status(403).json({ data: null, error: { message: 'Not authorized' } });
     }
 

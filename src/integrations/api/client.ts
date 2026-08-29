@@ -1,3 +1,5 @@
+import { nostrAuthHeaders } from "@/lib/nostrAuth";
+
 export function getDomainKey(): string | null {
   if (typeof window === 'undefined') return null;
   const hostname = window.location.hostname;
@@ -253,6 +255,9 @@ class QueryBuilder<T = unknown> implements PromiseLike<SupabaseResponse<T>> {
       headers: {
         "Content-Type": "application/json",
         ...(domainKey ? { "X-Domain-Key": domainKey } : {}),
+        // Signed proof of who is calling, when someone is logged in. The
+        // server needs it for privileged tables and ignores it elsewhere.
+        ...nostrAuthHeaders(url, method),
       },
     };
 
@@ -329,11 +334,13 @@ const functions = {
   ): Promise<{ data: T | null; error: { message: string; [key: string]: unknown } | null }> {
     try {
       const domainKey = getDomainKey();
-      const res = await fetch(`/api/${name}`, {
+      const url = `/api/${name}`;
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(domainKey ? { "X-Domain-Key": domainKey } : {}),
+          ...nostrAuthHeaders(url, "POST"),
         },
         body: JSON.stringify(options?.body ?? {}),
       });

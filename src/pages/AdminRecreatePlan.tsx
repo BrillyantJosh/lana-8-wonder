@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Search, RefreshCw, Eye, Send, CheckCircle2, XCircle
 import { toast } from 'sonner';
 import { getDomainKey } from '@/integrations/api/client';
 import { AdminMenu } from '@/components/AdminMenu';
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 import { generateLinearLevels, generateCompoundLevels, generatePassiveLevelsBySplit, type TradingLevel } from '@/lib/planGeneration';
 
@@ -105,6 +106,13 @@ const AdminRecreatePlan = () => {
         body: JSON.stringify({ nostr_hex_id: hexId.trim() })
       });
       const json = await res.json();
+
+      // found === null means the relays did not answer. That is not the same
+      // as "this person is not registered", and must not be reported as such.
+      if (!res.ok || json.found === null || json.found === undefined) {
+        toast.error('Could not read the Registrar (relays did not answer). Try again in a moment — this does not mean the user is unregistered.');
+        return;
+      }
 
       if (!json.found) {
         toast.error('No KIND 30889 registration found for this hex ID');
@@ -261,18 +269,29 @@ const AdminRecreatePlan = () => {
 
     try {
       const adjustedStartPrice = previewStartPrice * 1.08;
-      const avgBalance = wallets.reduce((s, w) => s + w.balance, 0) / wallets.length;
+
+      // Publish EXACTLY what the preview showed. The preview builds every
+      // account from its own wallet balance; sending a single average here
+      // made the server regenerate all eight from that average, so for any
+      // unevenly funded set — which is what Split Enrollment produces, since
+      // elapsed levels are never funded — the published plan matched no
+      // account at all. Send the same per-account balances the preview used,
+      // in the same wallet order.
+      const amountsPerWallet = previewAccounts.length === wallets.length
+        ? previewAccounts.map(a => a.balance)
+        : wallets.map(w => w.balance);
 
       const res = await fetch('/api/publish-lana8wonder-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {}),
+          ...nostrAuthHeaders('/api/publish-lana8wonder-plan', 'POST')
         },
         body: JSON.stringify({
           subject_hex: hexId.trim(),
           wallets: wallets.map(w => w.wallet_address),
-          amount_per_wallet: avgBalance,
+          amounts_per_wallet: amountsPerWallet,
           currency,
           exchange_rate: previewStartPrice,
           start_price: adjustedStartPrice

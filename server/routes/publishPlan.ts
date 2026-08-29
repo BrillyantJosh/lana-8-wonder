@@ -301,6 +301,10 @@ router.post('/', async (req: Request, res: Response) => {
       subject_hex,
       wallets,
       amount_per_wallet,
+      // Per-account funding. Split Enrollment funds each of the eight accounts
+      // differently (elapsed levels are not funded), so a single average would
+      // publish a plan that matches none of them. When present this wins.
+      amounts_per_wallet,
       currency,
       exchange_rate,
       start_price
@@ -311,6 +315,7 @@ router.post('/', async (req: Request, res: Response) => {
       subject_hex,
       wallets_count: wallets?.length,
       wallets,
+      amounts_per_wallet,
       currency,
       start_price,
       publisherPubkey
@@ -327,6 +332,32 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     console.log('Validated 8 wallet addresses');
+
+    // Resolve the amount each account is built from. Either an explicit
+    // per-account list, or one amount used for all eight.
+    let perWalletAmounts: number[];
+    if (amounts_per_wallet !== undefined && amounts_per_wallet !== null) {
+      if (!Array.isArray(amounts_per_wallet) || amounts_per_wallet.length !== 8) {
+        throw new Error(
+          `Invalid amounts_per_wallet: expected exactly 8 amounts, got ${amounts_per_wallet?.length ?? 0}`
+        );
+      }
+      perWalletAmounts = amounts_per_wallet.map((a: unknown, i: number) => {
+        const n = typeof a === 'string' ? parseFloat(a) : (a as number);
+        if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) {
+          throw new Error(`Invalid amounts_per_wallet[${i}]: ${String(a)}`);
+        }
+        return n;
+      });
+    } else {
+      const n = typeof amount_per_wallet === 'string' ? parseFloat(amount_per_wallet) : amount_per_wallet;
+      if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) {
+        throw new Error(`Invalid amount_per_wallet: ${String(amount_per_wallet)}`);
+      }
+      perWalletAmounts = new Array(8).fill(n);
+    }
+
+    console.log('Amount per account:', perWalletAmounts);
     console.log('Creating Lana8Wonder plan for subject:', subject_hex);
 
     // 1. Fetch relays from KIND 38888 (authoritative source)
@@ -359,16 +390,17 @@ router.post('/', async (req: Request, res: Response) => {
     const accounts = wallets.map((wallet: string, index: number) => {
       const accountId = index + 1;
       const config = accountConfigs[index];
+      const accountAmount = perWalletAmounts[index];
 
       let tradingLevels: TradingLevel[];
 
       if (config.type === 'linear') {
-        tradingLevels = generateLinearLevels(amount_per_wallet, accountPrices[index]);
+        tradingLevels = generateLinearLevels(accountAmount, accountPrices[index]);
       } else if (config.type === 'compound') {
-        tradingLevels = generateCompoundLevels(amount_per_wallet, accountPrices[index]);
+        tradingLevels = generateCompoundLevels(accountAmount, accountPrices[index]);
       } else { // passive
         tradingLevels = generatePassiveLevelsBySplit(
-          amount_per_wallet,
+          accountAmount,
           accountPrices[index],
           targetValues[index]!
         );
@@ -379,7 +411,7 @@ router.post('/', async (req: Request, res: Response) => {
         convertToKind88888Level(accountId, level, levelIndex)
       );
 
-      console.log(`Account ${accountId} (${config.type}): ${levels.length} levels`);
+      console.log(`Account ${accountId} (${config.type}): ${levels.length} levels from ${accountAmount} LANA`);
 
       return {
         account_id: accountId,
@@ -452,6 +484,7 @@ router.post('/', async (req: Request, res: Response) => {
       plan: {
         subject_hex,
         accounts: accounts.length,
+        amounts_per_wallet: perWalletAmounts,
         total_levels: accounts.reduce((sum: number, acc: any) => sum + acc.levels.length, 0)
       }
     });

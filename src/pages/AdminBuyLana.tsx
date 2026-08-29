@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Copy, Trash2, Send, Clock, CheckCircle2, CreditCard, AlertTriangle, Wallet, RefreshCw } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { UserProfileDialog } from '@/components/UserProfileDialog';
 import { useNostrLanaParams, type ExchangeRates } from '@/hooks/useNostrLanaParams';
 
@@ -121,7 +122,8 @@ const AdminBuyLana = () => {
           try {
             const statusRes = await fetch('/api/process-pending-payments/domain-status', {
               headers: {
-                ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+                ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {}),
+                ...nostrAuthHeaders('/api/process-pending-payments/domain-status', 'GET')
               }
             });
             const statusJson = await statusRes.json();
@@ -150,7 +152,8 @@ const AdminBuyLana = () => {
     try {
       const res = await fetch('/api/process-pending-payments/wallet-balance', {
         headers: {
-          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {})
+          ...(getDomainKey() ? { 'X-Domain-Key': getDomainKey()! } : {}),
+          ...nostrAuthHeaders('/api/process-pending-payments/wallet-balance', 'GET')
         }
       });
       const json = await res.json();

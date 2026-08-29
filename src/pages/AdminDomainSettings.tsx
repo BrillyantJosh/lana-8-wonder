@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, Globe, Loader2, Save, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminMenu } from '@/components/AdminMenu';
+import { nostrAuthHeaders } from '@/lib/nostrAuth';
 
 interface DomainConfig {
   domain_key: string | null;
@@ -153,7 +154,8 @@ const AdminDomainSettings = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'X-Domain-Key': domainKey
+            'X-Domain-Key': domainKey,
+            ...nostrAuthHeaders('/api/domain-config', 'PUT')
           },
           body: JSON.stringify({
             nostr_hex_id: userNostrHexId,
