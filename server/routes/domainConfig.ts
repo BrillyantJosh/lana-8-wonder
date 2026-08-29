@@ -19,9 +19,17 @@ router.get('/', (req: Request, res: Response) => {
                intl_bank_address, intl_iban, intl_swift,
                CASE WHEN donation_wallet_private_key IS NOT NULL AND donation_wallet_private_key != '' THEN 1 ELSE 0 END as has_private_key
         FROM domains WHERE domain_key = ?
-      `).get(domainKey);
+      `).get(domainKey) as Record<string, unknown> | undefined;
 
       if (domain) {
+        // The rest of this row is public on purpose: an anonymous buyer has to
+        // read the payee, the bank account and the contact line to pay at all,
+        // and the buy page renders them. `has_private_key` is different — it is
+        // configuration, telling anyone who asks which domains keep a spendable
+        // donation-wallet key on the server. The only page that reads it is the
+        // admin settings editor, so it now costs a signature.
+        const callerIsAdmin = !!req.authedPubkey && isAdminPubkey(req.authedPubkey, domainKey);
+        if (!callerIsAdmin) delete domain.has_private_key;
         return res.json({ data: domain, error: null });
       }
     }

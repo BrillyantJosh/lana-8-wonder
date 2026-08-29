@@ -108,9 +108,12 @@ const AdminDomainSettings = () => {
         }
 
         // Fetch domain config
+        // Signed, unlike the public reads of this endpoint: the editor needs
+        // `has_private_key`, which the server now hands to admins only.
         const configRes = await fetch('/api/domain-config', {
           headers: {
-            ...(effectiveDk ? { 'X-Domain-Key': effectiveDk } : {})
+            ...(effectiveDk ? { 'X-Domain-Key': effectiveDk } : {}),
+            ...nostrAuthHeaders('/api/domain-config', 'GET')
           }
         });
         const configJson = await configRes.json();

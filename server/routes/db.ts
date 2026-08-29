@@ -34,21 +34,60 @@ const SECRET_COLUMNS: Record<string, readonly string[]> = {
   domains: ['donation_wallet_private_key'],
 };
 
+// Columns of a partly-public table that a caller who has NOT proved it is an
+// admin may read. `domains` also carries the bank account money is wired to
+// (intl_iban / intl_swift / intl_bank_name / intl_recipient_name), the
+// operator's personal contact line and the payment link. GET /api/db/domains
+// takes no domain filter, so ONE unauthenticated request returned every
+// domain's row — a bank account and a phone number for anyone who asked.
+//
+// The public pages read exactly one column from this table:
+// `donation_wallet_id`, to confirm where a donation is about to go
+// (PreviewLana8Wonder, SendLana8WonderTransfer). The buy flow's payment
+// details do NOT come from here — they come from /api/domain-config, which
+// serves the single domain the buyer is on, and which still serves them to an
+// anonymous buyer because the buyer must read them to pay.
+const PUBLIC_COLUMNS: Record<string, readonly string[]> = {
+  domains: [
+    'domain_key',
+    'hostname',
+    'display_name',
+    'donation_wallet_id',
+    'currency_default',
+    'show_slots_on_landing_page',
+    'enable_buy_lana',
+    'active',
+  ],
+};
+
 const DOMAIN_SCOPED_TABLES = ['buy_lana', 'faq_items', 'what_is_lana'] as const;
 
 function isAdminWriteTable(table: string): boolean {
   return (ADMIN_WRITE_TABLES as readonly string[]).includes(table);
 }
 
-/** Strips secret columns from a row or list of rows before it goes out. */
-function redactSecrets(table: string, data: unknown): unknown {
+/**
+ * Drops the columns that must never leave the server, and — when `publicCols`
+ * is given — every column outside the public set.
+ *
+ * Applied to the RESPONSE rather than to the SQL on purpose: whichever handler
+ * built the row, and however it selected its columns, what goes out is filtered
+ * here. A handler that falls back to SELECT * cannot leak past it.
+ */
+function project(table: string, data: unknown, publicCols?: readonly string[]): unknown {
   const secrets = SECRET_COLUMNS[table];
-  if (!secrets || data === null || data === undefined) return data;
+  if (!secrets && !publicCols) return data;
+  if (data === null || data === undefined) return data;
 
   const scrub = (row: unknown): unknown => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
     const copy = { ...(row as Record<string, unknown>) };
-    for (const col of secrets) delete copy[col];
+    for (const col of secrets ?? []) delete copy[col];
+    if (publicCols) {
+      for (const col of Object.keys(copy)) {
+        if (!publicCols.includes(col)) delete copy[col];
+      }
+    }
     return copy;
   };
 
@@ -169,6 +208,36 @@ function buildSelect(select: string | undefined): string {
     .join(', ');
 }
 
+/**
+ * Every column name the caller's query touches — in `select`, in a filter, in
+ * `order`. Mirrors the prefixes `buildWhere` understands.
+ *
+ * A hidden column has to be unreachable as a FILTER too, not just missing from
+ * the reply: `?eq_intl_iban=<guess>` and `?order=intl_iban.desc` read a column
+ * the response never prints, one yes/no answer at a time.
+ */
+function referencedColumns(query: Record<string, string>): string[] {
+  const cols: string[] = [];
+
+  if (query.select && query.select !== '*') {
+    cols.push(...query.select.split(',').map((c) => c.trim()));
+  }
+
+  for (const key of Object.keys(query)) {
+    if (key.startsWith('eq_')) cols.push(key.slice(3));
+    else if (key.startsWith('is_')) cols.push(key.slice(3));
+    else if (key.startsWith('not_') && key.endsWith('_is_null')) cols.push(key.slice(4, -8));
+    else if (key.startsWith('in_')) cols.push(key.slice(3));
+    else if (key.startsWith('gte_')) cols.push(key.slice(4));
+  }
+
+  if (query.order) {
+    cols.push(...query.order.split(',').map((segment) => segment.trim().split('.')[0]));
+  }
+
+  return cols.filter((c) => c.length > 0);
+}
+
 function respond(res: Response, data: unknown, error: unknown = null, count?: number) {
   const body: Record<string, unknown> = { data, error };
   if (count !== undefined) {
@@ -222,15 +291,30 @@ router.use('/:table', (req: Request, res: Response, next) => {
     }
   }
 
-  // Scrub secret columns from every response this router produces, whichever
-  // handler produced it.
-  const secrets = SECRET_COLUMNS[table];
-  if (secrets) {
+  // Column scoping for a partly-public table (see PUBLIC_COLUMNS). A caller who
+  // has not proved it is an admin sees the site's public facts about a domain
+  // and nothing else — not the bank account, not the contact line.
+  const publicCols = PUBLIC_COLUMNS[table];
+  const hideNonPublic = publicCols && !callerIsAdmin ? publicCols : undefined;
+
+  if (hideNonPublic) {
+    const gated = referencedColumns(req.query as Record<string, string>)
+      .find((col) => !hideNonPublic.includes(col));
+    if (gated) {
+      // Refused, not quietly ignored: a filter or a sort on a hidden column
+      // reads it a guess at a time, however carefully the reply is scrubbed.
+      return respondError(res, `Not authorized to read "${table}"."${gated}"`, 403);
+    }
+  }
+
+  // Scrub secret columns — and, for a non-admin, everything outside the public
+  // set — from every response this router produces, whichever handler made it.
+  if (SECRET_COLUMNS[table] || hideNonPublic) {
     const originalJson = res.json.bind(res);
     res.json = (body: unknown) => {
       if (body && typeof body === 'object' && 'data' in (body as Record<string, unknown>)) {
         const copy = { ...(body as Record<string, unknown>) };
-        copy.data = redactSecrets(table, copy.data);
+        copy.data = project(table, copy.data, hideNonPublic);
         return originalJson(copy);
       }
       return originalJson(body);
