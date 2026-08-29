@@ -46,14 +46,23 @@ router.post('/', async (req: Request, res: Response) => {
         limit: 1
       });
 
-      // 10 second timeout
-      const timeoutPromise = new Promise<any[]>((resolve) => {
-        setTimeout(() => resolve([]), 10000);
+      // 10 second timeout — resolves to null (NOT []) so callers can
+      // distinguish "relays timed out" from a genuine "no plan found".
+      const TIMEOUT_MARKER = null;
+      const timeoutPromise = new Promise<any[] | null>((resolve) => {
+        setTimeout(() => resolve(TIMEOUT_MARKER), 10000);
       });
 
       const events = await Promise.race([queryPromise, timeoutPromise]);
 
-      const hasPlan = events && events.length > 0;
+      if (events === TIMEOUT_MARKER) {
+        console.warn(`KIND 88888 check for ${nostr_hex_id.slice(0, 8)}...: RELAY TIMEOUT`);
+        // has_plan: null = indeterminate. Fail-closed callers must abort;
+        // legacy fail-open callers treat null as falsy (unchanged behavior).
+        return res.status(504).json({ has_plan: null, error: { message: 'Relay query timed out' } });
+      }
+
+      const hasPlan = !!(events && events.length > 0);
       console.log(`KIND 88888 check for ${nostr_hex_id.slice(0, 8)}...: ${hasPlan ? 'FOUND' : 'NOT FOUND'} (${events?.length || 0} events)`);
 
       return res.json({ has_plan: hasPlan });
@@ -62,7 +71,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('Error checking KIND 88888:', error);
-    return res.status(500).json({ has_plan: false, error: { message: 'Failed to check Lana8Wonder plan' } });
+    return res.status(500).json({ has_plan: null, error: { message: 'Failed to check Lana8Wonder plan' } });
   }
 });
 

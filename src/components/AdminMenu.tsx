@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, ChevronDown, CreditCard, Globe, FileText, RefreshCw } from 'lucide-react';
+import { Settings, ChevronDown, CreditCard, Globe, FileText, RefreshCw, Layers } from 'lucide-react';
 
 interface AdminMenuProps {
   className?: string;
@@ -83,6 +83,10 @@ export const AdminMenu = ({ className }: AdminMenuProps) => {
         <DropdownMenuItem onClick={() => navigate('/admin-recreate-plan')}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Recreate Plan
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/admin-split-enroll')}>
+          <Layers className="h-4 w-4 mr-2" />
+          Split Enrollment
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

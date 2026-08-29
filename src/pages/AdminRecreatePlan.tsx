@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { getDomainKey } from '@/integrations/api/client';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
+import { generateLinearLevels, generateCompoundLevels, generatePassiveLevelsBySplit, type TradingLevel } from '@/lib/planGeneration';
 
 interface WalletInfo {
   wallet_address: string;
@@ -224,7 +225,7 @@ const AdminRecreatePlan = () => {
       const amountPerWallet = w.balance;
       const accountId = index + 1;
 
-      let levels: any[] = [];
+      let levels: TradingLevel[] = [];
 
       if (accountTypes[index] === 'linear') {
         levels = generateLinearLevels(amountPerWallet, accountPrices[index]);
@@ -296,100 +297,6 @@ const AdminRecreatePlan = () => {
       setPublishing(false);
     }
   };
-
-  // Plan generation functions (matching server logic)
-  function calculateSplit(price: number) {
-    const splitPrice = Math.pow(2, Math.ceil(Math.log2(price / 0.001))) * 0.001;
-    const splitNumber = Math.log2(splitPrice / 0.001) + 1;
-    return { splitNumber, splitPrice };
-  }
-
-  function generateLinearLevels(lanas: number, startPrice: number) {
-    const levels = [];
-    const lanasPerLevel = lanas / 10;
-    let remaining = lanas;
-    for (let i = 1; i <= 10; i++) {
-      const triggerPrice = startPrice * i;
-      const cashOut = triggerPrice * lanasPerLevel;
-      remaining -= lanasPerLevel;
-      const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-      levels.push({
-        level: i,
-        triggerPrice: triggerPrice.toFixed(5),
-        splitNumber,
-        splitPrice: splitPrice.toFixed(3),
-        lanasOnSale: parseFloat(lanasPerLevel.toFixed(2)),
-        cashOut: cashOut.toFixed(2),
-        remaining: parseFloat(remaining.toFixed(2))
-      });
-    }
-    return levels;
-  }
-
-  function generateCompoundLevels(lanas: number, startPrice: number) {
-    const sellPercentages = [0, 0.25, 0.20, 0.15, 0.12, 0.09, 0.07, 0.05, 0.04, 0.03];
-    const levels = [];
-    let remaining = lanas;
-    for (let i = 1; i <= 10; i++) {
-      const triggerPrice = startPrice * i;
-      const lanasOnSale = lanas * sellPercentages[i - 1];
-      const cashOut = triggerPrice * lanasOnSale;
-      remaining -= lanasOnSale;
-      const { splitNumber, splitPrice } = calculateSplit(triggerPrice);
-      levels.push({
-        level: i,
-        triggerPrice: triggerPrice.toFixed(5),
-        splitNumber,
-        splitPrice: splitPrice.toFixed(3),
-        lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
-        cashOut: cashOut.toFixed(2),
-        remaining: parseFloat(remaining.toFixed(2))
-      });
-    }
-    return levels;
-  }
-
-  function generatePassiveLevelsBySplit(lanas: number, startPrice: number, targetValue: number) {
-    const { splitNumber: startSplitNum } = calculateSplit(startPrice);
-    const levels = [];
-    let remaining = lanas;
-    let previousRemaining = lanas;
-
-    for (let splitNum = startSplitNum; splitNum <= 37 && levels.length < 10; splitNum++) {
-      const splitPrice = 0.001 * Math.pow(2, splitNum - 1);
-      const portfolioValue = remaining * splitPrice;
-      const hasReachedTarget = portfolioValue >= targetValue;
-
-      let lanasOnSale: number;
-      let cashOut: number;
-      let newRemaining: number;
-
-      if (hasReachedTarget) {
-        newRemaining = targetValue / splitPrice;
-        lanasOnSale = previousRemaining - newRemaining;
-        cashOut = lanasOnSale * splitPrice;
-      } else {
-        lanasOnSale = remaining * 0.01;
-        cashOut = lanasOnSale * splitPrice;
-        newRemaining = remaining - lanasOnSale;
-      }
-
-      levels.push({
-        level: splitNum,
-        triggerPrice: splitPrice.toFixed(5),
-        splitNumber: splitNum,
-        splitPrice: splitPrice.toFixed(3),
-        lanasOnSale: parseFloat(lanasOnSale.toFixed(2)),
-        cashOut: cashOut.toFixed(2),
-        remaining: parseFloat(newRemaining.toFixed(2))
-      });
-
-      previousRemaining = newRemaining;
-      remaining = newRemaining;
-    }
-
-    return levels;
-  }
 
   if (isAdmin === null) {
     return (
