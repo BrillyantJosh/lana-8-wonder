@@ -61,10 +61,14 @@ const AdminSplitEnroll = () => {
   const [walletsRegistered, setWalletsRegistered] = useState(false);
   const [relayVerified, setRelayVerified] = useState<'idle' | 'verifying' | 'verified' | 'failed'>('idle');
 
-  // Step 4: funding
+  // Step 4: funding — paid from the admin's KNIGHTS wallet (not the Main Wallet)
+  const [adminHexId, setAdminHexId] = useState<string>('');
+  const [knightsWallet, setKnightsWallet] = useState<string>('');
+  const [knightsLoading, setKnightsLoading] = useState(false);
   const [adminWif, setAdminWif] = useState('');
   const [adminWallet, setAdminWallet] = useState<string>('');
   const [adminBalance, setAdminBalance] = useState<number | null>(null);
+  const [wifMatchError, setWifMatchError] = useState<string | null>(null);
   const [wifValidating, setWifValidating] = useState(false);
   const [sending, setSending] = useState(false);
   const [txHash, setTxHash] = useState<string>('');
@@ -180,6 +184,7 @@ const AdminSplitEnroll = () => {
         });
         const json = await res.json();
         if (!json.data?.isGlobalAdmin) { navigate('/dashboard'); return; }
+        setAdminHexId(userHexId);
         setIsAdmin(true);
       } catch { navigate('/dashboard'); }
     };
@@ -371,55 +376,99 @@ const AdminSplitEnroll = () => {
     }
   };
 
-  // Step 4: WIF validation + balance
+  // Step 4a: load the admin's own KNIGHTS wallet (the funding source) from
+  // their registrar record, and show its balance up front.
   useEffect(() => {
-    if (!adminWif.trim()) { setAdminWallet(''); setAdminBalance(null); return; }
+    if (!adminHexId) return;
+    const loadKnights = async () => {
+      setKnightsLoading(true);
+      try {
+        const res = await fetch('/api/admin/fetch-kind30889', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nostr_hex_id: adminHexId })
+        });
+        const json = await res.json();
+        const knights = (json.wallets || []).find(
+          (w: { wallet_type?: string }) => (w.wallet_type || '').toLowerCase() === 'knights'
+        );
+        if (!knights?.wallet_address) {
+          setKnightsWallet('');
+          toast.error('No Knights wallet found in your registrar record — funding requires one.');
+          return;
+        }
+        setKnightsWallet(knights.wallet_address);
+
+        const electrumServers = (params?.electrum || []).map(e => ({ host: e.host, port: parseInt(String(e.port)) }));
+        const balRes = await fetch('/api/check-wallet-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_addresses: [knights.wallet_address],
+            electrum_servers: electrumServers.length > 0 ? electrumServers : [
+              { host: 'electrum1.lanacoin.com', port: 5097 },
+              { host: 'electrum2.lanacoin.com', port: 5097 }
+            ]
+          })
+        });
+        const balJson = await balRes.json();
+        if (balJson.success && balJson.wallets?.length > 0) {
+          setAdminBalance(balJson.wallets[0].balance || 0);
+        }
+      } catch (e) {
+        console.error('Knights wallet load failed:', e);
+        toast.error('Could not load your Knights wallet');
+      } finally {
+        setKnightsLoading(false);
+      }
+    };
+    loadKnights();
+  }, [adminHexId, params?.electrum]);
+
+  // Step 4b: the WIF must derive to the KNIGHTS wallet — a Main Wallet key
+  // (or any other) is rejected, so funding can only come from Knights.
+  useEffect(() => {
+    if (!adminWif.trim()) { setAdminWallet(''); setWifMatchError(null); return; }
+    if (!knightsWallet) return;
     const timer = setTimeout(async () => {
       setWifValidating(true);
       try {
         const result = await validateWifAndGetAddress(adminWif.trim());
-        if (result.valid && result.walletId) {
-          setAdminWallet(result.walletId);
-          // Fetch balance
-          const electrumServers = (params?.electrum || []).map(e => ({ host: e.host, port: parseInt(String(e.port)) }));
-          const balRes = await fetch('/api/check-wallet-balance', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              wallet_addresses: [result.walletId],
-              electrum_servers: electrumServers.length > 0 ? electrumServers : [
-                { host: 'electrum1.lanacoin.com', port: 5097 },
-                { host: 'electrum2.lanacoin.com', port: 5097 }
-              ]
-            })
-          });
-          const balJson = await balRes.json();
-          if (balJson.success && balJson.wallets?.length > 0) {
-            setAdminBalance(balJson.wallets[0].balance || 0);
-          }
+        if (!result.valid) {
+          setAdminWallet('');
+          setWifMatchError(result.error || 'Invalid WIF format');
+          return;
+        }
+        // Accept either address encoding — the registrar may hold either.
+        const matches = result.walletIdCompressed === knightsWallet
+          || result.walletIdUncompressed === knightsWallet;
+        if (matches) {
+          setAdminWallet(knightsWallet);
+          setWifMatchError(null);
         } else {
           setAdminWallet('');
-          setAdminBalance(null);
+          setWifMatchError(`This key belongs to ${result.walletId} — not your Knights wallet.`);
         }
       } catch {
         setAdminWallet('');
-        setAdminBalance(null);
+        setWifMatchError('Could not validate key');
       } finally {
         setWifValidating(false);
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [adminWif, params?.electrum]);
+  }, [adminWif, knightsWallet]);
 
   // Step 4: execute funding transaction from admin's wallet
   const handleFund = async () => {
-    if (!adminWallet || !adminWif.trim()) { toast.error('Enter a valid admin WIF key'); return; }
+    if (!knightsWallet) { toast.error('No Knights wallet available — cannot fund'); return; }
+    if (!adminWallet || !adminWif.trim()) { toast.error('Enter the WIF key of your Knights wallet'); return; }
     const recipients = funding
       .map((f, i) => ({ address: generatedWallets[i]?.address, amount: Math.round(f.fundingAmount * 10000) / 10000 }))
       .filter(r => r.address && r.amount > 0.01);
     if (recipients.length === 0) { toast.error('Nothing to fund — all levels elapsed?'); return; }
     if (adminBalance !== null && adminBalance < totalFunding + FEE_BUFFER) {
-      toast.error(`Insufficient admin balance: need ~${(totalFunding + FEE_BUFFER).toFixed(2)} LANA, have ${adminBalance.toFixed(2)}`);
+      toast.error(`Insufficient Knights wallet balance: need ~${(totalFunding + FEE_BUFFER).toFixed(2)} LANA, have ${adminBalance.toFixed(2)}`);
       return;
     }
 
@@ -591,8 +640,8 @@ const AdminSplitEnroll = () => {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Enroll a user into a past split on their behalf. You pay the funding from your own wallet;
-          levels already elapsed at the current rate are <strong>not</strong> funded.
+          Enroll a user into a past split on their behalf. You pay the funding from your own
+          <strong> Knights</strong> wallet; levels already elapsed at the current rate are <strong>not</strong> funded.
         </p>
 
         {/* Interrupted-enrollment recovery banner */}
@@ -730,7 +779,7 @@ const AdminSplitEnroll = () => {
                   <p className="text-xs text-muted-foreground">
                     Per-wallet full amount: {amountPerWallet.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA
                     (11 / {rate}) · start price {adjustedStartPrice.toFixed(6)} (+8% buffer) · no PHI donation ·
-                    admin pays <strong>{totalFunding.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</strong> + tx fee
+                    admin pays <strong>{totalFunding.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA</strong> + tx fee from the Knights wallet
                   </p>
                 </div>
               )}
@@ -821,45 +870,68 @@ const AdminSplitEnroll = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="h-5 w-5 text-primary" />
-                4. Fund from YOUR Wallet
+                4. Fund from YOUR Knights Wallet
               </CardTitle>
               <CardDescription>
-                Enter your (admin) WIF private key. {totalFunding.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA
-                will be sent from your wallet to the 8 annuity wallets.
+                {totalFunding.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA will be sent from your
+                <strong> Knights</strong> wallet to the 8 annuity wallets. Enter the WIF key of that wallet —
+                keys for other wallets (including your Main Wallet) are rejected.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="wif">Admin WIF Private Key</Label>
-                <Input
-                  id="wif" type="password"
-                  value={adminWif}
-                  onChange={(e) => setAdminWif(e.target.value)}
-                  placeholder="Enter your WIF private key..."
-                  className="font-mono text-sm"
-                  disabled={step !== 'fund' || sending}
-                />
-              </div>
-              {wifValidating && (
+              {/* Funding source: the admin's Knights wallet */}
+              {knightsLoading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Validating key &amp; fetching balance...
+                  <Loader2 className="h-3 w-3 animate-spin" /> Loading your Knights wallet...
                 </div>
               )}
-              {adminWallet && !wifValidating && (
-                <div className="text-sm space-y-1">
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="font-mono text-xs">{adminWallet}</span>
-                  </div>
+              {!knightsLoading && !knightsWallet && (
+                <div className="flex items-start gap-2 text-sm text-destructive p-2 bg-destructive/10 rounded">
+                  <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>No <strong>Knights</strong> wallet found in your registrar record (KIND 30889). Funding requires one.</span>
+                </div>
+              )}
+              {knightsWallet && (
+                <div className="p-3 rounded-lg border bg-muted/40 space-y-1">
+                  <div className="text-xs text-muted-foreground">Funding source — your Knights wallet</div>
+                  <div className="font-mono text-xs break-all">{knightsWallet}</div>
                   {adminBalance !== null && (
-                    <div className={adminBalance >= totalFunding + FEE_BUFFER ? 'text-green-600' : 'text-destructive'}>
+                    <div className={`text-sm ${adminBalance >= totalFunding + FEE_BUFFER ? 'text-green-600' : 'text-destructive'}`}>
                       Balance: {adminBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} LANA
-                      (need ~{(totalFunding + FEE_BUFFER).toFixed(2)})
+                      {' '}(need ~{(totalFunding + FEE_BUFFER).toFixed(2)})
                       {adminBalance < totalFunding + FEE_BUFFER && (
                         <span className="ml-1 inline-flex items-center"><XCircle className="h-3 w-3 mr-1" /> insufficient</span>
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label htmlFor="wif">Knights Wallet WIF Private Key</Label>
+                <Input
+                  id="wif" type="password"
+                  value={adminWif}
+                  onChange={(e) => setAdminWif(e.target.value)}
+                  placeholder="Enter the WIF key of your Knights wallet..."
+                  className="font-mono text-sm"
+                  disabled={step !== 'fund' || sending || !knightsWallet}
+                />
+              </div>
+              {wifValidating && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Verifying the key matches your Knights wallet...
+                </div>
+              )}
+              {adminWallet && !wifValidating && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" /> Key matches your Knights wallet
+                </div>
+              )}
+              {wifMatchError && !wifValidating && (
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span className="break-all">{wifMatchError}</span>
                 </div>
               )}
               {recipientsAlreadyFunded && step === 'fund' && (
