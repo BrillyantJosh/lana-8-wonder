@@ -381,5 +381,14 @@
     "account7Description": "",
     "account8Name": "Ultimate Freedom",
     "account8Description": ""
+  },
+  "walletPdf": {
+    "tagline": "Eight wallets, eight wonders.",
+    "position": "{{n}} of {{total}}",
+    "walletAddress": "Wallet address",
+    "privateKey": "Private key",
+    "scanToReceive": "Scan to receive",
+    "scanToSpend": "Scan to spend",
+    "keySafety": "Whoever holds the private key holds the money. Keep this document as you would keep cash."
   }
 }

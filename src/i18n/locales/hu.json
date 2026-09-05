@@ -381,5 +381,14 @@
     "account7Description": "",
     "account8Name": "Teljes szabadság",
     "account8Description": ""
+  },
+  "walletPdf": {
+    "tagline": "Nyolc tárca, nyolc csoda.",
+    "position": "{{n}} / {{total}}",
+    "walletAddress": "Tárca címe",
+    "privateKey": "Privát kulcs",
+    "scanToReceive": "Olvassa be a fogadáshoz",
+    "scanToSpend": "Olvassa be a költéshez",
+    "keySafety": "Akinél a privát kulcs van, azé a pénz. Őrizze ezt a dokumentumot úgy, mint a készpénzt."
   }
 }

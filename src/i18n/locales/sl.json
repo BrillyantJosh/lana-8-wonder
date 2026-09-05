@@ -381,5 +381,14 @@
     "account7Description": "",
     "account8Name": "Končna svoboda",
     "account8Description": ""
+  },
+  "walletPdf": {
+    "tagline": "Osem denarnic, osem čudes.",
+    "position": "{{n}} od {{total}}",
+    "walletAddress": "Naslov denarnice",
+    "privateKey": "Zasebni ključ",
+    "scanToReceive": "Skeniraj za prejem",
+    "scanToSpend": "Skeniraj za razpolaganje",
+    "keySafety": "Kdor ima zasebni ključ, ima denar. Ta dokument hranite tako, kot bi hranili gotovino."
   }
 }

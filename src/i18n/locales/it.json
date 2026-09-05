@@ -381,5 +381,14 @@
     "account7Description": "",
     "account8Name": "Libertà definitiva",
     "account8Description": ""
+  },
+  "walletPdf": {
+    "tagline": "Otto portafogli, otto meraviglie.",
+    "position": "{{n}} di {{total}}",
+    "walletAddress": "Indirizzo del portafoglio",
+    "privateKey": "Chiave privata",
+    "scanToReceive": "Scansiona per ricevere",
+    "scanToSpend": "Scansiona per spendere",
+    "keySafety": "Chi ha la chiave privata ha il denaro. Conservi questo documento come conserverebbe del contante."
   }
 }

@@ -381,5 +381,14 @@
     "account7Description": "",
     "account8Name": "Ultimative Freiheit",
     "account8Description": ""
+  },
+  "walletPdf": {
+    "tagline": "Acht Brieftaschen, acht Wunder.",
+    "position": "{{n}} von {{total}}",
+    "walletAddress": "Adresse der Brieftasche",
+    "privateKey": "Privater Schlüssel",
+    "scanToReceive": "Zum Empfangen scannen",
+    "scanToSpend": "Zum Ausgeben scannen",
+    "keySafety": "Wer den privaten Schlüssel hat, hat das Geld. Bewahren Sie dieses Dokument auf wie Bargeld."
   }
 }
