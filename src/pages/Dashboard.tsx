@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Loader2, Send, CheckCircle2 } from "lucide-react";
+import { LogOut, Loader2, CheckCircle2 } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
 import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
@@ -159,17 +159,6 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  const handleSendLana = (accountId: number, wallet: string, amount: number, emptyWallet: boolean = false) => {
-    // Navigate to send-lana page with params
-    const params = new URLSearchParams({
-      accountId: accountId.toString(),
-      wallet: wallet,
-      amount: amount.toString()
-    });
-    if (emptyWallet) params.set('emptyWallet', 'true');
-    navigate(`/send-lana?${params}`);
-  };
-
   if (!session) return null;
 
   if (loading) {
@@ -282,128 +271,6 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          {(() => {
-            const currentExchangeRate = params?.exchangeRates?.[plan.currency as keyof typeof params.exchangeRates] || 0;
-            
-            // Calculate withdrawal amounts for each account
-            const withdrawalInfo = plan.accounts.map(account => {
-              const currentBalance = walletBalances[account.wallet] || 0;
-              
-              // Find the last triggered level (highest trigger price that is <= current exchange rate)
-              const triggeredLevels = account.levels.filter(
-                level => currentExchangeRate > 0 && level.trigger_price <= currentExchangeRate
-              ).sort((a, b) => b.trigger_price - a.trigger_price);
-              
-              const lastTriggeredLevel = triggeredLevels[0];
-              
-              if (!lastTriggeredLevel || currentBalance === 0) {
-                return null;
-              }
-              
-              const requiredBalance = lastTriggeredLevel.remaining_lanas;
-              const withdrawalAmount = currentBalance - requiredBalance;
-              const isLastWithdrawal = requiredBalance === 0;
-              
-              // Apply 2% tolerance - only show withdrawal if amount exceeds 2% of required balance
-              const tolerance = requiredBalance * 0.02;
-              if (withdrawalAmount > tolerance) {
-                return {
-                  accountId: account.account_id,
-                  currentBalance,
-                  requiredBalance,
-                  withdrawalAmount,
-                  triggeredCount: triggeredLevels.length,
-                  isLastWithdrawal
-                };
-              }
-              
-              return null;
-            }).filter(Boolean);
-
-            if (withdrawalInfo.length === 0) {
-              return null;
-            }
-
-            const totalWithdrawal = withdrawalInfo.reduce((sum, info) => sum + (info?.withdrawalAmount || 0), 0);
-
-            return (
-              <Card className="border-green-500/50 bg-green-500/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-green-600">💰</span>
-                    {t('dashboard.withdrawalRequired')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('dashboard.basedOnExchangeRate', { currency: plan.currency, rate: formatNumber(currentExchangeRate, 4) })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {withdrawalInfo.map((info) => {
-                      if (!info) return null;
-                      const account = plan.accounts.find(acc => acc.account_id === info.accountId);
-                      
-                      return (
-                        <div key={info.accountId} className="border rounded-lg p-3 sm:p-4 bg-background">
-                          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-2">
-                            <div className="flex-1 w-full">
-                              <p className="font-semibold text-base sm:text-lg">{t('dashboard.account')} {info.accountId}</p>
-                              <p className="text-xs sm:text-sm text-muted-foreground mb-1">
-                                {info.triggeredCount === 1 
-                                  ? t('dashboard.levelsTriggered', { count: info.triggeredCount })
-                                  : t('dashboard.levelsTriggeredPlural', { count: info.triggeredCount })}
-                              </p>
-                              {account && (
-                                <p className="text-xs font-mono text-muted-foreground break-all">
-                                  {t('dashboard.from')}: {account.wallet}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-left sm:text-right w-full sm:w-auto">
-                              <p className="text-xl sm:text-2xl font-bold text-green-600">
-                                {formatNumber(info.withdrawalAmount, 4)} LANA
-                              </p>
-                              <p className="text-xs text-muted-foreground mb-2">{t('dashboard.toWithdraw')}</p>
-                              <Button 
-                                size="sm"
-                                onClick={() => handleSendLana(info.accountId, account?.wallet || "", info.withdrawalAmount, info.isLastWithdrawal)}
-                                className="w-full sm:w-auto"
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Send LANA
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm mt-3 pt-3 border-t">
-                            <div>
-                              <p className="text-muted-foreground">{t('dashboard.currentBalance')}:</p>
-                              <p className="font-mono text-xs sm:text-sm">{formatNumber(info.currentBalance, 4)} LANA</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">{t('dashboard.requiredBalance')}:</p>
-                              <p className="font-mono text-xs sm:text-sm">{formatNumber(info.requiredBalance, 4)} LANA</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {withdrawalInfo.length > 1 && (
-                      <div className="border-t pt-4 mt-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          <p className="font-semibold text-base sm:text-lg">{t('dashboard.totalWithdrawalRequired')}:</p>
-                          <p className="text-2xl sm:text-3xl font-bold text-green-600">
-                            {formatNumber(totalWithdrawal, 4)} LANA
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
         </div>
 
         <div className="space-y-6">

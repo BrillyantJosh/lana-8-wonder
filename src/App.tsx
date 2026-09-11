@@ -16,9 +16,6 @@ import AdminSplitEnroll from "./pages/AdminSplitEnroll";
 import CreateLana8Wonder from "./pages/CreateLana8Wonder";
 import AssignLana8Wonder from "./pages/AssignLana8Wonder";
 import PreviewLana8Wonder from "./pages/PreviewLana8Wonder";
-import SendLana from "./pages/SendLana";
-import SendLanaConfirm from "./pages/SendLanaConfirm";
-import SendLanaResult from "./pages/SendLanaResult";
 import SendLana8WonderTransfer from "./pages/SendLana8WonderTransfer";
 import NotFound from "./pages/NotFound";
 import { getDomainKey } from "./integrations/api/client";
@@ -43,9 +40,6 @@ const AppRoutes = () => (
     <Route path="/create-lana8wonder" element={<CreateLana8Wonder />} />
     <Route path="/assign-lana8wonder" element={<AssignLana8Wonder />} />
     <Route path="/preview-lana8wonder" element={<PreviewLana8Wonder />} />
-    <Route path="/send-lana" element={<SendLana />} />
-    <Route path="/send-lana-confirm" element={<SendLanaConfirm />} />
-    <Route path="/send-lana-result" element={<SendLanaResult />} />
     <Route path="/send-lana8wonder-transfer" element={<SendLana8WonderTransfer />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />

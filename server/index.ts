@@ -7,7 +7,6 @@ import { getDb, closeDb } from './db/connection.js';
 import { startHeartbeat, stopHeartbeat } from './heartbeat.js';
 import dbRouter from './routes/db.js';
 import checkWalletBalanceRouter from './routes/checkWalletBalance.js';
-import sendLanaTransactionRouter from './routes/sendLanaTransaction.js';
 import sendLanaMultiOutputRouter from './routes/sendLanaMultiOutput.js';
 import publishPlanRouter from './routes/publishPlan.js';
 import processPendingPaymentsRouter from './routes/processPendingPayments.js';
@@ -56,7 +55,6 @@ getDb();
 app.use('/api/check-wallet-balance', checkWalletBalanceRouter);
 // OPEN: the caller supplies the sending wallet's own WIF; the route refuses a
 // key that does not derive to the sender. Holding the key is the permission.
-app.use('/api/send-lana-transaction', sendLanaTransactionRouter);
 app.use('/api/send-lana-multi-output', sendLanaMultiOutputRouter);
 // GATED: signs KIND 88888 with the CENTRAL AUTHORITY key, addressable on
 // d=plan:<subject_hex> — an ungated call could replace any person's plan.
