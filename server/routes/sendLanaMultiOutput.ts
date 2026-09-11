@@ -15,7 +15,7 @@ const router = Router();
 router.post('/', async (req: Request, res: Response) => {
   try {
     console.log('Starting LANA multi-output transaction...');
-    const { sender_address, recipients, private_key, electrum_servers } = req.body;
+    const { sender_address, recipients, private_key, electrum_servers, fee_from_recipient } = req.body;
 
     console.log('Transaction parameters:', {
       sender_address,
@@ -85,7 +85,7 @@ router.post('/', async (req: Request, res: Response) => {
     console.log(`Found ${utxos.length} UTXOs`);
 
     // Calculate total amount in satoshis (already converted above)
-    const totalAmountSatoshis = recipientsInSatoshis.reduce((sum: number, r: any) => sum + r.amount, 0);
+    let totalAmountSatoshis = recipientsInSatoshis.reduce((sum: number, r: any) => sum + r.amount, 0);
     console.log(`Total to send: ${totalAmountSatoshis} satoshis (${(totalAmountSatoshis / 100000000).toFixed(8)} LANA)`);
 
     // Calculate available balance
@@ -125,6 +125,41 @@ router.post('/', async (req: Request, res: Response) => {
       fee = Math.floor(baseFee * 1.5);
 
       console.log(`   -> Selected ${selectedUTXOs.length} UTXOs, total: ${totalSelected} satoshis, new fee: ${fee} satoshis`);
+    }
+
+    // WHERE THE NETWORK FEE COMES FROM WHEN THE OUTPUTS ARE THE WHOLE WALLET.
+    //
+    // A Split enrollment sends 8 account wallets + the PHI donation, and those
+    // nine outputs sum to EXACTLY 100/rate — the whole of what the buyer paid
+    // for (PreviewLana8Wonder.tsx: total = 100/rate, phi = 12/rate,
+    // perWallet = (total - phi)/8, so 8*perWallet + phi === total). The entry
+    // gate asks for exactly 100/rate too. So a buyer who paid the full 100 and
+    // not a penny more holds exactly what the transaction must send, and there
+    // is nothing left anywhere to pay the miner with: refused by 0.000795 LANA
+    // on one input, for ever. Sending himself the quoted shortfall does not
+    // help either — the top-up is a new input and costs another 0.00027 — so
+    // there is no exit at all.
+    //
+    // That is not a wallet problem, it is an arithmetic one: nobody decided
+    // whose money pays the enrollment fee. `fee_from_recipient` decides it, by
+    // naming the output it comes out of — the PHI donation, for the enrollment.
+    // The eight account wallets, which the plan's levels are computed from,
+    // are never touched.
+    //
+    // Opt-in on purpose: a caller that does not name an output keeps exactly
+    // the behaviour it had.
+    if (typeof fee_from_recipient === 'number') {
+      const i = fee_from_recipient;
+      if (!Number.isInteger(i) || i < 0 || i >= recipientsInSatoshis.length) {
+        throw new Error(`fee_from_recipient out of range: ${fee_from_recipient}`);
+      }
+      const bearer = recipientsInSatoshis[i];
+      if (bearer.amount <= fee) {
+        throw new Error(`Output ${i} (${bearer.amount} satoshis) cannot carry the ${fee} satoshi network fee`);
+      }
+      bearer.amount -= fee;
+      totalAmountSatoshis -= fee;
+      console.log(`Fee of ${fee} satoshis taken from output ${i}: now ${bearer.amount} satoshis`);
     }
 
     // Final validation

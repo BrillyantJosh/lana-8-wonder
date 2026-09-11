@@ -180,11 +180,29 @@ const SendLana8WonderTransfer = () => {
         console.warn('⚠️ Donation wallet not configured — skipping PHI donation output');
       }
 
+      // THE NETWORK FEE COMES OUT OF THE PHI DONATION, and it has to come out
+      // of something. The eight account wallets plus the donation add up to
+      // EXACTLY what the buyer paid for (100/rate), and the create page asks
+      // for exactly that much — so a buyer who paid the full 100 holds exactly
+      // what this transaction must send, with nothing left for the miner. He
+      // was refused by 0.000795 LANA with no way out: topping up by the quoted
+      // figure adds an input and costs another 0.00027, every time.
+      //
+      // The donation is the right output to carry it: the eight accounts are
+      // what the plan's levels are computed from and must stay exact to the
+      // lanoshi. When no donation wallet is configured the donation output is
+      // not built at all — and then those 12/rate LANA stay in the wallet and
+      // pay the fee by themselves, so nothing is named here.
+      const feeFromRecipient = donationWalletId && donationWalletId.trim()
+        ? recipients.length - 1
+        : undefined;
+
       // Call the send-lana-multi-output edge function
       const { data, error } = await supabase.functions.invoke('send-lana-multi-output', {
         body: {
           sender_address: sourceWallet,
           recipients: recipients,
+          ...(feeFromRecipient === undefined ? {} : { fee_from_recipient: feeFromRecipient }),
           private_key: privateKey.trim(),
           electrum_servers: [
             { host: "electrum1.lanacoin.com", port: 5097 },
@@ -226,14 +244,24 @@ const SendLana8WonderTransfer = () => {
 
     } catch (error: any) {
       console.error('Transfer error:', error);
-      
+
+      // WHAT THE SERVER ACTUALLY SAID, not a shrug. The API shim returns the
+      // parsed body as the `error` object on a non-2xx, so a refusal arrives
+      // as { success: false, error: "Insufficient funds: need … have …" } —
+      // an object with no `.message`, which fell straight through to
+      // "Transfer failed. Please try again." Someone refused by a fraction of
+      // a LANA was told nothing at all and pressed again, and again.
+      const said = typeof error?.error === 'string' ? error.error
+        : typeof error?.message === 'string' ? error.message
+        : null;
+
       // Set error result
       setTransactionResult({
         success: false,
-        error: error.message || "Transfer failed. Please try again."
+        error: said || "Transfer failed. Please try again."
       });
-      
-      toast.error(error.message || "Transfer failed. Please try again.");
+
+      toast.error(said || "Transfer failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }
