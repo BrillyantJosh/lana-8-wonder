@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { electrumCall, ElectrumServer } from '../lib/electrum.js';
 import { SimplePool } from 'nostr-tools';
+import { BOOTSTRAP_RELAYS as RELAYS, KIND_38888_AUTHORIZED_PUBKEY as KIND_38888_PUBKEY } from '../lib/relayList.js';
 
 const router = Router();
 
@@ -10,8 +11,12 @@ const servers: ElectrumServer[] = [
   { host: 'electrum2.lanacoin.com', port: 5097 }
 ];
 
-const KIND_38888_PUBKEY = '9eb71bf1e9c3189c78800e4c3831c1c1a93ab43b61118818c32e4490891a35b3';
-const RELAYS = ['wss://relay.lanavault.space', 'wss://relay.lanacoin-eternity.com'];
+// This reader is looking for KIND 38888 itself, so it is the one place that
+// legitimately starts from a fixed list — the bootstrap in ../lib/relayList.
+// The two addresses that used to sit here were a bootstrap in name only: one
+// of them was the retired alias relay.lanacoin-eternity.com, so a day when
+// relay.lanavault.space was down left the exchange rate unreadable while two
+// perfectly healthy relays held it.
 
 // Cache exchange rates for 5 minutes to avoid hammering Nostr relays
 let cachedRates: Record<string, number> | null = null;

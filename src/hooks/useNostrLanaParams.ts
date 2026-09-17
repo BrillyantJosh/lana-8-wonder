@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SimplePool, Filter, Event } from 'nostr-tools';
+import { BOOTSTRAP_RELAYS as RELAY_URLS, KIND_38888_AUTHORIZED_PUBKEY as AUTHORIZED_PUBKEY, relaysFromKind38888 } from '@/lib/relayBootstrap';
 
 export interface ElectrumServer {
   host: string;
@@ -23,11 +24,11 @@ export interface LanaSystemParams {
   totalRelays: number;
 }
 
-const AUTHORIZED_PUBKEY = '9eb71bf1e9c3189c78800e4c3831c1c1a93ab43b61118818c32e4490891a35b3';
-const RELAY_URLS = [
-  'wss://relay.lanavault.space',
-  'wss://relay.lanacoin-eternity.com'
-];
+// This hook is the search for KIND 38888 itself, so it is one of the few
+// places that legitimately starts from a fixed list — the bootstrap in
+// @/lib/relayBootstrap, kept at the full four and free of the retired alias
+// relay.lanacoin-eternity.com. Everything downstream uses `params.relays`,
+// which is 38888's own answer.
 
 export const useNostrLanaParams = () => {
   const [params, setParams] = useState<LanaSystemParams | null>(null);
@@ -55,12 +56,13 @@ export const useNostrLanaParams = () => {
           throw new Error('No Lana System Parameters found');
         }
 
-        const latestEvent = event[0] as Event;
+        // Newest wins. `event[0]` off a merged array can be one relay's stale
+        // copy of the parameters, which is how a retired relay list, an old
+        // split or a superseded exchange rate comes back from the dead.
+        const latestEvent = [...event].sort((a, b) => b.created_at - a.created_at)[0] as Event;
 
         // Parse tags
-        const relays = latestEvent.tags
-          .filter(t => t[0] === 'relay')
-          .map(t => t[1]);
+        const relays = relaysFromKind38888(latestEvent);
 
         const electrum = latestEvent.tags
           .filter(t => t[0] === 'electrum')

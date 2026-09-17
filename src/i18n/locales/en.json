@@ -370,5 +370,29 @@
     "scanToReceive": "Scan to receive",
     "scanToSpend": "Scan to spend",
     "keySafety": "Whoever holds the private key holds the money. Keep this document as you would keep cash."
+  },
+  "freeze": {
+    "buyCheckFailedBody": "The registrar did not answer, so we do not know whether this wallet is frozen. We will not take a payment we might then have to refuse. Please try again in a few minutes.",
+    "buyCheckFailedTitle": "We could not check this wallet",
+    "buyFrozenBody": "The registrar has frozen this wallet, so it cannot receive a purchase and the account cannot enrol. You have not paid anything yet.",
+    "buyFrozenTitle": "This wallet is frozen",
+    "cannotUseFrozenWallet": "This wallet is frozen and cannot be used as the source of a plan.",
+    "contactRegistrar": "To have the freeze reviewed, contact the registrar.",
+    "correlationId": "Reference for support:",
+    "frozenWalletsLabel": "Frozen wallets:",
+    "notARelayProblem": "This is not a network problem. Trying again will give the same answer.",
+    "reasonGeneric": "Frozen by the registrar",
+    "reasonL8w": "Late wallet registration",
+    "reasonMaxCap": "Balance above the published maximum cap",
+    "reasonOwnPerson": "Sanction in the OWN process",
+    "reasonTooWild": "Irregular or suspicious activity",
+    "reasonUnregLanas": "Unregistered LANA above the threshold",
+    "registrarSaid": "The registrar said:",
+    "registrationFrozenBody": "Your account has a frozen wallet. While it is frozen, the registrar will not enrol you in Lana8Wonder. Nothing was registered and nothing was published.",
+    "registrationRefusedTitle": "The registrar refused the enrolment",
+    "retry": "Try again",
+    "walletFrozenBadge": "Frozen",
+    "walletStateUnknownBody": "None of the Lana servers answered, so we do not know whether any of your wallets is frozen. Rather than show you something that may be wrong, we show nothing. Please try again in a few minutes.",
+    "walletStateUnknownTitle": "We could not read your wallet list"
   }
 }

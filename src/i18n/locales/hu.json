@@ -370,5 +370,29 @@
     "scanToReceive": "Olvassa be a fogadáshoz",
     "scanToSpend": "Olvassa be a költéshez",
     "keySafety": "Akinél a privát kulcs van, azé a pénz. Őrizze ezt a dokumentumot úgy, mint a készpénzt."
+  },
+  "freeze": {
+    "buyCheckFailedBody": "A regisztrátor nem válaszolt, ezért nem tudjuk, hogy ez a tárca be van-e fagyasztva. Nem fogadunk el olyan fizetést, amelyet utána vissza kellene utasítanunk. Kérjük, próbálja újra néhány perc múlva.",
+    "buyCheckFailedTitle": "Nem tudtuk ellenőrizni ezt a tárcát",
+    "buyFrozenBody": "A regisztrátor befagyasztotta ezt a tárcát, így nem fogadhat vásárlást, és a fiók nem léphet be. Még semmit nem fizetett.",
+    "buyFrozenTitle": "Ez a tárca be van fagyasztva",
+    "cannotUseFrozenWallet": "Ez a tárca be van fagyasztva, ezért nem használható egy terv forrásaként.",
+    "contactRegistrar": "A befagyasztás felülvizsgálatához forduljon a regisztrátorhoz.",
+    "correlationId": "Hivatkozás az ügyfélszolgálathoz:",
+    "frozenWalletsLabel": "Befagyasztott tárcák:",
+    "notARelayProblem": "Ez nem hálózati hiba. Az újrapróbálkozás ugyanezt a választ adja.",
+    "reasonGeneric": "A regisztrátor befagyasztotta",
+    "reasonL8w": "Késői tárcaregisztráció",
+    "reasonMaxCap": "Az egyenleg meghaladja a közzétett felső határt",
+    "reasonOwnPerson": "Szankció az OWN folyamatban",
+    "reasonTooWild": "Szokatlan vagy gyanús tevékenység",
+    "reasonUnregLanas": "A küszöb feletti nem regisztrált LANA",
+    "registrarSaid": "A regisztrátor válasza:",
+    "registrationFrozenBody": "A fiókjában befagyasztott tárca van. Amíg be van fagyasztva, a regisztrátor nem lépteti be Önt a Lana8Wonderbe. Semmi nem lett regisztrálva és semmi nem lett közzétéve.",
+    "registrationRefusedTitle": "A regisztrátor elutasította a belépést",
+    "retry": "Újrapróbálkozás",
+    "walletFrozenBadge": "Befagyasztva",
+    "walletStateUnknownBody": "A Lana-kiszolgálók közül egy sem válaszolt, ezért nem tudjuk, hogy befagyasztott-e valamelyik tárcája. Ahelyett, hogy esetleg tévesat mutatnánk, semmit nem mutatunk. Kérjük, próbálja újra néhány perc múlva.",
+    "walletStateUnknownTitle": "Nem tudtuk beolvasni a tárcalistáját"
   }
 }

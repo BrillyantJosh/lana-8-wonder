@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Loader2, Wallet, AlertCircle } from "lucide-react";
+import { LogOut, Loader2, Wallet, AlertCircle, AlertTriangle, Snowflake } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
-import { fetchKind30889, type WalletListRecord } from "@/lib/nostrClient";
+import { readKind30889, type WalletListRecord, type WalletListReadState } from "@/lib/kind30889Read";
+import { freezeReasonLabel } from "@/lib/freezeReasons";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { api as supabase } from "@/integrations/api/client";
@@ -20,6 +21,12 @@ const CreateLana8Wonder = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [walletRecords, setWalletRecords] = useState<WalletListRecord[]>([]);
+  // FAIL CLOSED. `found` / `empty` / `unreachable` are three different
+  // facts, and only the first two are safe to draw a wallet list from: a
+  // list read from nobody cannot be trusted to show a freeze, and the
+  // freeze is the thing that stops a person paying for a plan the
+  // registrar will refuse.
+  const [readState, setReadState] = useState<WalletListReadState | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("");
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
@@ -61,9 +68,20 @@ const CreateLana8Wonder = () => {
       }
 
       try {
-        const records = await fetchKind30889(parsedSession.nostrHexId, params.relays);
+        const result = await readKind30889(parsedSession.nostrHexId, params.relays);
+        setReadState(result.state);
+
+        if (result.state === 'unreachable') {
+          // Nobody answered. An empty list here would read as "you have no
+          // wallets" and, worse, as "none of them is frozen".
+          console.warn('KIND 30889 unreadable — no relay answered:', result.silent);
+          setWalletRecords([]);
+          return;
+        }
+
+        const records = result.records;
         setWalletRecords(records);
-        
+
         // Load balances for all wallets
         if (records.length > 0 && params?.electrum && params.electrum.length > 0) {
           const allWalletAddresses = records.flatMap(r => 
@@ -73,6 +91,7 @@ const CreateLana8Wonder = () => {
         }
       } catch (error) {
         console.error("Error loading wallets:", error);
+        setReadState('unreachable');
         toast.error("Failed to load wallet list");
       } finally {
         setLoading(false);
@@ -271,6 +290,17 @@ const CreateLana8Wonder = () => {
   // upgrade-choice modal (if eligible) or navigate directly (current split).
   const handleAssignClick = async (walletAddress: string, currentBalance: number, isUpgradeEligible: boolean) => {
     try {
+      // The gate is repeated here on purpose. A rule that lives only in the
+      // markup is one refactor away from being gone.
+      if (readState !== 'found' && readState !== 'empty') {
+        toast.error(t('freeze.walletStateUnknownTitle'));
+        return;
+      }
+      const chosen = allWalletsDeduped.find(w => w.wallet_address === walletAddress);
+      if (chosen?.frozen) {
+        toast.error(`${t('freeze.cannotUseFrozenWallet')} ${freezeReasonLabel(chosen.freeze_reason, t)}`);
+        return;
+      }
       if (await checkExistingPlanAndRedirect()) return;
       if (isUpgradeEligible) {
         setUpgradeChoice({ walletAddress, currentBalance });
@@ -342,6 +372,20 @@ const CreateLana8Wonder = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
+              ) : readState === 'unreachable' || readState === null ? (
+                /* Silence gets its own screen. The old code fell through to
+                   "No wallets found for your account", which is a statement
+                   about this person, made on no evidence at all. */
+                <div className="text-center py-8 space-y-3">
+                  <AlertTriangle className="h-8 w-8 mx-auto text-amber-600 dark:text-amber-400" />
+                  <p className="text-sm font-semibold">{t('freeze.walletStateUnknownTitle')}</p>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    {t('freeze.walletStateUnknownBody')}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                    {t('freeze.retry')}
+                  </Button>
+                </div>
               ) : allWalletsDeduped.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-muted-foreground">{t('createLana8Wonder.noWalletsFound')}</p>
@@ -356,7 +400,10 @@ const CreateLana8Wonder = () => {
                     {allWalletsDeduped.map((wallet, idx) => {
                       const currentBalance = walletBalances[wallet.wallet_address] || 0;
                       const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
-                      const hasEnoughBalance = meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible;
+                      // A frozen wallet has no "enough" — the registrar will
+                      // refuse it whatever it holds, so offering it is the
+                      // whole bug in miniature.
+                      const hasEnoughBalance = !wallet.frozen && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
 
                       return (
                         <Card key={idx} className="overflow-hidden">
@@ -393,7 +440,20 @@ const CreateLana8Wonder = () => {
 
                             <div className="flex items-center justify-between gap-3 pt-2 border-t">
                               <div>
-                                {!balancesLoading && minimumRequired > 0 && (
+                                {wallet.frozen ? (
+                                  <div className="space-y-1">
+                                    <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit">
+                                      <Snowflake className="h-3 w-3" />
+                                      {t('freeze.walletFrozenBadge')}
+                                    </Badge>
+                                    <p className="text-xs text-muted-foreground">
+                                      {freezeReasonLabel(wallet.freeze_reason, t)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {t('freeze.cannotUseFrozenWallet')}
+                                    </p>
+                                  </div>
+                                ) : !balancesLoading && minimumRequired > 0 && (
                                   isUpgradeEligible ? (
                                     <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs">
                                       ✓ Split {currentSplit - 1} Upgrade
@@ -449,7 +509,7 @@ const CreateLana8Wonder = () => {
                         {allWalletsDeduped.map((wallet, idx) => {
                           const currentBalance = walletBalances[wallet.wallet_address] || 0;
                           const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
-                          const hasEnoughBalance = meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible;
+                          const hasEnoughBalance = !wallet.frozen && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
 
                           return (
                             <TableRow key={idx}>
@@ -472,7 +532,20 @@ const CreateLana8Wonder = () => {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{wallet.note || "—"}</TableCell>
                               <TableCell>
-                                {!balancesLoading && minimumRequired > 0 && (
+                                {wallet.frozen ? (
+                                  <div className="space-y-1">
+                                    <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit whitespace-nowrap">
+                                      <Snowflake className="h-3 w-3" />
+                                      {t('freeze.walletFrozenBadge')}
+                                    </Badge>
+                                    <p className="text-xs text-muted-foreground">
+                                      {freezeReasonLabel(wallet.freeze_reason, t)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground max-w-xs">
+                                      {t('freeze.cannotUseFrozenWallet')}
+                                    </p>
+                                  </div>
+                                ) : !balancesLoading && minimumRequired > 0 && (
                                   isUpgradeEligible ? (
                                     <Badge variant="default" className="bg-amber-600 hover:bg-amber-700 text-white text-xs whitespace-nowrap">
                                       ✓ Split {currentSplit - 1} Upgrade

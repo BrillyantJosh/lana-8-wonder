@@ -18,6 +18,7 @@ import {
   UserPlus,
   Check,
   FileDown,
+  Snowflake,
 } from 'lucide-react';
 import { useQRScanner } from '@/hooks/useQRScanner';
 import { toast } from 'sonner';
@@ -33,10 +34,15 @@ import {
   type PaymentMethodChoice,
 } from '@/lib/paymentInstructions';
 import { generatePaymentSlipPDF, type PaymentSlipRow } from '@/lib/paymentSlipPdf';
+import { evaluateWalletCheck } from '@/lib/buyWalletGate';
+import { freezeReasonLabel } from '@/lib/freezeReasons';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
-type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format' | 'has_lana8wonder';
+// `frozen` and `check_failed` both stop the wizard BEFORE step 4. A frozen
+// account cannot enrol, so taking its hundred first and refusing after is
+// the one outcome worth writing two states to avoid.
+type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format' | 'has_lana8wonder' | 'frozen' | 'check_failed';
 
 const BuyLana8Wonder = () => {
   const { t, i18n } = useTranslation();
@@ -85,6 +91,7 @@ const BuyLana8Wonder = () => {
   // Step 3: Wallet
   const [walletId, setWalletId] = useState('');
   const [walletStatus, setWalletStatus] = useState<WalletStatus>('idle');
+  const [freezeDetail, setFreezeDetail] = useState<{ wallet: string; reason: string }>({ wallet: '', reason: '' });
   const [walletError, setWalletError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
@@ -331,9 +338,29 @@ const BuyLana8Wonder = () => {
         },
         body: JSON.stringify({ wallet_id: address })
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (json.registered) {
+      // The same answer already carries `frozen` and `freeze_reason`; the flow
+      // used to read past them. A freeze we could not read is NOT an absent
+      // freeze — `check_failed` stops here rather than letting a payment
+      // through on a guess. (The `check-lana8wonder` call below is deliberately
+      // fail-OPEN; that is a different question with a different worst case.)
+      const verdict = evaluateWalletCheck(res.ok, json);
+
+      if (verdict.decision === 'check_failed') {
+        setWalletStatus('check_failed');
+        setWalletError(verdict.serverText || t('freeze.buyCheckFailedBody'));
+        return;
+      }
+
+      if (verdict.decision === 'frozen') {
+        setFreezeDetail({ wallet: verdict.wallet || address, reason: verdict.reason });
+        setWalletStatus('frozen');
+        setWalletError(t('freeze.buyFrozenBody'));
+        return;
+      }
+
+      if (verdict.decision === 'registered') {
         // Check if this wallet's owner already has a Lana8Wonder plan (KIND 88888)
         // Uses server-side endpoint for reliable relay connectivity
         const hexId = json.wallet?.nostr_hex_id;
@@ -364,10 +391,23 @@ const BuyLana8Wonder = () => {
       }
     } catch (error) {
       console.error('Error checking registration:', error);
-      setWalletStatus('idle');
-      setWalletError('Error checking registration. Please try again.');
+      // Fail closed and say so. 'idle' left the wizard looking merely
+      // unfinished, when in fact we had failed to ask the one question that
+      // decides whether this person may pay at all.
+      setWalletStatus('check_failed');
+      setWalletError(t('freeze.buyCheckFailedBody'));
     }
   }, [t]);
+
+  // If the wallet stops being acceptable after the wizard has moved on — a
+  // re-check that comes back frozen, or one that cannot be made — walk back to
+  // the wallet step. Nobody should reach a payment screen on a verdict that
+  // has since been withdrawn.
+  useEffect(() => {
+    if (currentStep >= 4 && currentStep <= 5 && (walletStatus === 'frozen' || walletStatus === 'check_failed')) {
+      setCurrentStep(3);
+    }
+  }, [currentStep, walletStatus]);
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -750,6 +790,56 @@ const BuyLana8Wonder = () => {
       );
     }
 
+    if (walletStatus === 'frozen') {
+      return (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <Snowflake className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                {t('freeze.buyFrozenTitle')}
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {t('freeze.buyFrozenBody')}
+              </p>
+              {freezeDetail.wallet && (
+                <p className="font-mono text-xs text-red-600 dark:text-red-400 break-all">
+                  {freezeDetail.wallet}
+                </p>
+              )}
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {freezeReasonLabel(freezeDetail.reason, t)}
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {t('freeze.contactRegistrar')}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (walletStatus === 'check_failed') {
+      return (
+        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-800">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                {t('freeze.buyCheckFailedTitle')}
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {t('freeze.buyCheckFailedBody')}
+              </p>
+              {walletError && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 break-words">{walletError}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (walletStatus === 'has_lana8wonder') {
       return (
         <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800">
@@ -875,7 +965,7 @@ const BuyLana8Wonder = () => {
               className={`font-mono text-xs sm:text-sm flex-1 ${
                 walletStatus === 'registered'
                   ? 'border-green-500'
-                  : walletStatus === 'not_registered' || walletStatus === 'already_used' || walletStatus === 'invalid_format' || walletStatus === 'has_lana8wonder'
+                  : walletStatus === 'not_registered' || walletStatus === 'already_used' || walletStatus === 'invalid_format' || walletStatus === 'has_lana8wonder' || walletStatus === 'frozen' || walletStatus === 'check_failed'
                   ? 'border-destructive'
                   : ''
               }`}
@@ -979,6 +1069,9 @@ const BuyLana8Wonder = () => {
           <Button
             className="w-full"
             size="lg"
+            // The only forward door into the payment steps. It opens on
+            // 'registered' and on nothing else — 'frozen' and 'check_failed'
+            // both keep it shut, which is the whole point of having them.
             disabled={walletStatus !== 'registered'}
             onClick={() => setCurrentStep(4)}
           >

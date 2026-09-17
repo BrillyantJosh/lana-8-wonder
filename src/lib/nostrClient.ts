@@ -1,4 +1,10 @@
 import { SimplePool, type Event, type Filter } from 'nostr-tools';
+import { readKind30889, type WalletInfo, type WalletListRecord } from './kind30889Read';
+
+// The wallet types live in kind30889Read.ts, next to the parser that fills
+// them — the freeze field (`w` tag index 6) used to be dropped here, and
+// keeping the shape and the parser apart is what let that happen quietly.
+export type { WalletInfo, WalletListRecord };
 
 export interface Lana8WonderPlan {
   subject_hex: string;
@@ -18,21 +24,6 @@ export interface Lana8WonderPlan {
       remaining_lanas: number;
     }>;
   }>;
-}
-
-export interface WalletInfo {
-  wallet_address: string;
-  wallet_type: string;
-  coin: string;
-  note: string;
-  unregistered_lanoshi: number;
-}
-
-export interface WalletListRecord {
-  customer_hex: string;
-  status: string;
-  wallets: WalletInfo[];
-  registrar_pubkey: string;
 }
 
 export interface LanaProfile {
@@ -118,71 +109,18 @@ export async function fetchKind0Profile(nostrHexId: string, relayUrls: string[])
   }
 }
 
+/**
+ * Backwards-compatible wrapper: the records, or an empty array.
+ *
+ * Callers that must not confuse "no relay answered" with "this person has no
+ * wallets" — anything gating on a freeze — use `readKind30889` instead and
+ * look at `state`. This wrapper exists for the places where an empty list and
+ * a silent network genuinely lead to the same screen.
+ */
 export async function fetchKind30889(customerHexId: string, relayUrls: string[]): Promise<WalletListRecord[]> {
-  const filter: Filter = {
-    kinds: [30889],
-    "#d": [customerHexId]
-  };
-
-  console.log("Fetching KIND 30889 for:", customerHexId);
-  console.log("Using relays:", relayUrls);
-
-  const pool = new SimplePool();
-
-  try {
-    const events = await pool.querySync(relayUrls, filter);
-    
-    console.log(`Found ${events.length} wallet list events`);
-
-    if (events.length === 0) {
-      console.log("No KIND 30889 events found");
-      return [];
-    }
-
-    // Deduplikacija: obdrži samo najnovejši event za vsakega registrarja (pubkey)
-    const latestByRegistrar = new Map<string, typeof events[0]>();
-    for (const event of events) {
-      const existing = latestByRegistrar.get(event.pubkey);
-      if (!existing || event.created_at > existing.created_at) {
-        latestByRegistrar.set(event.pubkey, event);
-      }
-    }
-    const dedupedEvents = Array.from(latestByRegistrar.values());
-    console.log(`After dedup by registrar: ${dedupedEvents.length} unique registrar events (was ${events.length})`);
-
-    const records: WalletListRecord[] = [];
-
-    for (const event of dedupedEvents) {
-      const dTag = event.tags.find(t => t[0] === "d");
-      const statusTag = event.tags.find(t => t[0] === "status");
-      const walletTags = event.tags.filter(t => t[0] === "w");
-
-      if (!dTag || !statusTag) continue;
-
-      const wallets: WalletInfo[] = walletTags.map(tag => ({
-        wallet_address: tag[1] || "",
-        wallet_type: tag[2] || "",
-        coin: tag[3] || "LANA",
-        note: tag[4] || "",
-        unregistered_lanoshi: parseInt(tag[5] || "0", 10)
-      }));
-
-      records.push({
-        customer_hex: dTag[1],
-        status: statusTag[1],
-        wallets,
-        registrar_pubkey: event.pubkey
-      });
-    }
-
-    console.log("Parsed wallet records:", records);
-    return records;
-  } catch (error) {
-    console.error("Error fetching KIND 30889:", error);
-    return [];
-  } finally {
-    pool.close(relayUrls);
-  }
+  const result = await readKind30889(customerHexId, relayUrls);
+  console.log(`KIND 30889 read: ${result.state}, ${result.records.length} record(s), answered by ${result.answered.length}/${relayUrls.length} relays`);
+  return result.records;
 }
 
 export async function fetchKind88888(nostrHexId: string, relayUrls: string[]): Promise<Lana8WonderPlan | null> {

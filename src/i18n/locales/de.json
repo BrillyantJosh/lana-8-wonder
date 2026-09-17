@@ -370,5 +370,29 @@
     "scanToReceive": "Zum Empfangen scannen",
     "scanToSpend": "Zum Ausgeben scannen",
     "keySafety": "Wer den privaten Schlüssel hat, hat das Geld. Bewahren Sie dieses Dokument auf wie Bargeld."
+  },
+  "freeze": {
+    "buyCheckFailedBody": "Der Registrar hat nicht geantwortet, daher wissen wir nicht, ob diese Wallet eingefroren ist. Wir nehmen keine Zahlung an, die wir danach ablehnen müssten. Bitte versuchen Sie es in einigen Minuten erneut.",
+    "buyCheckFailedTitle": "Wir konnten diese Wallet nicht prüfen",
+    "buyFrozenBody": "Der Registrar hat diese Wallet eingefroren. Sie kann keinen Kauf empfangen und das Konto kann sich nicht anmelden. Sie haben noch nichts bezahlt.",
+    "buyFrozenTitle": "Diese Wallet ist eingefroren",
+    "cannotUseFrozenWallet": "Diese Wallet ist eingefroren und kann nicht als Quelle eines Plans dienen.",
+    "contactRegistrar": "Wenden Sie sich an den Registrar, damit die Sperre geprüft wird.",
+    "correlationId": "Referenz für den Support:",
+    "frozenWalletsLabel": "Eingefrorene Wallets:",
+    "notARelayProblem": "Das ist kein Netzwerkproblem. Ein erneuter Versuch führt zur selben Antwort.",
+    "reasonGeneric": "Vom Registrar eingefroren",
+    "reasonL8w": "Verspätete Wallet-Registrierung",
+    "reasonMaxCap": "Guthaben über der veröffentlichten Obergrenze",
+    "reasonOwnPerson": "Sanktion im OWN-Prozess",
+    "reasonTooWild": "Ungewöhnliche oder verdächtige Aktivität",
+    "reasonUnregLanas": "Nicht registrierte LANA über dem Schwellenwert",
+    "registrarSaid": "Der Registrar antwortete:",
+    "registrationFrozenBody": "Ihr Konto hat eine eingefrorene Wallet. Solange sie eingefroren ist, meldet der Registrar Sie nicht bei Lana8Wonder an. Es wurde nichts registriert und nichts veröffentlicht.",
+    "registrationRefusedTitle": "Der Registrar hat die Anmeldung abgelehnt",
+    "retry": "Erneut versuchen",
+    "walletFrozenBadge": "Eingefroren",
+    "walletStateUnknownBody": "Keiner der Lana-Server hat geantwortet, daher wissen wir nicht, ob eine Ihrer Wallets eingefroren ist. Statt Ihnen etwas möglicherweise Falsches zu zeigen, zeigen wir nichts. Bitte versuchen Sie es in einigen Minuten erneut.",
+    "walletStateUnknownTitle": "Wir konnten Ihre Wallet-Liste nicht lesen"
   }
 }

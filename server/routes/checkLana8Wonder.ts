@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { SimplePool } from 'nostr-tools/pool';
+import { getLanaRelays } from '../lib/relayList.js';
 import WebSocket from 'ws';
 
 // Polyfill WebSocket for Node.js (required by nostr-tools SimplePool)
@@ -10,11 +11,11 @@ if (typeof globalThis.WebSocket === 'undefined') {
 const router = Router();
 
 const MAIN_PUBLISHER = 'a56253e6232b2ab5a96b60d233434d4f759ba4c858a3cc0f4ec51906dce73ae6';
-const RELAYS = [
-  'wss://relay.lanavault.space',
-  'wss://relay.lanacoin-eternity.com',
-  'wss://relay.lanaheartvoice.com'
-];
+
+// Relays come from KIND 38888, never from a list kept here. The list that used
+// to sit at this line named the retired alias relay.lanacoin-eternity.com and
+// left out relay.lovelana.org — so a plan that lived only on lovelana.org read
+// as "no plan".
 
 // POST /api/check-lana8wonder
 // Body: { nostr_hex_id: string }
@@ -34,6 +35,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     console.log(`Checking KIND 88888 for hex: ${nostr_hex_id.slice(0, 8)}...`);
 
+    const RELAYS = await getLanaRelays();
     const pool = new SimplePool();
 
     try {

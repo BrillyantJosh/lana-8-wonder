@@ -370,5 +370,29 @@
     "scanToReceive": "Skeniraj za prejem",
     "scanToSpend": "Skeniraj za razpolaganje",
     "keySafety": "Kdor ima zasebni ključ, ima denar. Ta dokument hranite tako, kot bi hranili gotovino."
+  },
+  "freeze": {
+    "buyCheckFailedBody": "Registrar ni odgovoril, zato ne vemo, ali je ta denarnica zamrznjena. Plačila ne vzamemo, če bi ga morali potem zavrniti. Poskusite čez nekaj minut.",
+    "buyCheckFailedTitle": "Denarnice nismo mogli preveriti",
+    "buyFrozenBody": "Registrar je to denarnico zamrznil, zato nakupa ne more prejeti in vpis ni mogoč. Ničesar še niste plačali.",
+    "buyFrozenTitle": "Ta denarnica je zamrznjena",
+    "cannotUseFrozenWallet": "Ta denarnica je zamrznjena in je ni mogoče uporabiti kot izhodišče za načrt.",
+    "contactRegistrar": "Za pregled zamrznitve se obrnite na registrarja.",
+    "correlationId": "Sklic za pomoč:",
+    "frozenWalletsLabel": "Zamrznjene denarnice:",
+    "notARelayProblem": "To ni težava z omrežjem. Ponoven poskus bo dal isti odgovor.",
+    "reasonGeneric": "Registrar je denarnico zamrznil",
+    "reasonL8w": "Prepozen vpis denarnice",
+    "reasonMaxCap": "Stanje presega objavljeno zgornjo mejo",
+    "reasonOwnPerson": "Sankcija v procesu OWN",
+    "reasonTooWild": "Nenavadno ali sumljivo dogajanje",
+    "reasonUnregLanas": "Preveč nevpisanih LANA",
+    "registrarSaid": "Registrar je odgovoril:",
+    "registrationFrozenBody": "Na vašem računu je zamrznjena denarnica. Dokler je zamrznjena, vas registrar v Lana8Wonder ne vpiše. Nič ni bilo vpisano in nič ni bilo objavljeno.",
+    "registrationRefusedTitle": "Registrar je vpis zavrnil",
+    "retry": "Poskusi znova",
+    "walletFrozenBadge": "Zamrznjena",
+    "walletStateUnknownBody": "Noben od Lana strežnikov ni odgovoril, zato ne vemo, ali je katera vaša denarnica zamrznjena. Da vam ne bi pokazali napačnega, ne pokažemo nič. Poskusite čez nekaj minut.",
+    "walletStateUnknownTitle": "Seznama vaših denarnic nismo mogli prebrati"
   }
 }

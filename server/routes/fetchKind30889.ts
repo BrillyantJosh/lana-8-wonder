@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { SimplePool } from 'nostr-tools/pool';
+import { getLanaRelays } from '../lib/relayList.js';
 import WebSocket from 'ws';
 
 // Polyfill WebSocket for Node.js
@@ -9,11 +10,10 @@ if (typeof globalThis.WebSocket === 'undefined') {
 
 const router = Router();
 
-const RELAYS = [
-  'wss://relay.lanavault.space',
-  'wss://relay.lanacoin-eternity.com',
-  'wss://relay.lanaheartvoice.com'
-];
+// Relays come from KIND 38888, never from a list kept here. The list that used
+// to sit at this line named the retired alias relay.lanacoin-eternity.com and
+// left out relay.lovelana.org — three addresses for four relays, one of them
+// a duplicate of another.
 
 // POST /api/admin/fetch-kind30889
 // Body: { nostr_hex_id: string }
@@ -28,6 +28,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     console.log(`Fetching KIND 30889 for: ${nostr_hex_id.slice(0, 8)}...`);
 
+    const RELAYS = await getLanaRelays();
     const pool = new SimplePool();
 
     try {
@@ -86,12 +87,18 @@ router.post('/', async (req: Request, res: Response) => {
         registrarPubkey = event.pubkey;
 
         for (const tag of walletTags) {
+          // Field 6 is the registrar's freeze reason. This parser read five of
+          // the seven fields and dropped it, which is how a frozen wallet came
+          // back through this endpoint looking exactly like a usable one.
+          const freezeReason = (tag[6] || '').trim();
           allWallets.push({
             wallet_address: tag[1] || '',
             wallet_type: tag[2] || '',
             coin: tag[3] || 'LANA',
             note: tag[4] || '',
-            unregistered_lanoshi: parseInt(tag[5] || '0', 10)
+            unregistered_lanoshi: parseInt(tag[5] || '0', 10),
+            freeze_reason: freezeReason,
+            frozen: freezeReason.length > 0
           });
         }
       }

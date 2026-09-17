@@ -11,6 +11,8 @@ import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { fetchKind30889 } from "@/lib/nostrClient";
+import { interpretRegistrationResponse, isRefusal, type RegistrationRefusal } from "@/lib/registrationRefusal";
+import { freezeReasonLabel } from "@/lib/freezeReasons";
 import { getCurrencySymbol } from "@/lib/utils";
 
 interface TradingLevel {
@@ -193,6 +195,9 @@ const PreviewLana8Wonder = () => {
   const [nostrHexId, setNostrHexId] = useState<string>('');
   const [walletRegistered, setWalletRegistered] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<any>(null);
+  // The registrar's own refusal, kept so the page can repeat it verbatim
+  // instead of replacing it with a guess about the relays.
+  const [registrationRefusal, setRegistrationRefusal] = useState<RegistrationRefusal | null>(null);
   const [txHash, setTxHash] = useState<string>('');
   const [publishedPlan, setPublishedPlan] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
@@ -334,6 +339,10 @@ const PreviewLana8Wonder = () => {
     const autoVerifyKind30889 = async () => {
       // Only run when wallet is registered, we have nostrHexId, relays, wallets, and haven't verified yet
       if (!walletRegistered || !nostrHexId || !params?.relays || params.relays.length === 0) return;
+      // An explicit refusal outranks anything the relays could tell us: the
+      // registration never happened, so "not on the relays" would be true and
+      // beside the point.
+      if (registrationRefusal) return;
       if (relayVerifyStatus !== 'idle') return; // Don't re-run if already verifying/verified
       if (!effectiveWallets || effectiveWallets.length === 0) return;
 
@@ -376,7 +385,7 @@ const PreviewLana8Wonder = () => {
     };
 
     autoVerifyKind30889();
-  }, [walletRegistered, nostrHexId, params?.relays, effectiveWallets, relayVerifyStatus]);
+  }, [walletRegistered, nostrHexId, params?.relays, effectiveWallets, relayVerifyStatus, registrationRefusal]);
 
   // Load plan data from database if not in location.state
   useEffect(() => {
@@ -819,11 +828,47 @@ const PreviewLana8Wonder = () => {
       if (!contentType?.includes('application/json')) {
         const textBody = await response.text();
         console.error('Non-JSON response:', textBody.substring(0, 500));
-        throw new Error(`API returned non-JSON response (status ${response.status})`);
+        // An answer we cannot parse is still an answer, and it is a refusal.
+        // Show what came back rather than inventing a story about relays.
+        setRegistrationRefusal({
+          kind: 'server_message',
+          status: '',
+          frozenWallets: [],
+          serverText: textBody.trim().slice(0, 400) || `HTTP ${response.status}`,
+          httpStatus: response.status,
+          correlationId: '',
+        });
+        setWalletRegistered(false);
+        toast.error(t('freeze.registrationRefusedTitle'), { duration: 10000 });
+        return;
       }
 
       const result = await response.json();
       console.log('Response body:', JSON.stringify(result, null, 2));
+
+      // === DID THE SERVER REFUSE? ===
+      //
+      // It did this fourteen times to one person and the page never said so.
+      // A refusal is final: the registrar has already decided, nothing was
+      // published, and walking on to relay verification only replaces its
+      // answer with a guess about the network — the guess that had her
+      // pressing the button again for two days.
+      const refusal = interpretRegistrationResponse(response.status, response.ok, result);
+      if (isRefusal(refusal)) {
+        console.error('⛔ Registration refused by the registrar:', refusal);
+        setRegistrationRefusal(refusal);
+        setRegistrationResult(null);
+        setWalletRegistered(false);
+        setRelayVerifyStatus('idle');
+        toast.error(
+          refusal.kind === 'frozen_account'
+            ? t('freeze.registrationRefusedTitle')
+            : refusal.serverText || t('freeze.registrationRefusedTitle'),
+          { duration: 10000 }
+        );
+        return; // STOP. No relay verification, no "not on the relays yet".
+      }
+      setRegistrationRefusal(null);
 
       // STRICT validation: API must return success AND all 8 nostr broadcasts must succeed
       const apiSuccess = response.ok && result.success;
@@ -952,9 +997,19 @@ const PreviewLana8Wonder = () => {
         stack: error?.stack
       });
 
-      // If the external API fails completely (network error etc.),
-      // still try to mark as registered since user says wallets exist
-      toast.error(`Registration error: ${error?.message || 'Unknown error'}. Check browser console for details.`);
+      // A request that never got an answer is also a stop. It used to leave
+      // only a toast behind, so the last thing on screen stayed whatever the
+      // previous attempt had put there.
+      setRegistrationRefusal({
+        kind: 'server_message',
+        status: '',
+        frozenWallets: [],
+        serverText: error?.message || 'Unknown error',
+        httpStatus: 0,
+        correlationId: '',
+      });
+      setWalletRegistered(false);
+      toast.error(`${t('freeze.registrationRefusedTitle')}: ${error?.message || 'Unknown error'}`, { duration: 10000 });
     } finally {
       setIsRegistering(false);
     }
@@ -1160,6 +1215,62 @@ const PreviewLana8Wonder = () => {
                   })}
                 </div>
                 
+                {/* === THE REGISTRAR SAID NO === */}
+                {registrationRefusal && (
+                  <div className="mt-4 md:mt-6 p-3 md:p-4 bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 rounded-lg">
+                    <div className="flex items-start gap-2 md:gap-3">
+                      <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="space-y-2 min-w-0">
+                        <p className="font-bold text-sm md:text-base text-red-800 dark:text-red-200">
+                          {t('freeze.registrationRefusedTitle')}
+                        </p>
+
+                        {registrationRefusal.kind === 'frozen_account' && (
+                          <p className="text-sm text-red-700 dark:text-red-300">
+                            {t('freeze.registrationFrozenBody')}
+                          </p>
+                        )}
+
+                        {registrationRefusal.frozenWallets.length > 0 && (
+                          <div className="text-sm text-red-700 dark:text-red-300">
+                            <p className="font-semibold">{t('freeze.frozenWalletsLabel')}</p>
+                            <ul className="mt-1 space-y-1">
+                              {registrationRefusal.frozenWallets.map((w) => (
+                                <li key={w.wallet}>
+                                  <span className="font-mono text-xs break-all">{w.wallet}</span>
+                                  <span className="block text-xs">{freezeReasonLabel(w.reason, t)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* The server's own words, always — an error shape we do
+                            not recognise must still reach the person. */}
+                        {registrationRefusal.serverText && (
+                          <div className="text-sm text-red-700 dark:text-red-300">
+                            <p className="font-semibold">{t('freeze.registrarSaid')}</p>
+                            <p className="text-xs break-words">{registrationRefusal.serverText}</p>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          {t('freeze.notARelayProblem')}
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          {t('freeze.contactRegistrar')}
+                        </p>
+                        {registrationRefusal.correlationId && (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {t('freeze.correlationId')}{' '}
+                            <span className="font-mono break-all">{registrationRefusal.correlationId}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {walletRegistered ? (
                   <>
                     <div className="mt-4 md:mt-6 p-2 md:p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
@@ -1233,6 +1344,7 @@ const PreviewLana8Wonder = () => {
                               setRelayVerifyStatus('idle');
                               setWalletRegistered(false);
                               setRegistrationResult(null);
+                              setRegistrationRefusal(null);
                               handleRegisterWallets();
                             }}
                             disabled={isRegistering}
@@ -1260,7 +1372,7 @@ const PreviewLana8Wonder = () => {
                   <div className="flex flex-col items-center gap-2 mt-4 md:gap-3 md:mt-6">
                     <Button
                       onClick={handleRegisterWallets}
-                      disabled={isRegistering}
+                      disabled={isRegistering || registrationRefusal?.kind === 'frozen_account'}
                       className="w-full sm:w-auto"
                     >
                       {isRegistering ? (

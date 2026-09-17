@@ -370,5 +370,29 @@
     "scanToReceive": "Scansiona per ricevere",
     "scanToSpend": "Scansiona per spendere",
     "keySafety": "Chi ha la chiave privata ha il denaro. Conservi questo documento come conserverebbe del contante."
+  },
+  "freeze": {
+    "buyCheckFailedBody": "Il registrar non ha risposto, quindi non sappiamo se questo portafoglio è congelato. Non accettiamo un pagamento che potremmo poi dover rifiutare. Riprova tra qualche minuto.",
+    "buyCheckFailedTitle": "Non siamo riusciti a verificare questo portafoglio",
+    "buyFrozenBody": "Il registrar ha congelato questo portafoglio: non può ricevere un acquisto e l'account non può iscriversi. Non hai ancora pagato nulla.",
+    "buyFrozenTitle": "Questo portafoglio è congelato",
+    "cannotUseFrozenWallet": "Questo portafoglio è congelato e non può essere usato come origine di un piano.",
+    "contactRegistrar": "Per far riesaminare il congelamento, contatta il registrar.",
+    "correlationId": "Riferimento per l'assistenza:",
+    "frozenWalletsLabel": "Portafogli congelati:",
+    "notARelayProblem": "Non è un problema di rete. Riprovare darà la stessa risposta.",
+    "reasonGeneric": "Congelato dal registrar",
+    "reasonL8w": "Registrazione del portafoglio in ritardo",
+    "reasonMaxCap": "Saldo superiore al limite massimo pubblicato",
+    "reasonOwnPerson": "Sanzione nel processo OWN",
+    "reasonTooWild": "Attività irregolare o sospetta",
+    "reasonUnregLanas": "LANA non registrati oltre la soglia",
+    "registrarSaid": "Il registrar ha risposto:",
+    "registrationFrozenBody": "Il tuo account ha un portafoglio congelato. Finché resta congelato, il registrar non ti iscrive a Lana8Wonder. Non è stato registrato nulla e non è stato pubblicato nulla.",
+    "registrationRefusedTitle": "Il registrar ha rifiutato l'iscrizione",
+    "retry": "Riprova",
+    "walletFrozenBadge": "Congelato",
+    "walletStateUnknownBody": "Nessuno dei server Lana ha risposto, quindi non sappiamo se qualche tuo portafoglio è congelato. Invece di mostrarti qualcosa che potrebbe essere sbagliato, non mostriamo nulla. Riprova tra qualche minuto.",
+    "walletStateUnknownTitle": "Non siamo riusciti a leggere l'elenco dei tuoi portafogli"
   }
 }

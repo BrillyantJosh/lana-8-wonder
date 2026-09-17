@@ -12,6 +12,8 @@ if (typeof globalThis.WebSocket === 'undefined') {
 
 const router = Router();
 
+import { BOOTSTRAP_RELAYS, KIND_38888_AUTHORIZED_PUBKEY, relaysFromKind38888 } from '../lib/relayList.js';
+
 // ============================================================================
 // HELPER FUNCTIONS - Copied from PreviewLana8Wonder.tsx / Deno edge function
 // ============================================================================
@@ -241,11 +243,11 @@ async function publishToNostr(
 // KIND 38888 RELAY FETCHER — get authorized relay list from system params
 // ============================================================================
 
-const KIND_38888_AUTHORIZED_PUBKEY = '9eb71bf1e9c3189c78800e4c3831c1c1a93ab43b61118818c32e4490891a35b3';
-const BOOTSTRAP_RELAYS = [
-  'wss://relay.lanavault.space',
-  'wss://relay.lanacoin-eternity.com'
-];
+// Authority key and bootstrap list both live in ../lib/relayList, with the
+// reason they must stay the full four written next to them. The two addresses
+// that used to sit here included the retired alias
+// relay.lanacoin-eternity.com, so the fallback path could publish a plan to a
+// list that names one relay twice and two others not at all.
 
 async function fetchRelaysFromKind38888(): Promise<string[]> {
   console.log('Fetching relays from KIND 38888...');
@@ -264,10 +266,10 @@ async function fetchRelaysFromKind38888(): Promise<string[]> {
       return BOOTSTRAP_RELAYS;
     }
 
-    const latestEvent = events[0];
-    const relays = latestEvent.tags
-      .filter((t: string[]) => t[0] === 'relay')
-      .map((t: string[]) => t[1]);
+    // Newest wins. `events[0]` off a merged array can be one relay's stale
+    // copy — which is how a retired relay list comes back from the dead.
+    const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+    const relays = relaysFromKind38888(latestEvent);
 
     if (relays.length === 0) {
       console.warn('KIND 38888 has no relay tags, using bootstrap relays');

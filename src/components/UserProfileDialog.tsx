@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { getDomainKey } from '@/integrations/api/client';
 import { fetchKind0Profile, fetchKind30889, type LanaProfile, type WalletInfo } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
+import { freezeReasonLabel } from '@/lib/freezeReasons';
+import { useTranslation } from 'react-i18next';
 
 interface UserProfileDialogProps {
   open: boolean;
@@ -30,20 +32,14 @@ const WALLET_TYPE_ORDER: Record<string, number> = {
   'Lana8Wonder': 5,
 };
 
-const FREEZE_REASONS: Record<string, string> = {
-  frozen_l8w: 'Late wallet registration',
-  frozen_max_cap: 'Maximum balance cap exceeded',
-  frozen_too_wild: 'Irregular or suspicious activity',
-  frozen_unreg_Lanas: 'Unregistered LANA exceeding threshold',
-  frozen: 'All accounts frozen by registrar',
-};
 
 export function UserProfileDialog({ open, onOpenChange, walletAddress }: UserProfileDialogProps) {
   const { params } = useNostrLanaParams();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [nostrHexId, setNostrHexId] = useState<string | null>(null);
   const [profile, setProfile] = useState<LanaProfile | null>(null);
-  const [wallets, setWallets] = useState<(WalletInfo & { freezeStatus?: string })[]>([]);
+  const [wallets, setWallets] = useState<WalletInfo[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [balancesLoading, setBalancesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,19 +92,15 @@ export function UserProfileDialog({ open, onOpenChange, walletAddress }: UserPro
 
         setProfile(profileResult);
 
-        // Extract wallets from the newest record, including freeze status from tag[6]
+        // The freeze reason now comes through the parser, which is where it
+        // always belonged. This used to build `freezeStatus: ''` for every
+        // wallet and then never fill it in, with a note about re-fetching the
+        // raw event by hand — so this dialog drew every frozen wallet as
+        // unfrozen, and the plan page did the same thing for real money.
         if (walletRecords.length > 0) {
           // Use the first (newest after dedup) record
           const record = walletRecords[0];
-          // Re-parse to get freeze status (tag index 6) which isn't in the base WalletInfo
-          const enrichedWallets = record.wallets.map(w => ({
-            ...w,
-            freezeStatus: '' // Will be populated below
-          }));
-
-          // Re-fetch the raw event to get freeze status tags
-          // For now, use the wallet list as-is, sorted by type
-          const sorted = enrichedWallets.sort((a, b) => {
+          const sorted = [...record.wallets].sort((a, b) => {
             const orderA = WALLET_TYPE_ORDER[a.wallet_type] || 99;
             const orderB = WALLET_TYPE_ORDER[b.wallet_type] || 99;
             return orderA - orderB;
@@ -270,8 +262,8 @@ export function UserProfileDialog({ open, onOpenChange, walletAddress }: UserPro
                 {wallets.map((wallet, i) => {
                   const balance = balances[wallet.wallet_address];
                   const isHighlighted = wallet.wallet_address === walletAddress;
-                  const isFrozen = !!wallet.freezeStatus && wallet.freezeStatus !== '';
-                  const freezeLabel = wallet.freezeStatus ? FREEZE_REASONS[wallet.freezeStatus] || wallet.freezeStatus : '';
+                  const isFrozen = wallet.frozen;
+                  const freezeLabel = isFrozen ? freezeReasonLabel(wallet.freeze_reason, t) : '';
 
                   return (
                     <Card
