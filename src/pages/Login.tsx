@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { QrCode, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { convertWifToIds } from "@/lib/lanaKeys";
-import { fetchKind88888, fetchKind0Profile } from "@/lib/nostrClient";
+import { fetchKind0Profile } from "@/lib/nostrClient";
+import { readKind88888 } from "@/lib/kind88888Read";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { useQRScanner } from "@/hooks/useQRScanner";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -150,10 +151,19 @@ const Login = () => {
       sessionStorage.setItem("lana_session", JSON.stringify(lanaSession));
 
       // Check for KIND 88888 plan on relays
-      const plan = await fetchKind88888(ids.nostrHexId, params.relays);
+      const planRead = await readKind88888(ids.nostrHexId, params.relays);
 
-      if (plan) {
+      if (planRead.state === 'found') {
         toast.success("Annuity plan found!");
+        navigate("/dashboard");
+      } else if (planRead.state === 'unreachable') {
+        // Nobody answered, or the newest plan could not be read — NOT "no
+        // plan". Every branch below ends on /create-lana8wonder or on
+        // resuming a publication, and both would act on an absence nobody
+        // established. The dashboard reads again and, if the relays are still
+        // quiet, says "we could not check" with a retry.
+        console.warn('KIND 88888 unreadable at login —', planRead.answered.length, 'answered, silent:', planRead.silent);
+        toast.warning(t('planRead.unknownTitle'));
         navigate("/dashboard");
       } else {
         // No published plan — check if user has incomplete enrollment

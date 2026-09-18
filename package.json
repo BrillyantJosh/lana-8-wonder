@@ -17,7 +17,8 @@
     "preview": "vite preview",
     "test:enroll": "tsx scripts/testSplitEnrollFee.ts",
     "test:freeze": "tsx --tsconfig tsconfig.app.json scripts/testFreezeVisibility.ts",
-    "test": "npm run test:enroll && npm run test:freeze"
+    "test:plan": "tsx scripts/testPlanRead.ts",
+    "test": "npm run test:enroll && npm run test:freeze && npm run test:plan"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

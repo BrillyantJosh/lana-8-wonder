@@ -172,6 +172,10 @@ export async function readKind30889(
         .ensureRelay(url)
         .then((relay) => {
           const sub = relay.subscribe([filter], {
+            // nostr-tools fakes an EOSE after `baseEoseTimeout` (4.4 s) on a
+            // relay that connected but stalls. Our own timer must fire first,
+            // or a stalled relay is scored as one that answered "nothing".
+            eoseTimeout: timeoutMs * 2,
             onevent: (event: Event) => {
               if (seen.has(event.id)) return;
               seen.add(event.id);
@@ -179,8 +183,12 @@ export async function readKind30889(
             },
             oneose: () => {
               clearTimeout(timer);
-              try { sub.close(); } catch { /* already closed */ }
+              // finish BEFORE close: Subscription.close() calls onclose
+              // synchronously, which would record this relay as silent — as it
+              // did for every relay until this line moved, so every read came
+              // back `unreachable`.
               finish(true);
+              try { sub.close(); } catch { /* already closed */ }
             },
             onclose: () => {
               // After EOSE this is our own sub.close() and `finish` has already

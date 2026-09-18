@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Loader2, CheckCircle2 } from "lucide-react";
+import { LogOut, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { LanaSession } from "@/lib/lanaKeys";
-import { Lana8WonderPlan, fetchKind88888 } from "@/lib/nostrClient";
+import { Lana8WonderPlan } from "@/lib/nostrClient";
+import { readKind88888, type PlanReadState } from "@/lib/kind88888Read";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { api as supabase } from "@/integrations/api/client";
@@ -26,6 +27,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<LanaSession | null>(null);
   const [plan, setPlan] = useState<Lana8WonderPlan | null>(null);
+  // `found` / `empty` / `unreachable` are three different facts. Only `empty`
+  // may send anyone to create (and pay for) a plan.
+  const [planState, setPlanState] = useState<PlanReadState | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("");
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
@@ -50,19 +54,31 @@ const Dashboard = () => {
 
       if (!params?.relays || params.relays.length === 0) {
         toast.error("No relays available");
+        setPlanState('unreachable');
         setLoading(false);
         return;
       }
 
       try {
-        const fetchedPlan = await fetchKind88888(parsedSession.nostrHexId, params.relays);
-        
-        if (!fetchedPlan) {
+        const result = await readKind88888(parsedSession.nostrHexId, params.relays);
+        setPlanState(result.state);
+
+        if (result.state === 'unreachable') {
+          // Nobody answered, or the newest plan could not be read. This is
+          // not "you have no plan": the redirect below leads to the page that
+          // takes a deposit for a NEW plan, so it may only follow a relay
+          // that actually said so.
+          console.warn('KIND 88888 unreadable —', result.answered.length, 'answered, silent:', result.silent);
+          return;
+        }
+
+        if (result.state === 'empty') {
           toast.error("No annuity plan found");
           navigate("/create-lana8wonder");
           return;
         }
 
+        const fetchedPlan = result.plan!;
         setPlan(fetchedPlan);
         
         // Load balances for all wallets in the plan
@@ -71,6 +87,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error("Error loading plan:", error);
+        setPlanState('unreachable');
         toast.error("Failed to load annuity plan");
       } finally {
         setLoading(false);
@@ -168,6 +185,33 @@ const Dashboard = () => {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">{t('dashboard.loadingPlan')}</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!plan && planState === 'unreachable') {
+    // Silence gets its own screen. The old code landed here on "No Plan
+    // Found — Redirecting to plan creation", a statement about this person
+    // made on no evidence (and, after a thrown read, a redirect that never
+    // came).
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader className="text-center space-y-3">
+            <AlertTriangle className="h-8 w-8 mx-auto text-amber-600 dark:text-amber-400" />
+            <CardTitle>{t('planRead.unknownTitle')}</CardTitle>
+            <CardDescription>{t('planRead.unknownBody')}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              {t('planRead.retry')}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              {t('dashboard.logout')}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

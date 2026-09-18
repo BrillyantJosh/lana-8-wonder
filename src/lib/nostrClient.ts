@@ -1,4 +1,4 @@
-import { SimplePool, type Event, type Filter } from 'nostr-tools';
+import { SimplePool, type Filter } from 'nostr-tools';
 import { readKind30889, type WalletInfo, type WalletListRecord } from './kind30889Read';
 
 // The wallet types live in kind30889Read.ts, next to the parser that fills
@@ -6,25 +6,11 @@ import { readKind30889, type WalletInfo, type WalletListRecord } from './kind308
 // keeping the shape and the parser apart is what let that happen quietly.
 export type { WalletInfo, WalletListRecord };
 
-export interface Lana8WonderPlan {
-  subject_hex: string;
-  plan_id: string;
-  coin: string;
-  currency: string;
-  policy: string;
-  accounts: Array<{
-    account_id: number;
-    wallet: string;
-    levels: Array<{
-      row_id: string;
-      level_no: number;
-      trigger_price: number;
-      coins_to_give: number;
-      cash_out: number;
-      remaining_lanas: number;
-    }>;
-  }>;
-}
+// The plan type lives in kind88888Read.ts for the same reason. There is no
+// `fetchKind88888` any more: it returned `null` both for "no plan" and for "no
+// relay answered", and both callers read that as "go and buy one". Use
+// `readKind88888` and look at `state`.
+export type { Lana8WonderPlan } from './kind88888Read';
 
 export interface LanaProfile {
   name?: string;
@@ -121,48 +107,4 @@ export async function fetchKind30889(customerHexId: string, relayUrls: string[])
   const result = await readKind30889(customerHexId, relayUrls);
   console.log(`KIND 30889 read: ${result.state}, ${result.records.length} record(s), answered by ${result.answered.length}/${relayUrls.length} relays`);
   return result.records;
-}
-
-export async function fetchKind88888(nostrHexId: string, relayUrls: string[]): Promise<Lana8WonderPlan | null> {
-  const MAIN_PUBLISHER = "a56253e6232b2ab5a96b60d233434d4f759ba4c858a3cc0f4ec51906dce73ae6";
-  
-  const filter: Filter = {
-    kinds: [88888],
-    "#p": [nostrHexId],
-    "#d": [`plan:${nostrHexId}`],
-    authors: [MAIN_PUBLISHER]
-  };
-
-  console.log("Fetching KIND 88888 for:", nostrHexId);
-  console.log("Using relays:", relayUrls);
-
-  const pool = new SimplePool();
-
-  try {
-    const events = await pool.querySync(relayUrls, filter);
-    
-    console.log(`Found ${events.length} events`);
-
-    if (events.length === 0) {
-      console.log("No KIND 88888 events found");
-      return null;
-    }
-
-    // Get the newest event
-    const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
-    
-    try {
-      const plan: Lana8WonderPlan = JSON.parse(latestEvent.content);
-      console.log("Found plan:", plan);
-      return plan;
-    } catch (error) {
-      console.error("Error parsing plan content:", error);
-      return null;
-    }
-  } catch (error) {
-    console.error("Error fetching from relays:", error);
-    return null;
-  } finally {
-    pool.close(relayUrls);
-  }
 }
