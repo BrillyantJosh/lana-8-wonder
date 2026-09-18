@@ -29,6 +29,19 @@ import {
 } from '../src/lib/relayBootstrap';
 import { BOOTSTRAP_RELAYS as SERVER_RELAYS } from '../server/lib/relayList.js';
 import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import i18next from 'i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
+import { enrolmentFreezeVerdict, freezeBlocksEnrolment } from '../src/lib/freezePolicy';
+import { refusalIsFinal } from '../src/lib/registrationRefusal';
+import { MaxCapFreezeNotice } from '../src/components/MaxCapFreezeNotice';
+import en from '../src/i18n/locales/en.json';
+import sl from '../src/i18n/locales/sl.json';
+import de from '../src/i18n/locales/de.json';
+import it from '../src/i18n/locales/it.json';
+import hu from '../src/i18n/locales/hu.json';
 
 let pass = 0;
 let fail = 0;
@@ -50,7 +63,7 @@ const FROZEN_403 = {
 const ev = (pubkey: string, created_at: number, tags: string[][]) =>
   ({ id: `${pubkey}-${created_at}`, pubkey, created_at, kind: 30889, tags, content: '', sig: '' }) as any;
 
-function main() {
+async function main() {
   console.log('\nA. the refusal reaches the person, in the registrar\'s own words');
 
   const frozen = interpretRegistrationResponse(403, false, FROZEN_403);
@@ -173,13 +186,16 @@ function main() {
 
   console.log('\nG. the buy wizard refuses before the money');
 
+  // (Before the owner's rule of 18.9.2026 this fixture was frozen_max_cap. A
+  // cap freeze now passes — see section J — so the blocking case is a reason
+  // that still blocks.)
   const frozenBuy = evaluateWalletCheck(true, {
     registered: true,
-    wallet: { wallet_id: 'LFrozen1', frozen: true, freeze_reason: 'frozen_max_cap', nostr_hex_id: 'a'.repeat(64) },
+    wallet: { wallet_id: 'LFrozen1', frozen: true, freeze_reason: 'frozen_too_wild', nostr_hex_id: 'a'.repeat(64) },
   });
-  check('a frozen wallet stops the wizard', frozenBuy.decision === 'frozen', frozenBuy.decision);
+  check('a wallet frozen for a blocking reason stops the wizard', frozenBuy.decision === 'frozen', frozenBuy.decision);
   check('naming the wallet', frozenBuy.wallet === 'LFrozen1');
-  check('and the reason', frozenBuy.reason === 'frozen_max_cap');
+  check('and the reason', frozenBuy.reason === 'frozen_too_wild');
 
   const okBuy = evaluateWalletCheck(true, {
     registered: true,
@@ -243,8 +259,120 @@ function main() {
   check('the only hardcoded relay addresses left are the two bootstrap files',
     hits.length === 0, hits.join(' | '));
 
+  await ownersRule();
+
   console.log(`\n${pass} ok, ${fail} failed`);
   process.exit(fail === 0 ? 0 : 1);
+}
+
+/**
+ * J. THE OWNER'S RULE, 18.9.2026: a cap freeze and an OWN sanction may enrol;
+ * every other freeze may not; a freeze we could not read still stops.
+ */
+async function ownersRule() {
+  console.log('\nJ. which freezes stop an enrolment');
+
+  const v = enrolmentFreezeVerdict;
+  check('not frozen → none', v(false, '') === 'none');
+  check('frozen_max_cap → passes, with the way out', v(true, 'frozen_max_cap') === 'max_cap');
+  check('frozen_own_person → passes', v(true, 'frozen_own_person') === 'own_person');
+  check('frozen_too_wild → blocks', v(true, 'frozen_too_wild') === 'blocks');
+  check('frozen_l8w → blocks', v(true, 'frozen_l8w') === 'blocks');
+  check('frozen_unreg_Lanas → blocks', v(true, 'frozen_unreg_Lanas') === 'blocks');
+  check('a code nobody has written yet → blocks', v(true, 'frozen_brand_new_code') === 'blocks');
+  check('frozen with NO reason → blocks (the registrar\'s own rule)', v(true, '') === 'blocks' && v(true, null) === 'blocks');
+  check('only the exact string passes — FROZEN_MAX_CAP blocks', v(true, 'FROZEN_MAX_CAP') === 'blocks');
+  check('the legacy frozen_own is not frozen_own_person', v(true, 'frozen_own') === 'blocks');
+  check('a reason on a wallet marked unfrozen still counts (registrar clears it on unfreeze)',
+    v(false, 'frozen_too_wild') === 'blocks');
+
+  console.log('\n   — the source-wallet picker, from a real 30889 tag —');
+  const capTag = parseWalletTag(['w', 'LCap1', 'Main Wallet', 'LANA', '', '0', 'frozen_max_cap']);
+  const ownTag = parseWalletTag(['w', 'LOwn1', 'Main Wallet', 'LANA', '', '0', 'frozen_own_person']);
+  const wildTag = parseWalletTag(['w', 'LWild1', 'Main Wallet', 'LANA', '', '0', 'frozen_too_wild']);
+  const oddTag = parseWalletTag(['w', 'LOdd1', 'Main Wallet', 'LANA', '', '0', 'frozen_something_new']);
+  check('a cap-frozen wallet is selectable', !freezeBlocksEnrolment(capTag.frozen, capTag.freeze_reason));
+  check('and is still shown as frozen, for the cap', capTag.frozen && v(capTag.frozen, capTag.freeze_reason) === 'max_cap');
+  check('an OWN-sanctioned wallet is selectable', !freezeBlocksEnrolment(ownTag.frozen, ownTag.freeze_reason));
+  check('a too_wild wallet is not', freezeBlocksEnrolment(wildTag.frozen, wildTag.freeze_reason));
+  check('an unknown code is not', freezeBlocksEnrolment(oddTag.frozen, oddTag.freeze_reason));
+
+  console.log('\n   — the buy wizard —');
+  const w = (freeze_reason: string | null, frozen = true) =>
+    evaluateWalletCheck(true, { registered: true, wallet: { wallet_id: 'LX1', frozen, freeze_reason, nostr_hex_id: 'c'.repeat(64) } });
+  const capBuy = w('frozen_max_cap');
+  check('cap-frozen → registered, the door opens', capBuy.decision === 'registered', capBuy.decision);
+  check('carrying max_cap so the page explains it', capBuy.passedFreeze === 'max_cap', capBuy.passedFreeze);
+  const ownBuy = w('frozen_own_person');
+  check('OWN-sanctioned → registered', ownBuy.decision === 'registered' && ownBuy.passedFreeze === 'own_person');
+  check('too_wild → frozen, the door stays shut', w('frozen_too_wild').decision === 'frozen');
+  check('an unknown code → frozen', w('frozen_something_new').decision === 'frozen');
+  check('frozen:true with a null reason → frozen', w(null).decision === 'frozen');
+  check('an unfrozen wallet carries no passed freeze', w(null, false).passedFreeze === '');
+
+  console.log('\n   — unreadable still fails CLOSED, whatever the reason would have been —');
+  const silentCap = classifyWalletListRead({
+    answered: [],
+    silent: ['wss://a'],
+    events: [ev('reg1', 1, [['d', 'hex'], ['status', 'active'], ['w', 'LCap1', 'Main Wallet', 'LANA', '', '0', 'frozen_max_cap']])],
+  });
+  check('a silent read hands out no wallets to pick, cap-frozen or not', silentCap.state === 'unreachable' && silentCap.records.length === 0);
+  check('a failed registration check is still check_failed', evaluateWalletCheck(false, null, true).decision === 'check_failed');
+  check('an answer with no `frozen` field is still check_failed',
+    evaluateWalletCheck(true, { registered: true, wallet: { wallet_id: 'LX', freeze_reason: 'frozen_max_cap' } }).decision === 'check_failed');
+
+  console.log('\n   — a refusal is only "final" when its freeze blocks —');
+  const refusal = (frozen_wallets: string[], status = 'frozen_account') =>
+    interpretRegistrationResponse(403, false, { success: false, status, error: 'Registration blocked', frozen_wallets });
+  check('a refusal naming only a cap freeze does not lock the retry', !refusalIsFinal(refusal(['LCap1 (frozen_max_cap)'])));
+  check('nor one naming only an OWN sanction', !refusalIsFinal(refusal(['LOwn1 (frozen_own_person)'])));
+  check('a too_wild refusal does', refusalIsFinal(refusal(['LWild1 (frozen_too_wild)'])));
+  check('a mix with any blocking freeze does', refusalIsFinal(refusal(['LCap1 (frozen_max_cap)', 'LWild1 (frozen_too_wild)'])));
+  check('a frozen_account naming no wallet does — we cannot tell, so we do not guess',
+    refusalIsFinal(refusal([])));
+  check('a database error is never called final',
+    !refusalIsFinal(interpretRegistrationResponse(500, false, { success: false, status: 'error', error: 'Database error while checking frozen status' })));
+  check('the cap refusal is still shown, in the registrar\'s own words (task 1 stands)',
+    isRefusal(refusal(['LCap1 (frozen_max_cap)'])) && refusal(['LCap1 (frozen_max_cap)']).serverText === 'Registration blocked');
+
+  console.log('\n   — the explanation is actually there —');
+  const locales: Record<string, any> = { en, sl, de, it, hu };
+  for (const [lang, res] of Object.entries(locales)) {
+    const f = res.freeze || {};
+    check(`${lang}: the way-out title and body exist`,
+      typeof f.maxCapPathTitle === 'string' && f.maxCapPathTitle.length > 0 &&
+      typeof f.maxCapPathBody === 'string' && f.maxCapPathBody.includes('LanaTrace') && f.maxCapPathBody.includes('Resolve Freeze'));
+  }
+  check('en: no timing is promised',
+    !/minute|hour|\bdays?\b|immediately|instantly|within/i.test((en as any).freeze.maxCapPathBody));
+
+  const i18n = i18next.createInstance();
+  await i18n.use(initReactI18next).init({
+    resources: { en: { translation: en }, sl: { translation: sl } },
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+  });
+  const render = () => renderToStaticMarkup(createElement(I18nextProvider, { i18n }, createElement(MaxCapFreezeNotice)));
+  const enHtml = render();
+  check('the notice renders the English way out',
+    enHtml.includes('you can still enrol') && enHtml.includes('Resolve Freeze'), enHtml.slice(0, 200));
+  await i18n.changeLanguage('sl');
+  const slHtml = render();
+  check('and the Slovenian one',
+    slHtml.includes('vpis je vseeno mogoč') && slHtml.includes('zgornjo mejo'), slHtml.slice(0, 200));
+
+  // The render conditions are in the pages, so read the pages. Removing the
+  // notice from either screen, or going back to gating on the raw `frozen`
+  // flag, fails here.
+  const create = readFileSync('src/pages/CreateLana8Wonder.tsx', 'utf8');
+  const buy = readFileSync('src/pages/BuyLana8Wonder.tsx', 'utf8');
+  check('the picker shows the notice on phone and desktop',
+    (create.match(/freezeVerdict === 'max_cap' && \(?\s*(<TableRow>[\s\S]{0,120})?<MaxCapFreezeNotice/g) || []).length === 2);
+  check('the picker no longer gates on the bare `frozen` flag',
+    !/!wallet\.frozen|chosen\?\.frozen\)/.test(create));
+  check('the buy page shows the notice for a passed cap freeze',
+    /passedFreeze === 'max_cap' && \(\s*<MaxCapFreezeNotice/.test(buy));
 }
 
 main();

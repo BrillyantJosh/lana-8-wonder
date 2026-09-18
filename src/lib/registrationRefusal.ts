@@ -26,6 +26,7 @@
  * never to the relay story.
  */
 import { parseFrozenWallets, type FrozenWalletNote } from './freezeReasons';
+import { freezeBlocksEnrolment } from './freezePolicy';
 
 export type RefusalKind = 'none' | 'frozen_account' | 'server_message';
 
@@ -119,4 +120,22 @@ export function interpretRegistrationResponse(
 /** True when the flow must stop here and must NOT go on to relay verification. */
 export function isRefusal(r: RegistrationRefusal): boolean {
   return r.kind !== 'none';
+}
+
+/**
+ * Will pressing the button again get the same answer?
+ *
+ * Only when the refusal is a freeze the policy says blocks. A freeze refusal
+ * that names only `frozen_max_cap` / `frozen_own_person` wallets is one the
+ * owner has decided to let through (the registrar is being changed to match),
+ * so the page must not lock the person out of trying. A frozen_account that
+ * names no wallet at all is treated as blocking — we cannot tell, so we do not
+ * guess the permissive way. Any other error (a database hiccup, a proxy
+ * failure) may well be transient and is never called final.
+ */
+export function refusalIsFinal(r: RegistrationRefusal): boolean {
+  if (r.frozenWallets.length > 0) {
+    return r.frozenWallets.some((w) => freezeBlocksEnrolment(true, w.reason));
+  }
+  return r.kind === 'frozen_account';
 }

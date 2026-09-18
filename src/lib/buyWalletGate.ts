@@ -18,7 +18,15 @@
  * writes `frozen: wallet.frozen ?? false`. Its absence therefore means we are
  * not talking to the registrar we think we are, and that is `check_failed`,
  * not `not frozen`.
+ *
+ * WHICH freezes stop the wizard is not decided here but in ./freezePolicy:
+ * `frozen_max_cap` and `frozen_own_person` pass (the owner's rule of
+ * 18.9.2026 — a cap freeze is resolved by enrolling and then donating the
+ * remainder), everything else blocks. A passing freeze still travels with the
+ * verdict as `passedFreeze`, so the page can tell a cap-frozen buyer the way
+ * out instead of pretending the freeze is not there.
  */
+import { enrolmentFreezeVerdict } from './freezePolicy';
 export type BuyWalletDecision =
   | 'registered'
   | 'not_registered'
@@ -27,12 +35,17 @@ export type BuyWalletDecision =
 
 export interface BuyWalletVerdict {
   decision: BuyWalletDecision;
-  /** The frozen wallet address, when the refusal is a freeze. */
+  /** The frozen wallet address, when the wallet is frozen (blocking or not). */
   wallet: string;
   /** The registrar's freeze code, '' when it sent none. */
   reason: string;
   /** The registrar's own words, for the `check_failed` case. */
   serverText: string;
+  /**
+   * A freeze the policy lets through, when there is one. Only ever set with
+   * decision `registered`; '' otherwise.
+   */
+  passedFreeze: '' | 'max_cap' | 'own_person';
 }
 
 const base = (decision: BuyWalletDecision): BuyWalletVerdict => ({
@@ -40,6 +53,7 @@ const base = (decision: BuyWalletDecision): BuyWalletVerdict => ({
   wallet: '',
   reason: '',
   serverText: '',
+  passedFreeze: '',
 });
 
 /**
@@ -81,13 +95,16 @@ export function evaluateWalletCheck(
   // we cannot answer the freeze question, so we do not pretend to.
   if (!wallet || !('frozen' in wallet)) return base('check_failed');
 
-  if (wallet.frozen === true) {
-    return {
-      decision: 'frozen',
-      wallet: String(wallet.wallet_id ?? '').trim(),
-      reason: String(wallet.freeze_reason ?? '').trim(),
-      serverText: '',
-    };
+  const walletId = String(wallet.wallet_id ?? '').trim();
+  const reason = String(wallet.freeze_reason ?? '').trim();
+  const verdict = enrolmentFreezeVerdict(wallet.frozen === true, reason);
+
+  if (verdict === 'blocks') {
+    return { ...base('frozen'), wallet: walletId, reason };
+  }
+
+  if (verdict === 'max_cap' || verdict === 'own_person') {
+    return { ...base('registered'), wallet: walletId, reason, passedFreeze: verdict };
   }
 
   return base('registered');

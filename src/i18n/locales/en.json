@@ -380,7 +380,9 @@
     "contactRegistrar": "To have the freeze reviewed, contact the registrar.",
     "correlationId": "Reference for support:",
     "frozenWalletsLabel": "Frozen wallets:",
-    "notARelayProblem": "This is not a network problem. Trying again will give the same answer.",
+    "maxCapPathBody": "This wallet is frozen because its balance is above the published cap. You can still enrol in Lana8Wonder. After enrolment, donate this wallet's remaining balance through the registrar — on LanaTrace, open the wallet and press “Resolve Freeze” — and the freeze is released automatically.",
+    "maxCapPathTitle": "Frozen for the balance cap — you can still enrol",
+    "notARelayProblem": "This is not a network problem — the registrar answered.",
     "reasonGeneric": "Frozen by the registrar",
     "reasonL8w": "Late wallet registration",
     "reasonMaxCap": "Balance above the published maximum cap",
@@ -388,11 +390,17 @@
     "reasonTooWild": "Irregular or suspicious activity",
     "reasonUnregLanas": "Unregistered LANA above the threshold",
     "registrarSaid": "The registrar said:",
-    "registrationFrozenBody": "Your account has a frozen wallet. While it is frozen, the registrar will not enrol you in Lana8Wonder. Nothing was registered and nothing was published.",
+    "registrationFrozenBody": "The registrar refused because your account has a frozen wallet. Nothing was registered and nothing was published.",
     "registrationRefusedTitle": "The registrar refused the enrolment",
     "retry": "Try again",
+    "retrySameAnswer": "Trying again will give the same answer while this freeze stays in place.",
     "walletFrozenBadge": "Frozen",
     "walletStateUnknownBody": "None of the Lana servers answered, so we do not know whether any of your wallets is frozen. Rather than show you something that may be wrong, we show nothing. Please try again in a few minutes.",
     "walletStateUnknownTitle": "We could not read your wallet list"
+  },
+  "planRead": {
+    "unknownTitle": "We could not check your annuity plan",
+    "unknownBody": "The Lana servers did not give us a readable answer, so we do not know whether you have a plan. This does not mean you have none, and we will not send you to buy a new one on a guess. Please try again in a few minutes.",
+    "retry": "Try again"
   }
 }

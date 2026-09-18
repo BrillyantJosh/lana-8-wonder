@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { LogOut, Loader2, Wallet, AlertCircle, AlertTriangle, Snowflake } from "
 import { LanaSession } from "@/lib/lanaKeys";
 import { readKind30889, type WalletListRecord, type WalletListReadState } from "@/lib/kind30889Read";
 import { freezeReasonLabel } from "@/lib/freezeReasons";
+import { enrolmentFreezeVerdict, freezeBlocksEnrolment } from "@/lib/freezePolicy";
+import { MaxCapFreezeNotice } from "@/components/MaxCapFreezeNotice";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { toast } from "sonner";
 import { api as supabase } from "@/integrations/api/client";
@@ -296,8 +298,10 @@ const CreateLana8Wonder = () => {
         toast.error(t('freeze.walletStateUnknownTitle'));
         return;
       }
+      // Reason-aware (owner's rule, 18.9.2026, see @/lib/freezePolicy): a cap
+      // freeze or an OWN-process sanction may enrol; any other freeze may not.
       const chosen = allWalletsDeduped.find(w => w.wallet_address === walletAddress);
-      if (chosen?.frozen) {
+      if (chosen && freezeBlocksEnrolment(chosen.frozen, chosen.freeze_reason)) {
         toast.error(`${t('freeze.cannotUseFrozenWallet')} ${freezeReasonLabel(chosen.freeze_reason, t)}`);
         return;
       }
@@ -400,10 +404,12 @@ const CreateLana8Wonder = () => {
                     {allWalletsDeduped.map((wallet, idx) => {
                       const currentBalance = walletBalances[wallet.wallet_address] || 0;
                       const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
-                      // A frozen wallet has no "enough" — the registrar will
-                      // refuse it whatever it holds, so offering it is the
-                      // whole bug in miniature.
-                      const hasEnoughBalance = !wallet.frozen && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
+                      // A wallet frozen for a BLOCKING reason has no "enough"
+                      // — it is refused whatever it holds, so offering it is
+                      // the whole bug in miniature. A cap freeze or an OWN
+                      // sanction is not blocking (@/lib/freezePolicy).
+                      const freezeVerdict = enrolmentFreezeVerdict(wallet.frozen, wallet.freeze_reason);
+                      const hasEnoughBalance = freezeVerdict !== 'blocks' && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
 
                       return (
                         <Card key={idx} className="overflow-hidden">
@@ -440,7 +446,7 @@ const CreateLana8Wonder = () => {
 
                             <div className="flex items-center justify-between gap-3 pt-2 border-t">
                               <div>
-                                {wallet.frozen ? (
+                                {freezeVerdict === 'blocks' ? (
                                   <div className="space-y-1">
                                     <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit">
                                       <Snowflake className="h-3 w-3" />
@@ -486,6 +492,14 @@ const CreateLana8Wonder = () => {
                                 </Button>
                               )}
                             </div>
+
+                            {freezeVerdict === 'max_cap' && <MaxCapFreezeNotice />}
+                            {freezeVerdict === 'own_person' && (
+                              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Snowflake className="h-3 w-3" />
+                                {t('freeze.walletFrozenBadge')} — {freezeReasonLabel(wallet.freeze_reason, t)}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -509,10 +523,12 @@ const CreateLana8Wonder = () => {
                         {allWalletsDeduped.map((wallet, idx) => {
                           const currentBalance = walletBalances[wallet.wallet_address] || 0;
                           const isUpgradeEligible = currentSplit > 1 && previousSplitMinimum > 0 && meetsMinimum(currentBalance, previousSplitMinimum);
-                          const hasEnoughBalance = !wallet.frozen && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
+                          const freezeVerdict = enrolmentFreezeVerdict(wallet.frozen, wallet.freeze_reason);
+                          const hasEnoughBalance = freezeVerdict !== 'blocks' && (meetsMinimum(currentBalance, minimumRequired) || isUpgradeEligible);
 
                           return (
-                            <TableRow key={idx}>
+                            <Fragment key={idx}>
+                            <TableRow className={freezeVerdict === 'max_cap' ? 'border-b-0' : undefined}>
                               <TableCell className="font-mono text-sm max-w-xs truncate">{wallet.wallet_address}</TableCell>
                               <TableCell>
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
@@ -532,7 +548,7 @@ const CreateLana8Wonder = () => {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{wallet.note || "—"}</TableCell>
                               <TableCell>
-                                {wallet.frozen ? (
+                                {freezeVerdict === 'blocks' ? (
                                   <div className="space-y-1">
                                     <Badge variant="destructive" className="flex items-center gap-1 text-xs w-fit whitespace-nowrap">
                                       <Snowflake className="h-3 w-3" />
@@ -577,8 +593,22 @@ const CreateLana8Wonder = () => {
                                     {t('createLana8Wonder.assignToL8W')}
                                   </Button>
                                 )}
+                                {freezeVerdict === 'own_person' && (
+                                  <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                                    <Snowflake className="h-3 w-3" />
+                                    {t('freeze.walletFrozenBadge')} — {freezeReasonLabel(wallet.freeze_reason, t)}
+                                  </p>
+                                )}
                               </TableCell>
                             </TableRow>
+                            {freezeVerdict === 'max_cap' && (
+                              <TableRow>
+                                <TableCell colSpan={6} className="pt-0">
+                                  <MaxCapFreezeNotice />
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            </Fragment>
                           );
                         })}
                       </TableBody>

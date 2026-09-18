@@ -380,7 +380,9 @@
     "contactRegistrar": "A befagyasztás felülvizsgálatához forduljon a regisztrátorhoz.",
     "correlationId": "Hivatkozás az ügyfélszolgálathoz:",
     "frozenWalletsLabel": "Befagyasztott tárcák:",
-    "notARelayProblem": "Ez nem hálózati hiba. Az újrapróbálkozás ugyanezt a választ adja.",
+    "maxCapPathBody": "Ez a tárca be van fagyasztva, mert az egyenlege meghaladja a közzétett felső határt. A Lana8Wonderbe ettől még beléphet. A belépés után adományozza a tárca fennmaradó egyenlegét a regisztrátoron keresztül – a LanaTrace-en nyissa meg a tárcát, és nyomja meg a „Resolve Freeze” gombot –, és a befagyasztás automatikusan feloldódik.",
+    "maxCapPathTitle": "Felső határ miatt befagyasztva – a belépés így is lehetséges",
+    "notARelayProblem": "Ez nem hálózati hiba – a regisztrátor válaszolt.",
     "reasonGeneric": "A regisztrátor befagyasztotta",
     "reasonL8w": "Késői tárcaregisztráció",
     "reasonMaxCap": "Az egyenleg meghaladja a közzétett felső határt",
@@ -388,11 +390,17 @@
     "reasonTooWild": "Szokatlan vagy gyanús tevékenység",
     "reasonUnregLanas": "A küszöb feletti nem regisztrált LANA",
     "registrarSaid": "A regisztrátor válasza:",
-    "registrationFrozenBody": "A fiókjában befagyasztott tárca van. Amíg be van fagyasztva, a regisztrátor nem lépteti be Önt a Lana8Wonderbe. Semmi nem lett regisztrálva és semmi nem lett közzétéve.",
+    "registrationFrozenBody": "A regisztrátor elutasította, mert a fiókjában befagyasztott tárca van. Semmi nem lett regisztrálva és semmi nem lett közzétéve.",
     "registrationRefusedTitle": "A regisztrátor elutasította a belépést",
     "retry": "Újrapróbálkozás",
+    "retrySameAnswer": "Amíg ez a befagyasztás érvényben van, az újrapróbálkozás ugyanezt a választ adja.",
     "walletFrozenBadge": "Befagyasztva",
-    "walletStateUnknownBody": "A Lana-kiszolgálók közül egy sem válaszolt, ezért nem tudjuk, hogy befagyasztott-e valamelyik tárcája. Ahelyett, hogy esetleg tévesat mutatnánk, semmit nem mutatunk. Kérjük, próbálja újra néhány perc múlva.",
+    "walletStateUnknownBody": "A Lana-kiszolgálók közül egy sem válaszolt, ezért nem tudjuk, hogy befagyasztott-e valamelyik tárcája. Ahelyett, hogy esetleg téveset mutatnánk, semmit nem mutatunk. Kérjük, próbálja újra néhány perc múlva.",
     "walletStateUnknownTitle": "Nem tudtuk beolvasni a tárcalistáját"
+  },
+  "planRead": {
+    "unknownTitle": "Nem tudtuk ellenőrizni a járadéktervét",
+    "unknownBody": "A Lana-kiszolgálók nem adtak olvasható választ, ezért nem tudjuk, van-e terve. Ez nem jelenti azt, hogy nincs, és találgatás alapján nem küldjük el új terv vásárlására. Kérjük, próbálja újra néhány perc múlva.",
+    "retry": "Újrapróbálkozás"
   }
 }

@@ -16,7 +16,7 @@
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "preview": "vite preview",
     "test:enroll": "tsx scripts/testSplitEnrollFee.ts",
-    "test:freeze": "tsx scripts/testFreezeVisibility.ts",
+    "test:freeze": "tsx --tsconfig tsconfig.app.json scripts/testFreezeVisibility.ts",
     "test": "npm run test:enroll && npm run test:freeze"
   },
   "dependencies": {

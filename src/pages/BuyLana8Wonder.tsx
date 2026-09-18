@@ -36,12 +36,15 @@ import {
 import { generatePaymentSlipPDF, type PaymentSlipRow } from '@/lib/paymentSlipPdf';
 import { evaluateWalletCheck } from '@/lib/buyWalletGate';
 import { freezeReasonLabel } from '@/lib/freezeReasons';
+import { MaxCapFreezeNotice } from '@/components/MaxCapFreezeNotice';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
-// `frozen` and `check_failed` both stop the wizard BEFORE step 4. A frozen
-// account cannot enrol, so taking its hundred first and refusing after is
-// the one outcome worth writing two states to avoid.
+// `frozen` and `check_failed` both stop the wizard BEFORE step 4. A wallet
+// frozen for a blocking reason cannot enrol, so taking its hundred first and
+// refusing after is the one outcome worth writing two states to avoid. A cap
+// freeze or an OWN sanction is NOT `frozen` here — it passes as `registered`
+// (owner's rule, 18.9.2026; see @/lib/freezePolicy) with the way out shown.
 type WalletStatus = 'idle' | 'validating' | 'registered' | 'not_registered' | 'already_used' | 'invalid_format' | 'has_lana8wonder' | 'frozen' | 'check_failed';
 
 const BuyLana8Wonder = () => {
@@ -92,6 +95,8 @@ const BuyLana8Wonder = () => {
   const [walletId, setWalletId] = useState('');
   const [walletStatus, setWalletStatus] = useState<WalletStatus>('idle');
   const [freezeDetail, setFreezeDetail] = useState<{ wallet: string; reason: string }>({ wallet: '', reason: '' });
+  // A freeze the policy let through — kept so the page can explain it.
+  const [passedFreeze, setPassedFreeze] = useState<'' | 'max_cap' | 'own_person'>('');
   const [walletError, setWalletError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const { videoRef, canvasRef, startScanning: startQR, cleanup: cleanupQR } = useQRScanner();
@@ -298,6 +303,7 @@ const BuyLana8Wonder = () => {
     }
 
     setWalletStatus('validating');
+    setPassedFreeze('');
     setWalletError(null);
 
     // 1. Format validation
@@ -361,6 +367,7 @@ const BuyLana8Wonder = () => {
       }
 
       if (verdict.decision === 'registered') {
+        setPassedFreeze(verdict.passedFreeze);
         // Check if this wallet's owner already has a Lana8Wonder plan (KIND 88888)
         // Uses server-side endpoint for reliable relay connectivity
         const hexId = json.wallet?.nostr_hex_id;
@@ -985,6 +992,9 @@ const BuyLana8Wonder = () => {
             )}
           </div>
           <WalletStatusIndicator />
+          {walletStatus === 'registered' && passedFreeze === 'max_cap' && (
+            <MaxCapFreezeNotice className="mt-2" />
+          )}
           {!walletId.trim() && (
             <p className="text-xs text-muted-foreground mt-1">
               💡 {t('buyLana.step3WifHint')}

@@ -380,7 +380,9 @@
     "contactRegistrar": "Wenden Sie sich an den Registrar, damit die Sperre geprüft wird.",
     "correlationId": "Referenz für den Support:",
     "frozenWalletsLabel": "Eingefrorene Wallets:",
-    "notARelayProblem": "Das ist kein Netzwerkproblem. Ein erneuter Versuch führt zur selben Antwort.",
+    "maxCapPathBody": "Diese Wallet ist eingefroren, weil ihr Guthaben über der veröffentlichten Obergrenze liegt. Sie können sich trotzdem bei Lana8Wonder anmelden. Spenden Sie nach der Anmeldung das restliche Guthaben dieser Wallet über den Registrar – öffnen Sie auf LanaTrace die Wallet und drücken Sie „Resolve Freeze“ –, dann wird die Sperre automatisch aufgehoben.",
+    "maxCapPathTitle": "Wegen der Obergrenze eingefroren – Anmeldung trotzdem möglich",
+    "notARelayProblem": "Das ist kein Netzwerkproblem – der Registrar hat geantwortet.",
     "reasonGeneric": "Vom Registrar eingefroren",
     "reasonL8w": "Verspätete Wallet-Registrierung",
     "reasonMaxCap": "Guthaben über der veröffentlichten Obergrenze",
@@ -388,11 +390,17 @@
     "reasonTooWild": "Ungewöhnliche oder verdächtige Aktivität",
     "reasonUnregLanas": "Nicht registrierte LANA über dem Schwellenwert",
     "registrarSaid": "Der Registrar antwortete:",
-    "registrationFrozenBody": "Ihr Konto hat eine eingefrorene Wallet. Solange sie eingefroren ist, meldet der Registrar Sie nicht bei Lana8Wonder an. Es wurde nichts registriert und nichts veröffentlicht.",
+    "registrationFrozenBody": "Der Registrar hat abgelehnt, weil Ihr Konto eine eingefrorene Wallet hat. Es wurde nichts registriert und nichts veröffentlicht.",
     "registrationRefusedTitle": "Der Registrar hat die Anmeldung abgelehnt",
     "retry": "Erneut versuchen",
+    "retrySameAnswer": "Solange diese Sperre besteht, führt ein erneuter Versuch zur selben Antwort.",
     "walletFrozenBadge": "Eingefroren",
     "walletStateUnknownBody": "Keiner der Lana-Server hat geantwortet, daher wissen wir nicht, ob eine Ihrer Wallets eingefroren ist. Statt Ihnen etwas möglicherweise Falsches zu zeigen, zeigen wir nichts. Bitte versuchen Sie es in einigen Minuten erneut.",
     "walletStateUnknownTitle": "Wir konnten Ihre Wallet-Liste nicht lesen"
+  },
+  "planRead": {
+    "unknownTitle": "Wir konnten Ihren Rentenplan nicht prüfen",
+    "unknownBody": "Die Lana-Server haben uns keine lesbare Antwort gegeben, daher wissen wir nicht, ob Sie einen Plan haben. Das heißt nicht, dass Sie keinen haben, und wir schicken Sie nicht auf Verdacht los, einen neuen zu kaufen. Bitte versuchen Sie es in einigen Minuten erneut.",
+    "retry": "Erneut versuchen"
   }
 }

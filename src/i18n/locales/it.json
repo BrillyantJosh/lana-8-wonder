@@ -380,7 +380,9 @@
     "contactRegistrar": "Per far riesaminare il congelamento, contatta il registrar.",
     "correlationId": "Riferimento per l'assistenza:",
     "frozenWalletsLabel": "Portafogli congelati:",
-    "notARelayProblem": "Non è un problema di rete. Riprovare darà la stessa risposta.",
+    "maxCapPathBody": "Questo portafoglio è congelato perché il suo saldo supera il limite massimo pubblicato. Puoi comunque iscriverti a Lana8Wonder. Dopo l'iscrizione, dona il saldo rimanente di questo portafoglio tramite il registrar — su LanaTrace apri il portafoglio e premi «Resolve Freeze» — e il congelamento verrà rimosso automaticamente.",
+    "maxCapPathTitle": "Congelato per il limite di saldo: puoi comunque iscriverti",
+    "notARelayProblem": "Non è un problema di rete: il registrar ha risposto.",
     "reasonGeneric": "Congelato dal registrar",
     "reasonL8w": "Registrazione del portafoglio in ritardo",
     "reasonMaxCap": "Saldo superiore al limite massimo pubblicato",
@@ -388,11 +390,17 @@
     "reasonTooWild": "Attività irregolare o sospetta",
     "reasonUnregLanas": "LANA non registrati oltre la soglia",
     "registrarSaid": "Il registrar ha risposto:",
-    "registrationFrozenBody": "Il tuo account ha un portafoglio congelato. Finché resta congelato, il registrar non ti iscrive a Lana8Wonder. Non è stato registrato nulla e non è stato pubblicato nulla.",
+    "registrationFrozenBody": "Il registrar ha rifiutato perché il tuo account ha un portafoglio congelato. Non è stato registrato nulla e non è stato pubblicato nulla.",
     "registrationRefusedTitle": "Il registrar ha rifiutato l'iscrizione",
     "retry": "Riprova",
+    "retrySameAnswer": "Finché questo congelamento resta, riprovare darà la stessa risposta.",
     "walletFrozenBadge": "Congelato",
     "walletStateUnknownBody": "Nessuno dei server Lana ha risposto, quindi non sappiamo se qualche tuo portafoglio è congelato. Invece di mostrarti qualcosa che potrebbe essere sbagliato, non mostriamo nulla. Riprova tra qualche minuto.",
     "walletStateUnknownTitle": "Non siamo riusciti a leggere l'elenco dei tuoi portafogli"
+  },
+  "planRead": {
+    "unknownTitle": "Non siamo riusciti a verificare il tuo piano di rendita",
+    "unknownBody": "I server Lana non ci hanno dato una risposta leggibile, quindi non sappiamo se hai un piano. Questo non significa che tu non ne abbia uno, e non ti manderemo a comprarne uno nuovo sulla base di un'ipotesi. Riprova tra qualche minuto.",
+    "retry": "Riprova"
   }
 }

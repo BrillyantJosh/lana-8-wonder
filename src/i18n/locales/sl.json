@@ -380,7 +380,9 @@
     "contactRegistrar": "Za pregled zamrznitve se obrnite na registrarja.",
     "correlationId": "Sklic za pomoč:",
     "frozenWalletsLabel": "Zamrznjene denarnice:",
-    "notARelayProblem": "To ni težava z omrežjem. Ponoven poskus bo dal isti odgovor.",
+    "maxCapPathBody": "Ta denarnica je zamrznjena, ker njeno stanje presega objavljeno zgornjo mejo. V Lana8Wonder se lahko vseeno vpišete. Po vpisu preostanek te denarnice podarite prek registrarja — na LanaTrace odprite denarnico in pritisnite »Resolve Freeze« — in zamrznitev se sama sprosti.",
+    "maxCapPathTitle": "Zamrznjena zaradi zgornje meje — vpis je vseeno mogoč",
+    "notARelayProblem": "To ni težava z omrežjem — registrar je odgovoril.",
     "reasonGeneric": "Registrar je denarnico zamrznil",
     "reasonL8w": "Prepozen vpis denarnice",
     "reasonMaxCap": "Stanje presega objavljeno zgornjo mejo",
@@ -388,11 +390,17 @@
     "reasonTooWild": "Nenavadno ali sumljivo dogajanje",
     "reasonUnregLanas": "Preveč nevpisanih LANA",
     "registrarSaid": "Registrar je odgovoril:",
-    "registrationFrozenBody": "Na vašem računu je zamrznjena denarnica. Dokler je zamrznjena, vas registrar v Lana8Wonder ne vpiše. Nič ni bilo vpisano in nič ni bilo objavljeno.",
+    "registrationFrozenBody": "Registrar je vpis zavrnil, ker je na vašem računu zamrznjena denarnica. Nič ni bilo vpisano in nič ni bilo objavljeno.",
     "registrationRefusedTitle": "Registrar je vpis zavrnil",
     "retry": "Poskusi znova",
+    "retrySameAnswer": "Dokler ta zamrznitev velja, bo ponoven poskus dal isti odgovor.",
     "walletFrozenBadge": "Zamrznjena",
     "walletStateUnknownBody": "Noben od Lana strežnikov ni odgovoril, zato ne vemo, ali je katera vaša denarnica zamrznjena. Da vam ne bi pokazali napačnega, ne pokažemo nič. Poskusite čez nekaj minut.",
     "walletStateUnknownTitle": "Seznama vaših denarnic nismo mogli prebrati"
+  },
+  "planRead": {
+    "unknownTitle": "Vašega načrta anuitete nismo mogli preveriti",
+    "unknownBody": "Lana strežniki nam niso dali berljivega odgovora, zato ne vemo, ali imate načrt. To ne pomeni, da ga nimate, in na ugibanje vas ne bomo pošiljali kupovat novega. Poskusite čez nekaj minut.",
+    "retry": "Poskusi znova"
   }
 }

@@ -11,7 +11,7 @@ import { nostrAuthHeaders } from '@/lib/nostrAuth';
 import { api as supabase, getDomainKey } from "@/integrations/api/client";
 import { useNostrLanaParams } from "@/hooks/useNostrLanaParams";
 import { fetchKind30889 } from "@/lib/nostrClient";
-import { interpretRegistrationResponse, isRefusal, type RegistrationRefusal } from "@/lib/registrationRefusal";
+import { interpretRegistrationResponse, isRefusal, refusalIsFinal, type RegistrationRefusal } from "@/lib/registrationRefusal";
 import { freezeReasonLabel } from "@/lib/freezeReasons";
 import { getCurrencySymbol } from "@/lib/utils";
 
@@ -1254,9 +1254,22 @@ const PreviewLana8Wonder = () => {
                           </div>
                         )}
 
-                        <p className="text-xs text-red-600 dark:text-red-400">
-                          {t('freeze.notARelayProblem')}
-                        </p>
+                        {/* Only when an answer actually came back. If the
+                            request itself failed, it IS a network problem and
+                            saying otherwise would be the old lie reversed. */}
+                        {registrationRefusal.httpStatus > 0 && (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {t('freeze.notARelayProblem')}
+                          </p>
+                        )}
+                        {/* Only a freeze that blocks is final. A database
+                            hiccup may pass, and a cap freeze is one the owner
+                            has decided to let through. */}
+                        {refusalIsFinal(registrationRefusal) && (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {t('freeze.retrySameAnswer')}
+                          </p>
+                        )}
                         <p className="text-xs text-red-600 dark:text-red-400">
                           {t('freeze.contactRegistrar')}
                         </p>
@@ -1372,7 +1385,7 @@ const PreviewLana8Wonder = () => {
                   <div className="flex flex-col items-center gap-2 mt-4 md:gap-3 md:mt-6">
                     <Button
                       onClick={handleRegisterWallets}
-                      disabled={isRegistering || registrationRefusal?.kind === 'frozen_account'}
+                      disabled={isRegistering || (!!registrationRefusal && refusalIsFinal(registrationRefusal))}
                       className="w-full sm:w-auto"
                     >
                       {isRegistering ? (
