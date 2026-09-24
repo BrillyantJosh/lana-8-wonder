@@ -9,6 +9,7 @@ import { ArrowLeft, Globe, Loader2, Save, Plus, Trash2, CheckCircle, XCircle } f
 import { toast } from 'sonner';
 import { AdminMenu } from '@/components/AdminMenu';
 import { nostrAuthHeaders } from '@/lib/nostrAuth';
+import { cardPaymentsAllowed } from '@/lib/paymentInstructions';
 
 interface DomainConfig {
   domain_key: string | null;
@@ -20,6 +21,7 @@ interface DomainConfig {
   currency_default: string;
   show_slots_on_landing_page: string;
   enable_buy_lana: number; // 0 or 1 from SQLite
+  enable_card_payments: number; // 0 or 1 from SQLite
   has_private_key?: number; // 0 or 1 from SQLite
   // International payments
   enable_international_payments: number;
@@ -119,7 +121,14 @@ const AdminDomainSettings = () => {
         const configJson = await configRes.json();
 
         if (configJson.data) {
-          setConfig(configJson.data);
+          // An older server, or a hostname with no domains row, answers
+          // without the card flag. The buy page reads a missing flag as
+          // "card on", so the switch has to show the same thing — an OFF
+          // nobody chose would be a lie about a live payment method.
+          setConfig({
+            ...configJson.data,
+            enable_card_payments: cardPaymentsAllowed(configJson.data.enable_card_payments) ? 1 : 0,
+          });
         }
 
         // Fetch domain admins if effective domain exists
@@ -170,6 +179,7 @@ const AdminDomainSettings = () => {
             currency_default: config.currency_default,
             show_slots_on_landing_page: config.show_slots_on_landing_page,
             enable_buy_lana: config.enable_buy_lana,
+            enable_card_payments: config.enable_card_payments,
             enable_international_payments: config.enable_international_payments,
             intl_recipient_name: config.intl_recipient_name,
             intl_bank_name: config.intl_bank_name,
@@ -265,7 +275,7 @@ const AdminDomainSettings = () => {
   };
 
   // Update config field
-  const updateField = (field: keyof DomainConfig, value: string) => {
+  const updateField = (field: keyof DomainConfig, value: string | number) => {
     setConfig(prev => prev ? { ...prev, [field]: value } : null);
   };
 
@@ -415,6 +425,30 @@ const AdminDomainSettings = () => {
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       config.enable_buy_lana === 1 ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Credit Card Toggle */}
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enable_card_payments" className="text-base font-medium">Enable Credit Card Payments</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Offer the credit card as a payment method on the buy page. When disabled, buyers on this domain see bank transfer only. Each domain decides for itself.
+                    </p>
+                  </div>
+                  <button
+                    id="enable_card_payments"
+                    role="switch"
+                    aria-checked={config.enable_card_payments === 1}
+                    disabled={!domainKey}
+                    onClick={() => updateField('enable_card_payments', config.enable_card_payments === 1 ? 0 : 1)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      config.enable_card_payments === 1 ? 'bg-primary' : 'bg-gray-300'
+                    } ${!domainKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.enable_card_payments === 1 ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </div>

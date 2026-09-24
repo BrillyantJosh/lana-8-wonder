@@ -19,7 +19,8 @@
     "test:freeze": "tsx --tsconfig tsconfig.app.json scripts/testFreezeVisibility.ts",
     "test:plan": "tsx scripts/testPlanRead.ts",
     "test:signer": "tsx --test server/lib/lanaSignature.test.ts server/lib/lanaTransaction.sign.test.ts",
-    "test": "npm run test:signer && npm run test:enroll && npm run test:freeze && npm run test:plan"
+    "test:cardpayments": "tsx --test src/lib/paymentInstructions.test.ts server/routes/domainCardPayments.test.ts",
+    "test": "npm run test:signer && npm run test:cardpayments && npm run test:enroll && npm run test:freeze && npm run test:plan"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

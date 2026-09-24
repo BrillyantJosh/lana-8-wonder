@@ -20,9 +20,11 @@ export interface PaymentSlipRow {
 export interface PaymentSlipInput {
   heading: string;
   intro?: string;
-  /** The headline pair: what to pay and under which reference. */
+  /** The headline: what to pay, under which reference, and as what purpose. */
   amount?: PaymentSlipRow;
   reference?: PaymentSlipRow;
+  /** Reference + buyer name, the line that goes in the bank's purpose box. */
+  purpose?: PaymentSlipRow;
   /** Order facts (payee, wallet, date) shown under the headline. */
   summary: PaymentSlipRow[];
   instructions: PaymentInstructions | null;
@@ -67,7 +69,7 @@ export async function generatePaymentSlipPDF(input: PaymentSlipInput): Promise<v
   }
 
   // ---- Headline box: amount + reference ------------------------------------
-  const headline = [input.amount, input.reference].filter(Boolean) as PaymentSlipRow[];
+  const headline = [input.amount, input.reference, input.purpose].filter(Boolean) as PaymentSlipRow[];
   if (headline.length > 0) {
     const boxHeight = 12 + headline.length * 13;
     ensureSpace(boxHeight + 6);
@@ -83,8 +85,17 @@ export async function generatePaymentSlipPDF(input: PaymentSlipInput): Promise<v
       doc.text(row.label, PAGE_MARGIN + 5, boxY);
 
       doc.setFont(font, 'bold');
-      doc.setFontSize(16);
       doc.setTextColor(0);
+      // The purpose line carries a person's name, so unlike the amount and the
+      // reference it can be long. Step down the size until it fits rather than
+      // letting a name run off the edge of the slip somebody takes to a bank.
+      let valueSize = 16;
+      const available = contentWidth - 10;
+      doc.setFontSize(valueSize);
+      while (valueSize > 9 && doc.getTextWidth(row.value) > available) {
+        valueSize -= 1;
+        doc.setFontSize(valueSize);
+      }
       doc.text(row.value, PAGE_MARGIN + 5, boxY + 7);
       boxY += 13;
     }

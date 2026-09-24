@@ -188,6 +188,15 @@ export function initializeSchema(db: Database.Database): void {
   try { db.exec("ALTER TABLE domains ADD COLUMN intl_iban TEXT"); } catch(e) { /* column already exists */ }
   try { db.exec("ALTER TABLE domains ADD COLUMN intl_swift TEXT"); } catch(e) { /* column already exists */ }
 
+  // Which payment methods a domain offers is the domain's own decision.
+  // DEFAULT 1, deliberately the opposite of enable_international_payments
+  // above: international transfers are an extra a domain opts into, but the
+  // card is a way people are paying right now — uk takes most of its orders
+  // that way. A migration that defaulted to 0 would silently switch the card
+  // off on every domain at once. Turning it off is a click in admin settings,
+  // never a side effect of a deploy.
+  try { db.exec("ALTER TABLE domains ADD COLUMN enable_card_payments INTEGER DEFAULT 1"); } catch(e) { /* column already exists */ }
+
   // Seed domains
   const insertDomain = db.prepare(`
     INSERT OR IGNORE INTO domains (domain_key, hostname, display_name, currency_default)

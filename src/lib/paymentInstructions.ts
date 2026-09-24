@@ -43,6 +43,41 @@ export type PaymentMethodChoice = 'card' | 'transfer' | 'international' | null;
 
 type Translate = (key: string) => string;
 
+/**
+ * Does this domain offer the credit card?
+ *
+ * Read fail-OPEN, and deliberately not the way the international flag is read.
+ * International payments are an extra a domain switches on; the card is a way
+ * people are paying today. So a flag we cannot read — an older server, the
+ * bare lana8wonder.com hostname that has no domain row, a request that failed
+ * — must leave the card exactly where it is. Only a domain admin's explicit 0
+ * takes it away.
+ */
+export function cardPaymentsAllowed(flag: unknown): boolean {
+  return !(flag === 0 || flag === '0' || flag === false);
+}
+
+/**
+ * What the buyer writes in their bank form's "purpose of payment" field.
+ *
+ * The reference number stays first and unchanged: it is unique per order
+ * (153 of 153 so far), while names are not — one domain alone has six orders
+ * from the same name. The name is added after it because a human reading the
+ * bank statement recognises a person faster than a seven-digit number.
+ *
+ * Built here, next to the account details, so step 4, the confirmation page
+ * and the PDF compose it the same way out of the same two stored fields.
+ */
+export function formatPaymentPurpose(
+  reference: string | null | undefined,
+  payeeName: string | null | undefined
+): string {
+  const ref = String(reference ?? '').trim();
+  const name = String(payeeName ?? '').trim();
+  if (ref && name) return `${ref} ${name}`;
+  return ref || name;
+}
+
 /** Append a line only when there is a real value — never a blank row. */
 function push(lines: PaymentInstructionLine[], label: string, value: unknown): void {
   if (value === null || value === undefined) return;

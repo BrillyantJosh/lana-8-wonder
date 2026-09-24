@@ -30,6 +30,8 @@ import { fetchKind0Profile, type LanaProfile } from '@/lib/nostrClient';
 import { useNostrLanaParams } from '@/hooks/useNostrLanaParams';
 import {
   buildPaymentInstructions,
+  cardPaymentsAllowed,
+  formatPaymentPurpose,
   type PaymentInstructions,
   type PaymentMethodChoice,
 } from '@/lib/paymentInstructions';
@@ -74,6 +76,7 @@ const BuyLana8Wonder = () => {
         }
         // Load international payment config
         if (json.data) {
+          setCardPaymentsEnabled(cardPaymentsAllowed(json.data.enable_card_payments));
           setIntlPaymentConfig({
             enable_international_payments: json.data.enable_international_payments || 0,
             intl_recipient_name: json.data.intl_recipient_name || '',
@@ -108,6 +111,10 @@ const BuyLana8Wonder = () => {
   const [buyerProfile, setBuyerProfile] = useState<LanaProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<'card' | 'transfer' | 'international' | null>(null);
+  // Per-domain: does this domain offer the card at all? Starts true and only an
+  // explicit 0 from /api/domain-config turns it off, so a slow or failed config
+  // read never removes a payment method people are using today.
+  const [cardPaymentsEnabled, setCardPaymentsEnabled] = useState(true);
   const [payee, setPayee] = useState('');
   const [reference, setReference] = useState<string>('');
   const [intlPaymentConfig, setIntlPaymentConfig] = useState<{
@@ -199,6 +206,16 @@ const BuyLana8Wonder = () => {
     }
   }, [currency, existingBalance, params?.exchangeRates]);
 
+  // If the domain stops offering the card while a buyer already has it
+  // selected, move the choice to bank transfer rather than leaving a selection
+  // pointing at an option that is no longer on the page: the Continue button
+  // stays enabled and nobody gets stuck mid-purchase.
+  useEffect(() => {
+    if (!cardPaymentsEnabled && selectedPayment === 'card') {
+      setSelectedPayment('transfer');
+    }
+  }, [cardPaymentsEnabled, selectedPayment]);
+
   // Generate 7-digit reference on step 4 mount
   useEffect(() => {
     if (currentStep === 4 && !reference) {
@@ -223,6 +240,7 @@ const BuyLana8Wonder = () => {
           if (json.data.currency_default && !currency) {
             setCurrency(json.data.currency_default);
           }
+          setCardPaymentsEnabled(cardPaymentsAllowed(json.data.enable_card_payments));
           // Refresh international payment config
           setIntlPaymentConfig({
             enable_international_payments: json.data.enable_international_payments || 0,
@@ -561,11 +579,11 @@ const BuyLana8Wonder = () => {
         window.open(buyerProfile.payment_link, '_blank');
       }
 
-      toast.success('Order submitted successfully!');
+      toast.success(t('buyLana.submitSuccess'));
       setCurrentStep(6);
     } catch (error) {
       console.error('Error saving order:', error);
-      toast.error('Failed to submit order. Please try again.');
+      toast.error(t('buyLana.submitFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -601,6 +619,15 @@ const BuyLana8Wonder = () => {
   );
 
   const isBankOrder = confirmedMethod === 'transfer' || confirmedMethod === 'international';
+
+  // What goes in the bank form's "purpose of payment" box. The reference stays
+  // the first thing in it — it is what makes an order unique — and the buyer's
+  // name follows so a human reading the statement recognises the person.
+  // On step 4 it is composed live from the field below, which is the same pair
+  // of values the insert stores, so the screen cannot promise one thing and
+  // the order carry another.
+  const paymentPurpose = formatPaymentPurpose(reference, payee);
+  const confirmedPurpose = formatPaymentPurpose(confirmedOrder?.reference, confirmedOrder?.payee);
 
   // ---- Payment slip PDF ---------------------------------------------------
   // Fed the same confirmedOrder and confirmedInstructions the page renders, and
@@ -642,13 +669,16 @@ const BuyLana8Wonder = () => {
       reference: confirmedOrder.reference
         ? { label: translate('buyLana.step4Reference'), value: confirmedOrder.reference }
         : undefined,
+      purpose: confirmedPurpose
+        ? { label: translate('buyLana.step4PaymentPurpose'), value: confirmedPurpose }
+        : undefined,
       summary,
       instructions: confirmedInstructions,
       footerNotes: notes,
       // ASCII only: the file has to land safely on any phone or desktop.
       fileName: `lana8wonder-payment-${confirmedOrder.reference || 'order'}.pdf`,
     };
-  }, [confirmedOrder, confirmedInstructions, contactDetails, translate, i18n.language]);
+  }, [confirmedOrder, confirmedPurpose, confirmedInstructions, contactDetails, translate, i18n.language]);
 
   const handleDownloadSlip = useCallback(async () => {
     const input = buildSlipInput();
@@ -1145,58 +1175,62 @@ const BuyLana8Wonder = () => {
             <div className="space-y-3">
               <Label className="text-sm sm:text-base">{t('buyLana.step4PaymentMethod')}</Label>
 
-              {/* Credit Card */}
-              <Card
-                className={`cursor-pointer transition-all hover:border-primary ${
-                  selectedPayment === 'card'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border'
-                } ${!buyerProfile?.payment_link ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => {
-                  if (buyerProfile?.payment_link) {
-                    setSelectedPayment('card');
-                  } else {
-                    toast.error('Credit card payment not available');
-                  }
-                }}
-              >
-                <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    selectedPayment === 'card'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base">{t('buyLana.step4CardPayment')}</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                      Fast and secure online payment
-                    </p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    selectedPayment === 'card' ? 'border-primary' : 'border-muted-foreground'
-                  }`}>
-                    {selectedPayment === 'card' && <div className="w-3 h-3 rounded-full bg-primary" />}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Credit card payment link info */}
-              {selectedPayment === 'card' && buyerProfile?.payment_link && (
-                <Card className="bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 border-2">
-                  <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-red-700 dark:text-red-300">{t('buyLana.step4CardPayment')}</p>
-                        <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-                          {t('buyLana.step4CardPaymentNotice')}
+              {/* Credit Card - only shown when this domain offers it */}
+              {cardPaymentsEnabled && (
+                <>
+                  <Card
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      selectedPayment === 'card'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border'
+                    } ${!buyerProfile?.payment_link ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => {
+                      if (buyerProfile?.payment_link) {
+                        setSelectedPayment('card');
+                      } else {
+                        toast.error(t('buyLana.step4CardUnavailable'));
+                      }
+                    }}
+                  >
+                    <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        selectedPayment === 'card'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base">{t('buyLana.step4CardPayment')}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {t('buyLana.step4CardPaymentDesc')}
                         </p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selectedPayment === 'card' ? 'border-primary' : 'border-muted-foreground'
+                      }`}>
+                        {selectedPayment === 'card' && <div className="w-3 h-3 rounded-full bg-primary" />}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Credit card payment link info */}
+                  {selectedPayment === 'card' && buyerProfile?.payment_link && (
+                    <Card className="bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 border-2">
+                      <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-300">{t('buyLana.step4CardPayment')}</p>
+                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
+                              {t('buyLana.step4CardPaymentNotice')}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
 
               {/* Bank Transfer */}
@@ -1219,7 +1253,7 @@ const BuyLana8Wonder = () => {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm sm:text-base">{t('buyLana.step4BankTransfer')}</h3>
                     <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                      Direct transfer to our account
+                      {t('buyLana.step4BankTransferDesc')}
                     </p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -1239,8 +1273,10 @@ const BuyLana8Wonder = () => {
                       <p className="text-sm text-muted-foreground mb-2">{t('buyLana.step4Reference')}</p>
                       <p className="text-2xl font-bold font-mono tracking-wider">{reference}</p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Please include this reference in your bank transfer
+                        {t('buyLana.step4ReferenceNote')}
                       </p>
+                      <p className="text-sm text-muted-foreground mt-4 mb-1">{t('buyLana.step4PaymentPurpose')}</p>
+                      <p className="text-base font-semibold break-words">{paymentPurpose}</p>
                     </div>
 
                     {selectedInstructions
@@ -1294,6 +1330,8 @@ const BuyLana8Wonder = () => {
                           <p className="text-xs text-muted-foreground mt-2">
                             {t('buyLana.step4IntlReferenceNote')}
                           </p>
+                          <p className="text-sm text-muted-foreground mt-4 mb-1">{t('buyLana.step4PaymentPurpose')}</p>
+                          <p className="text-base font-semibold break-words">{paymentPurpose}</p>
                         </div>
 
                         {selectedInstructions
@@ -1485,6 +1523,12 @@ const BuyLana8Wonder = () => {
                   <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                     {t('buyLana.step6ReferenceMissing')}
                   </p>
+                )}
+                {confirmedPurpose && (
+                  <>
+                    <p className="text-sm text-muted-foreground mt-4 mb-1">{t('buyLana.step4PaymentPurpose')}</p>
+                    <p className="text-base font-semibold break-words">{confirmedPurpose}</p>
+                  </>
                 )}
               </div>
 

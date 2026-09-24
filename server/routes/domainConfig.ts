@@ -4,6 +4,37 @@ import { isAdminPubkey } from '../middleware/requireAdmin.js';
 
 const router = Router();
 
+/**
+ * The answer for a hostname that has no row in `domains` — the bare
+ * lana8wonder.com and www.lana8wonder.com both land here, because neither
+ * carries a domain_key.
+ *
+ * Per-domain switches cannot reach these two, so the values here are what the
+ * buy page will see forever. `enable_card_payments: 1` therefore is not a
+ * default, it is the decision: nobody can administer these hostnames, so the
+ * page must keep behaving exactly as it does today rather than losing a
+ * payment method to a flag no one can turn back on.
+ */
+export function buildFallbackDomainConfig(config: Record<string, string>) {
+  return {
+    domain_key: null,
+    display_name: 'Lana8Wonder',
+    donation_wallet_id: config.donation_wallet_id || '',
+    contact_details: config.contact_details || '',
+    nostr_hex_id_buying_lanas: config.nostr_hex_id_buying_lanas || '',
+    currency_default: 'EUR',
+    show_slots_on_landing_page: config.show_lots_on_landing_page || 'true',
+    payment_link: '',
+    enable_card_payments: 1,
+    enable_international_payments: 0,
+    intl_recipient_name: '',
+    intl_bank_name: '',
+    intl_bank_address: '',
+    intl_iban: '',
+    intl_swift: '',
+  };
+}
+
 // GET /api/domain-config - returns public domain config (never private key)
 router.get('/', (req: Request, res: Response) => {
   try {
@@ -15,6 +46,7 @@ router.get('/', (req: Request, res: Response) => {
         SELECT domain_key, hostname, display_name, donation_wallet_id,
                contact_details, payment_link, nostr_hex_id_buying_lanas,
                currency_default, show_slots_on_landing_page, enable_buy_lana, active,
+               enable_card_payments,
                enable_international_payments, intl_recipient_name, intl_bank_name,
                intl_bank_address, intl_iban, intl_swift,
                CASE WHEN donation_wallet_private_key IS NOT NULL AND donation_wallet_private_key != '' THEN 1 ELSE 0 END as has_private_key
@@ -45,25 +77,7 @@ router.get('/', (req: Request, res: Response) => {
       config[s.setting_key] = s.setting_value;
     }
 
-    return res.json({
-      data: {
-        domain_key: null,
-        display_name: 'Lana8Wonder',
-        donation_wallet_id: config.donation_wallet_id || '',
-        contact_details: config.contact_details || '',
-        nostr_hex_id_buying_lanas: config.nostr_hex_id_buying_lanas || '',
-        currency_default: 'EUR',
-        show_slots_on_landing_page: config.show_lots_on_landing_page || 'true',
-        payment_link: '',
-        enable_international_payments: 0,
-        intl_recipient_name: '',
-        intl_bank_name: '',
-        intl_bank_address: '',
-        intl_iban: '',
-        intl_swift: '',
-      },
-      error: null
-    });
+    return res.json({ data: buildFallbackDomainConfig(config), error: null });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return res.status(500).json({ data: null, error: { message } });
@@ -101,7 +115,7 @@ router.put('/', (req: Request, res: Response) => {
     const allowedFields = [
       'donation_wallet_id', 'donation_wallet_private_key', 'contact_details',
       'payment_link', 'nostr_hex_id_buying_lanas', 'currency_default',
-      'show_slots_on_landing_page', 'enable_buy_lana',
+      'show_slots_on_landing_page', 'enable_buy_lana', 'enable_card_payments',
       'enable_international_payments', 'intl_recipient_name', 'intl_bank_name',
       'intl_bank_address', 'intl_iban', 'intl_swift'
     ];
@@ -134,6 +148,7 @@ router.put('/', (req: Request, res: Response) => {
       SELECT domain_key, hostname, display_name, donation_wallet_id,
              contact_details, payment_link, nostr_hex_id_buying_lanas,
              currency_default, show_slots_on_landing_page, enable_buy_lana, active,
+             enable_card_payments,
              enable_international_payments, intl_recipient_name, intl_bank_name,
              intl_bank_address, intl_iban, intl_swift,
              CASE WHEN donation_wallet_private_key IS NOT NULL AND donation_wallet_private_key != '' THEN 1 ELSE 0 END as has_private_key
