@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { ripemd160 } from "https://esm.sh/hash.js@1.1.7";
+import { signLanaSighash } from '../_shared/lanaSignature.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -203,35 +204,6 @@ async function publicKeyToAddress(publicKey: Uint8Array): Promise<string> {
   payload.set(hash160, 1);
   const address = await base58CheckEncode(payload);
   return address;
-}
-
-function encodeDER(r: bigint, s: bigint): Uint8Array {
-  const rHex = r.toString(16).padStart(64, '0');
-  const sHex = s.toString(16).padStart(64, '0');
-  const rArray = Array.from(hexToUint8Array(rHex));
-  const sArray = Array.from(hexToUint8Array(sHex));
-  while(rArray.length > 1 && rArray[0] === 0) rArray.shift();
-  while(sArray.length > 1 && sArray[0] === 0) sArray.shift();
-  if (rArray[0] >= 0x80) rArray.unshift(0);
-  if (sArray[0] >= 0x80) sArray.unshift(0);
-  const der = [0x30, 0x00, 0x02, rArray.length, ...rArray, 0x02, sArray.length, ...sArray];
-  der[1] = der.length - 2;
-  return new Uint8Array(der);
-}
-
-function signECDSA(privateKeyHex: string, messageHash: Uint8Array): Uint8Array {
-  const privateKey = BigInt('0x' + privateKeyHex);
-  const z = BigInt('0x' + uint8ArrayToHex(messageHash));
-  const k = Point.mod(z + privateKey, Point.N);
-  if (k === 0n) throw new Error('Invalid k');
-  const kG = Point.G.multiply(k);
-  const r = Point.mod(kG.x, Point.N);
-  if (r === 0n) throw new Error('Invalid r');
-  const kInv = Point.modInverse(k, Point.N);
-  const s = Point.mod(kInv * (z + r * privateKey), Point.N);
-  if (s === 0n) throw new Error('Invalid s');
-  const finalS = s > Point.N / 2n ? Point.N - s : s;
-  return encodeDER(r, finalS);
 }
 
 class UTXOSelector {
@@ -596,7 +568,7 @@ async function buildSignedTx(
         const sighash = await sha256d(preimage);
         console.log(`🔑 Sighash computed for input ${i + 1}`);
         
-        const signature = signECDSA(privateKeyHex, sighash);
+        const signature = await signLanaSighash(privateKeyHex, sighash, publicKey);
         const signatureWithHashType = new Uint8Array([...signature, 0x01]);
         const scriptSig = new Uint8Array([
           ...pushData(signatureWithHashType),
